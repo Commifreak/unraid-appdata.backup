@@ -1,0 +1,75 @@
+Menu="AB.Main:1"
+Title="Settings"
+---
+<div id="title"><span class="left"><i class="fa fa-hand-peace-o title"></i>Welcome to appdata backup</span></div>
+<p>Welcome to the appdata backup plugin!</p>
+<p>This plugin allows you to back up and restore all your appdata content! It takes care of everything (stop/start
+    docker containers) including some extras (update docker containers)</p>
+
+<div id="title"><span class="left"><i class="fa fa-cog title"></i>Settings</span></div>
+
+<form>
+    <dl>
+        <dt><b>Appdata Share (Source):</b></dt>
+        <dd><input type='text' class='setting' id="source" name="source"
+                   data-pickfilter="HIDE_FILES_FILTER" data-pickroot="/mnt/" data-pickfolders="true"/></dd>
+
+        <dt><b>Destination Share:</b></dt>
+        <dd><input type='text' class='setting' id="destinationShare" name="shareFolder"
+                   data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"></dd>
+
+        <dt><b>Use Compression?</b></dt>
+        <dd><select class='setting' id='compression'>
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
+        <dt><b>Verify Backups?</b><br/>This can lead to broken backups - Only enable if you know what you do!</dt>
+        <dd><select class='setting' id='verify'>
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
+        <dt><b>Ignore errors during backup?</b><br/>This can lead to broken backups - Only enable if you know what you
+            do!
+        </dt>
+        <dd><select class='setting' id='ignoreBackupErrors'>
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
+        <dt><b>Create separate archives (one per folder)?</b></dt>
+        <dd><select class='setting' id='separateArchives'>
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
+        <dt>&nbsp;</dt>
+        <dd><input type="button" value="Save"/> <input type="reset" value="Discard"/>
+            <button style="margin-left: 15px;">Manual backup</button>
+        </dd>
+    </dl>
+</form>
+
+<div id="title"><span class="left"><i class="fa fa-life-ring title"></i>Help & other things</span></div>
+<p>If you need assistance, you can ask in the unraid community for help.</p>
+<dl>
+    <dt>Plugin thread @ Unraid community</dt>
+    <dd><a href="https://forums.unraid.net/topic/132721-plugin-ca-appdata-backup-restore-v3" target="_blank">Open</a>
+    </dd>
+
+    <dt>Maintainer</dt>
+    <dd>2022 - now: <a href="https://forums.unraid.net/profile/140912-kluthr/" target="_blank">Robin</a> <a
+                href="https://kluthr.de" target="_blank">Kluth</a> | 2015-2022 <a
+                href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
+
+    <dt>Want to say "Thank You"?</dt>
+    <dd>Thanks! 😊 Thanks for using! You must know, <abbr title="All community developers">we</abbr> make those plugins with ❤️ (and a lot of ☕). If you like, you can donate via <a href="https://paypal.me/robinkluth/" target="_blank"><i class="fa fa-paypal"></i> PayPal</a>.</dd>
+
+    <dt>GitHub repository</dt>
+    <dd><a href="https://github.com/Commifreak/unraid-appdata.backup" target="_blank"><i class="fa fa-github"></i> Open</a></dd>
+</dl>
