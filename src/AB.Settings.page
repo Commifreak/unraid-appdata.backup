@@ -2,23 +2,30 @@ Menu="AB.Main:1"
 Title="Settings"
 ---
 <?php
-require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
-require_once('/usr/local/emhttp/plugins/appdata.backup/include/internals.php');
 
-/** @var $appdataBackup array */
+require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
+require_once('/usr/local/emhttp/plugins/appdata.backup/include/ABSettings.php');
+
+use unraid\plugins\ABSettings;
 
 
 /**
  * POST Handling
  */
 if ($_POST) {
-    @mkdir($appdataBackup['pluginConfig']);
+    if (!file_exists(ABSettings::$pluginDir)) {
+        mkdir(ABSettings::$pluginDir);
+    }
 
     //Hack the order string
     parse_str($_POST['containerOrder'], $containerOrder);
     $_POST = array_merge($_POST, $containerOrder);
-    file_put_contents($appdataBackup['settingsFile'], json_encode($_POST, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    file_put_contents(ABSettings::getConfigPath(), json_encode($_POST, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
+
+$abSettings = new ABSettings();
+
+
 ?>
 <link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.filetree.css') ?>">
 <style>
@@ -47,17 +54,17 @@ if ($_POST) {
 
 </style>
 
-<div id="title"><span class="left"><i class="fa fa-hand-peace-o title"></i>Welcome to appdata backup</span></div>
+<div class="title"><span class="left"><i class="fa fa-hand-peace-o title"></i>Welcome to appdata backup</span></div>
 <p>Welcome to the appdata backup plugin!</p>
 <p>This plugin allows you to back up and restore all your appdata content! It takes care of everything (stop/start
     docker containers) including some extras (update docker containers)</p>
 
-<div id="title"><span class="left"><i class="fa fa-cog title"></i>Main settings</span></div>
+<div class="title"><span class="left"><i class="fa fa-cog title"></i>Main settings</span></div>
 
 <form method="post">
     <dl>
         <dt><b>Backup type</b></dt>
-        <dd><select id="backupMethod" name="backupMethod">
+        <dd><select id="backupMethod" name="backupMethod" data-setting="<?= $abSettings->backupMethod ?>">
                 <option value="stopAll">Stop all containers, backup, start all</option>
                 <option value="oneAfterTheOther">Stop, backup, start for each container</option>
             </select></dd>
@@ -69,24 +76,26 @@ if ($_POST) {
     <dl>
 
         <dt><b>Delete backups if older than x days:</b></dt>
-        <dd><input id='deleteOldBackupsIfOlderThan' name="deleteOldBackupsDays" type='number' value=''
+        <dd><input id='deleteOldBackupsIfOlderThan' name="deleteOldBackupsDays" type='number'
+                   value='<?= $abSettings->deleteOldBackupsDays ?>'
                    placeholder='Leave empty to disable'/></dd>
 
         <dt><b>Keep this many backups:</b></dt>
-        <dd><input id='keepBackupsDays' name="keepBackupsDays" type='number' value=''
+        <dd><input id='keepBackupsDays' name="keepBackupsDays" type='number' value='<?= $abSettings->keepBackupsDays ?>'
                    placeholder='Leave empty to disable'/></dd>
 
         <dt><b>Appdata Share (Source):</b></dt>
-        <dd><input type='text' class='ftAttach' id="source" name="source"
+        <dd><input type='text' required class='ftAttach' id="source" name="source" value="<?= $abSettings->source ?>"
                    data-pickfilter="HIDE_FILES_FILTER" data-pickroot="/mnt/" data-pickfolders="true"/></dd>
 
 
         <dt><b>Destination Share:</b></dt>
-        <dd><input type='text' class='ftAttach' id="destination" name="destination"
+        <dd><input type='text' required class='ftAttach' id="destination" name="destination"
+                   value="<?= $abSettings->destination ?>"
                    data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"></dd>
 
         <dt><b>Use Compression?</b></dt>
-        <dd><select id='compression' name="compression">
+        <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>">
                 <option value='no'>No</option>
                 <option value='yes'>Yes, normal</option>
                 <option value='yesMulticore'>Yes, multicore</option>
@@ -106,7 +115,8 @@ if ($_POST) {
                 Only enable if you know what you do!
             </div>
         </dt>
-        <dd><select id='verifyBackup' name="defaults[verifyBackup]">
+        <dd><select id='verifyBackup' name="defaults[verifyBackup]"
+                    data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
             </select>
@@ -118,16 +128,17 @@ if ($_POST) {
                 do!
             </div>
         </dt>
-        <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]">
-                <option value='no'>No</option>
+        <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
+                    data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
                 <option value='yes'>Yes</option>
+                <option value='no'>No</option>
             </select>
         </dd>
 
         <dt><b>Create separate archives (one per container)?</b></dt>
-        <dd><select id='separateArchives' name="separateArchives">
-                <option value='no'>No</option>
+        <dd><select id='separateArchives' name="separateArchives" data-setting="<?= $abSettings->separateArchives ?>">
                 <option value='yes'>Yes</option>
+                <option value='no'>No</option>
             </select>
         </dd>
 
@@ -135,9 +146,9 @@ if ($_POST) {
 
     <dl>
         <dt><b>Backup the flash drive?</b></dt>
-        <dd><select id='flashBackup' name="flashBackup">
-                <option value='no'>No</option>
+        <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>">
                 <option value='yes'>Yes</option>
+                <option value='no'>No</option>
             </select></dd>
     </dl>
 
@@ -145,12 +156,13 @@ if ($_POST) {
         <p>This puts a compressed copy of your flash drive inside the backup as well.</p>
     </blockquote>
 
-    <div id="title"><span class="left"><i class="fa fa-clock-o title"></i>Notifications, scheduling and retention</span>
+    <div class="title"><span class="left"><i
+                    class="fa fa-clock-o title"></i>Notifications, scheduling and retention</span>
     </div>
 
     <dl>
         <dt><b>Notification Settings:</b></dt>
-        <dd><select id='notification' name="notification">
+        <dd><select id='notification' name="notification" data-setting="<?= $abSettings->notification ?>">
                 <option value='errors'>Errors Only</option>
                 <option value='always'>Start And Stop</option>
                 <option value='completion'>Completion Only</option>
@@ -159,7 +171,7 @@ if ($_POST) {
         </dd>
 
         <dt><b>Scheduled Backup Frequency</b></dt>
-        <dd><select id='backupFrequency' name="backupFrequency">
+        <dd><select id='backupFrequency' name="backupFrequency" data-setting="<?= $abSettings->backupFrequency ?>">
                 <option value='disabled'>Disabled</option>
                 <option value='daily'>Daily</option>
                 <option value='weekly'>Weekly</option>
@@ -169,7 +181,8 @@ if ($_POST) {
         </dd>
 
         <dt><b>Day of Week:</b></dt>
-        <dd><select id='backupFrequencyDay' name="backupFrequencyWeekday">
+        <dd><select id='backupFrequencyDay' name="backupFrequencyWeekday"
+                    data-setting="<?= $abSettings->backupFrequencyWeekday ?>">
                 <option value='0'>Sunday</option>
                 <option value='1'>Monday</option>
                 <option value='2'>Tuesday</option>
@@ -181,7 +194,8 @@ if ($_POST) {
         </dd>
 
         <dt><b>Day of Month:</b></dt>
-        <dd><select id='backupFrequencyDayOfMonth' name="backupFrequencyDayOfMonth">
+        <dd><select id='backupFrequencyDayOfMonth' name="backupFrequencyDayOfMonth"
+                    data-setting="<?= $abSettings->backupFrequencyDayOfMonth ?>">
                 <option value='1'>1st</option>
                 <option value='2'>2nd</option>
                 <option value='3'>3rd</option>
@@ -217,34 +231,38 @@ if ($_POST) {
         </dd>
 
         <dt><b>Hour:</b></dt>
-        <dd><input type="number" min="00" max="23" id='backupFrequencyHour' name="backupFrequencyHour"/></dd>
+        <dd><input type="number" min="00" max="23" id='backupFrequencyHour' name="backupFrequencyHour"
+                   value="<?= $abSettings->backupFrequencyHour ?>"/></dd>
 
         <dt><b>Minute:</b></dt>
-        <dd><input type="number" min="00" max="59" id='backupFrequencyMinute'/></dd>
+        <dd><input type="number" min="00" max="59" id='backupFrequencyMinute' name="backupFrequencyMinute"
+                   value="<?= $abSettings->backupFrequencyMinute ?>"/></dd>
 
         <dt><b>Custom Cron Entry:</b></dt>
         <dd><input type='text' id='backupFrequencyCustom' name="backupFrequencyCustom"
+                   value="<?= $abSettings->backupFrequencyCustom ?>"
                    placeholder="Setting this, will disable the other options"/></dd>
     </dl>
 
 
-    <div id="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
+    <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
     <p><b>General note</b>: This plugin always backup every unknown (new) container with the default settings. In this
         section you can set settings that deviate from the defaults.</p>
 
     <dl>
         <dt><b>Update containers after backup?</b></dt>
-        <dd><select id='updateContainers' name="defaults[updateContainers]">
-                <option value='no'>No</option>
+        <dd><select id='updateContainers' name="defaults[updateContainers]"
+                    data-setting="<?= $abSettings->defaults['updateContainers'] ?>">
                 <option value='yes'>Yes</option>
+                <option value='no'>No</option>
             </select>
         </dd>
     </dl>
 
     <div style="display: flex;">
         <div class="dockerSettings" style="flex-grow: 1; flex-basis: 0;">
-            <div id="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings</span></div>
+            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings</span></div>
 
             <?php
             $dockerClient  = new DockerClient();
@@ -258,10 +276,23 @@ if ($_POST) {
                 }
                 $volumes = implode("; ", $volumes);
 
+                $containerSetting = $abSettings->containerSettings[$container['Name']] ?? [
+                    'skip'               => 'no',
+                    'verifyBackup'       => '',
+                    'ignoreBackupErrors' => '',
+                    'updateContainer'    => '',
+                    'exclude'            => ''
+                ];
+
                 echo <<<HTML
         <dl>
         <dt><img src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
-        <dd><input type='checkbox' name="{$container['Name']}[skip]" id="{$container['Name']}_skip" /> <label for="{$container['Name']}_exclude">Exclude from backup?</label></dd>
+        <dd><label for="{$container['Name']}_exclude">Backup?</label>
+        <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+    </select>
+    </dd>
         </dl>
 
 <blockquote class='inline_help'>
@@ -270,7 +301,7 @@ if ($_POST) {
 <dd>$volumes</dd>
 
 <dt>Verify Backup?</dt>
-<dd><select id='{$container['Name']}_verifyBackup' name="{$container['Name']}[verifyBackup]" >
+<dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
 		<option value=''>Use standard</option>
 		<option value='yes'>Yes</option>
 		<option value='no'>No</option>
@@ -278,23 +309,23 @@ if ($_POST) {
 	
 <dt>Ignore errors during backup?</dt>
 <dd>
-    <select id='{$container['Name']}_ignoreBackupErrors' name="{$container['Name']}[ignoreBackupErrors]">
+    <select id='{$container['Name']}_ignoreBackupErrors' name="containerSettings[{$container['Name']}][ignoreBackupErrors]" data-setting="{$containerSetting['ignoreBackupErrors']}">
         <option value=''>Use standard</option>
+        <option value='yes'>Yes</option>
 		<option value='no'>No</option>
-		<option value='yes'>Yes</option>
 	</select>
 </dd>
 	
 <dt>Update container after backup?</dt>
-<dd><select id='{$container['Name']}_updateContainers' name="{$container['Name']}[updateContainers]">
+<dd><select id='{$container['Name']}_updateContainers' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
         <option value=''>Use standard</option>
-        <option value='no'>No</option>
         <option value='yes'>Yes</option>
+        <option value='no'>No</option>
     </select>
 </dd>
 	
 <dt>Excluded folders/files</dt>
-<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="{$container['Name']}[exclude]" onfocus="$('.ft').slideDown('fast');" style="resize: vertical; width: 400px;"></textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
 </dl>
 </blockquote>
@@ -306,13 +337,21 @@ HTML;
 
         </div>
         <div style="flex-grow: 1; flex-basis: 0; padding-left: 10px; max-width: 35%;">
-            <div id="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
+            <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
             <p>This defines the start sequence. Stop would be this order in reverse. This list also defines the sequence
                 for the <code>Stop, backup, start for each container</code> type.</p>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
-                foreach ($allContainers as $container) {
+
+                $_containers      = array_column($allContainers, null, 'Name');
+                $sortedContainers = [];
+                foreach ($abSettings->containerOrder as $name) {
+                    $sortedContainers[] = $_containers[$name];
+                    unset($_containers[$name]);
+                }
+                $sortedContainers = array_merge($sortedContainers, $_containers);
+                foreach ($sortedContainers as $container) {
                     $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
                     echo <<<HTML
 <li id="containerOrder_{$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
@@ -324,11 +363,12 @@ HTML;
         </div>
     </div>
 
-    <div id="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts</span></div>
+    <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts</span></div>
 
     <dl>
         <dt>Pre-run script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="preRunScript" name="preRunScript"
+                   value="<?= $abSettings->preRunScript ?>"
                    data-pickroot="/mnt/"/></dd>
     </dl>
 
@@ -339,6 +379,7 @@ HTML;
     <dl>
         <dt>Pre-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="preBackupScript" name="preBackupScript"
+                   value="<?= $abSettings->preBackupScript ?>"
                    data-pickroot="/mnt/"/></dd>
     </dl>
 
@@ -349,6 +390,7 @@ HTML;
     <dl>
         <dt>Post-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="postBackupScript" name="postBackupScript"
+                   value="<?= $abSettings->postBackupScript ?>"
                    data-pickroot="/mnt/"/></dd>
     </dl>
 
@@ -359,6 +401,7 @@ HTML;
     <dl>
         <dt>Post-run script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="postRunScript" name="postRunScript"
+                   value="<?= $abSettings->postRunScript ?>"
                    data-pickroot="/mnt/"/></dd>
     </dl>
 
@@ -366,14 +409,14 @@ HTML;
         <p>Runs the selected script AFTER everything is done.</p>
     </blockquote>
 
-    <div id="title"><span class="left"><i class="fa fa-plus-square title"></i>Some extra options</span></div>
+    <div class="title"><span class="left"><i class="fa fa-plus-square title"></i>Some extra options</span></div>
 
     <dl>
         <dt>Include extra files/folders</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea id="includeFiles" name="includeFiles"
                                                                  onfocus="$('.ft').slideDown('fast');"
-                                                                 style="resize: vertical; width: 400px;"></textarea>
+                                                                 style="resize: vertical; width: 400px;"><?= $abSettings->includeFiles ?></textarea>
                 <div class="ft" style="display: none;">
                     <div class="fileTreeDiv"></div>
                     <button onclick="addSelectionToList(this);  return false;">Add to list</button>
@@ -393,7 +436,7 @@ HTML;
     </dl>
 </form>
 
-<div id="title"><span class="left"><i class="fa fa-life-ring title"></i>Help & other things</span></div>
+<div class="title"><span class="left"><i class="fa fa-life-ring title"></i>Help & other things</span></div>
 <p>If you need assistance, you can ask in the unraid community for help.</p>
 <dl>
     <dt>Plugin thread @ Unraid community</dt>
@@ -429,6 +472,16 @@ HTML;
         $('.ftAttach').fileTreeAttach();
         $('.ftAttach').attr('placeholder', 'Please click to select');
         $('.sortable').sortable();
+
+        /**
+         * Select correct setting value
+         */
+        console.debug('Setting select settings...');
+        $('select[data-setting]').each(function (index) {
+            console.debug($(this).attr('name'), $(this).data('setting'));
+            $(this).find('option[value="' + $(this).data('setting') + '"]').attr('selected', 'selected');
+        });
+
 
     });
 
