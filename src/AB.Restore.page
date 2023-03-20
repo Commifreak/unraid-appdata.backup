@@ -1,4 +1,13 @@
 Menu="AB.Main:2"
 Title="Restore"
 ---
-RESCHTOR
+<?php
+
+use unraid\plugins\AppdataBackup\ABHelper;
+
+if (!ABHelper::isArrayOnline()) {
+    echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
+    return;
+}
+
+?>

@@ -5,8 +5,15 @@ Title="Settings"
 
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
 require_once('/usr/local/emhttp/plugins/appdata.backup/include/ABSettings.php');
+require_once('/usr/local/emhttp/plugins/appdata.backup/include/functions.php');
 
-use unraid\plugins\ABSettings;
+use unraid\plugins\AppdataBackup\ABHelper;
+use unraid\plugins\AppdataBackup\ABSettings;
+
+if (!ABHelper::isArrayOnline()) {
+    echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
+    return;
+}
 
 
 /**
@@ -76,17 +83,18 @@ $abSettings = new ABSettings();
     <dl>
 
         <dt><b>Delete backups if older than x days:</b></dt>
-        <dd><input id='deleteOldBackupsIfOlderThan' name="deleteOldBackupsDays" type='number'
-                   value='<?= $abSettings->deleteOldBackupsDays ?>'
+        <dd><input id='deleteBackupsOlderThan' name="deleteBackupsOlderThan" type='number'
+                   value='<?= $abSettings->deleteBackupsOlderThan ?>'
                    placeholder='Leave empty to disable'/></dd>
 
-        <dt><b>Keep this many backups:</b></dt>
-        <dd><input id='keepBackupsDays' name="keepBackupsDays" type='number' value='<?= $abSettings->keepBackupsDays ?>'
+        <dt><b>Keep at least this many backups:</b></dt>
+        <dd><input id='keepMinBackups' name="keepMinBackups" type='number' value='<?= $abSettings->keepMinBackups ?>'
                    placeholder='Leave empty to disable'/></dd>
 
         <dt><b>Appdata Share (Source):</b></dt>
-        <dd><input type='text' required class='ftAttach' id="source" name="source" value="<?= $abSettings->source ?>"
-                   data-pickfilter="HIDE_FILES_FILTER" data-pickroot="/mnt/" data-pickfolders="true"/></dd>
+        <dd>The source share is being read from the docker default appdata path. All container paths are read from their
+            volume configuration
+        </dd>
 
 
         <dt><b>Destination Share:</b></dt>
@@ -105,14 +113,15 @@ $abSettings = new ABSettings();
 
     <blockquote class='inline_help'>
         <p><b>Yes, normal</b>: Uses normal gzip compression</p>
-        <p><b>Yes, multicore</b>: Uses <a href="https://zlib.net/pigz/" target="_blank">pigz</a> for compression. Please
+        <p><b>Yes, multicore</b>: Uses <a href="https://facebook.github.io/zstd/" target="_blank">zstdmt</a> for
+            compression. Please
             note, that this <i>could</i> decrease other system services during backup.</p>
     </blockquote>
 
     <dl>
         <dt>
-            <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/>This can lead to broken backups -
-                Only enable if you know what you do!
+            <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects any
+                    errors during backup. This option just adds an extra layer of security</small>
             </div>
         </dt>
         <dd><select id='verifyBackup' name="defaults[verifyBackup]"
@@ -130,13 +139,6 @@ $abSettings = new ABSettings();
         </dt>
         <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
                     data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
-                <option value='yes'>Yes</option>
-                <option value='no'>No</option>
-            </select>
-        </dd>
-
-        <dt><b>Create separate archives (one per container)?</b></dt>
-        <dd><select id='separateArchives' name="separateArchives" data-setting="<?= $abSettings->separateArchives ?>">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
             </select>
@@ -252,8 +254,8 @@ $abSettings = new ABSettings();
 
     <dl>
         <dt><b>Update containers after backup?</b></dt>
-        <dd><select id='updateContainers' name="defaults[updateContainers]"
-                    data-setting="<?= $abSettings->defaults['updateContainers'] ?>">
+        <dd><select id='updateContainer' name="defaults[updateContainer]"
+                    data-setting="<?= $abSettings->defaults['updateContainer'] ?>">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
             </select>
@@ -271,23 +273,21 @@ $abSettings = new ABSettings();
             foreach ($allContainers as $container) {
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
                 $volumes = [];
-                foreach ($container['Volumes'] as $volume) {
+                foreach ($container['Volumes'] ?? [] as $volume) {
                     $volumes[] = explode(":", $volume)[0];
                 }
                 $volumes = implode("; ", $volumes);
 
-                $containerSetting = $abSettings->containerSettings[$container['Name']] ?? [
-                    'skip'               => 'no',
-                    'verifyBackup'       => '',
-                    'ignoreBackupErrors' => '',
-                    'updateContainer'    => '',
-                    'exclude'            => ''
-                ];
+                if (empty($volumes)) {
+                    $volumes = "<b>No volumes - container will NOT being backed up!</b>";
+                }
+
+                $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
 
                 echo <<<HTML
         <dl>
-        <dt><img src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
-        <dd><label for="{$container['Name']}_exclude">Backup?</label>
+        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
+        <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="yes">Yes</option>
             <option value="no">No</option>
@@ -317,14 +317,14 @@ $abSettings = new ABSettings();
 </dd>
 	
 <dt>Update container after backup?</dt>
-<dd><select id='{$container['Name']}_updateContainers' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
+<dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
         <option value=''>Use standard</option>
         <option value='yes'>Yes</option>
         <option value='no'>No</option>
     </select>
 </dd>
 	
-<dt>Excluded folders/files</dt>
+<dt>Excluded folders/files<br />One folder/file per line. <a href="https://www.gnu.org/software/tar/manual/html_node/wildcards.html" target="_blank">tar's glob syntax</a> is used.</dt>
 <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
 </dl>
@@ -343,14 +343,7 @@ HTML;
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
-
-                $_containers      = array_column($allContainers, null, 'Name');
-                $sortedContainers = [];
-                foreach ($abSettings->containerOrder as $name) {
-                    $sortedContainers[] = $_containers[$name];
-                    unset($_containers[$name]);
-                }
-                $sortedContainers = array_merge($sortedContainers, $_containers);
+                $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
                 foreach ($sortedContainers as $container) {
                     $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
                     echo <<<HTML
@@ -363,7 +356,8 @@ HTML;
         </div>
     </div>
 
-    <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts</span></div>
+    <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts | <small><i
+                        class="fa fa-info"></i> Those must return exit code 0 for success detection</small></span></div>
 
     <dl>
         <dt>Pre-run script</dt>
@@ -496,6 +490,8 @@ HTML;
         $el = $(element).prev().find("input:checked");
         $textarea = $(element).parent().prev();
 
+        console.debug($el, $textarea);
+
 
         if ($el.length !== 0) {
             var checked = $el
@@ -504,10 +500,11 @@ HTML;
                 })
                 .get()
                 .join('\n');
-            if ($textarea.text() === "") {
-                $textarea.append(checked);
+            console.debug(checked);
+            if ($textarea.val() === "") {
+                $textarea.val(checked);
             } else {
-                $textarea.append("\n" + checked);
+                $textarea.val($textarea.val() + "\n" + checked);
             }
         }
         $(element).parent().slideUp('fast', function () {
