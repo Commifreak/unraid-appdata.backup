@@ -13,6 +13,8 @@ class ABHelper {
 
     private static $skipStartContainers = [];
 
+    public static $targetLogLevel = '';
+
     /**
      * Logs a message to the system log
      * @param $string
@@ -79,11 +81,11 @@ class ABHelper {
         }
         file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][$level]") . " $msg" . ($newLine ? "\n" : ''), FILE_APPEND);
 
-        if ($level == self::LOGLEVEL_ERR) {
+        if ($level == self::LOGLEVEL_ERR && self::$targetLogLevel == self::LOGLEVEL_ERR) {
             self::notify("Error occured!", "Please check the backup log tab!", $msg, 'alert');
         }
 
-        if ($level == self::LOGLEVEL_WARN) {
+        if ($level == self::LOGLEVEL_WARN && in_array(self::$targetLogLevel, [self::LOGLEVEL_WARN, self::LOGLEVEL_ERR])) {
             self::notify("Warning", "Please check the backup log tab!", $msg, 'warning');
         }
     }

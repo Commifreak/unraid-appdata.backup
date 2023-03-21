@@ -57,6 +57,7 @@ class ABSettings {
                 }
             }
         }
+        ABHelper::$targetLogLevel = $this->notification;
     }
 
     public static function getConfigPath() {
