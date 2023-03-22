@@ -15,9 +15,8 @@ class ABSettings {
     public static $logfile = 'ab.log';
     public static $debugLogFile = 'ab.debug.log';
 
-    public static $stateFileBackupInProgress = 'backupInProgress';
-    public static $stateFileRestoreInProgress = 'restoreInProgress';
-    public static $stateFileVerifyInProgress = 'verifyInProgress';
+    public static $stateFileScriptRunning = 'running';
+    public static $stateFileAbort = 'abort';
 
     public static $emhttpVars = '/var/local/emhttp/var.ini';
 
@@ -25,17 +24,16 @@ class ABSettings {
     public string|null $backupMethod = 'oneAfterTheOther';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
-    public string $source = '/mnt/cache/appdata';
     public string $destination = '';
     public string $compression = 'yes';
     public array $defaults = ['verifyBackup' => 'no', 'ignoreBackupErrors' => 'no', 'updateContainer' => 'no'];
     public string $flashBackup = 'yes';
     public string $notification = 'errors';
-    public string $backupFrequency = 'daily';
-    public string|int $backupFrequencyWeekday = '';
-    public string|int $backupFrequencyDayOfMonth = '';
-    public string|int $backupFrequencyHour = '';
-    public string|int $backupFrequencyMinute = '';
+    public string $backupFrequency = 'disabled';
+    public string|int $backupFrequencyWeekday = '1';
+    public string|int $backupFrequencyDayOfMonth = '1';
+    public string|int $backupFrequencyHour = '0';
+    public string|int $backupFrequencyMinute = '0';
     public string $backupFrequencyCustom = '';
     public array $containerSettings = [];
     public array $containerOrder = [];
@@ -72,7 +70,7 @@ class ABSettings {
      */
     public function getContainerSpecificSettings($name, $setEmptyToDefault = true) {
         if (!isset($this->containerSettings[$name])) {
-            return array_merge($this->defaults, ['skip' => 'no', 'exclude' => []]);
+            return array_merge($this->defaults, ['skip' => 'no', 'exclude' => [], 'dontStop' => 'no']);
         }
 
         $settings = $this->containerSettings[$name];
@@ -85,6 +83,35 @@ class ABSettings {
             }
         }
         return $settings;
+    }
+
+    public function checkCron() {
+        switch ($this->backupFrequency) {
+            case 'custom':
+                $cronSettings = $this->backupFrequencyCustom;
+                break;
+            case 'daily':
+                $cronSettings = $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * *";
+                break;
+            case 'weekly':
+                $cronSettings = $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * " . $this->backupFrequencyWeekday;
+                break;
+            case 'monthly':
+                $cronSettings = $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " " . $this->backupFrequencyDayOfMonth . " * *";
+                break;
+            default:
+                $cronSettings = '';
+        }
+
+        if (!empty($cronSettings)) {
+            $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php';
+            file_put_contents('/etc/cron.d/appdata_backup', $cronSettings);
+
+            // Restart dcron, that forces a re-read of /etc/cron.d. Otherwise, we have to wait one hour, because dcron read cron.d files once an hour.
+            exec("/etc/rc.d/rc.crond restart");
+        } elseif (file_exists('/etc/cron.d/appdata_backup')) {
+            unlink('/etc/cron.d/appdata_backup');
+        }
     }
 
 }

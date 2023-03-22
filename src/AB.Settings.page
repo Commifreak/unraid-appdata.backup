@@ -32,6 +32,10 @@ if ($_POST) {
 
 $abSettings = new ABSettings();
 
+if ($_POST) {
+    $abSettings->checkCron();
+}
+
 
 ?>
 <link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.filetree.css') ?>">
@@ -326,6 +330,12 @@ $abSettings = new ABSettings();
 <dt>Excluded folders/files<br />One folder/file per line. <a href="https://www.gnu.org/software/tar/manual/html_node/wildcards.html" target="_blank">tar's glob syntax</a> is used.</dt>
 <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
+<dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
+<dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
+		<option value='no'>No</option>
+		<option value='yes'>Yes</option>
+	</select></dd>
+
 </dl>
 </blockquote>
 HTML;
@@ -424,7 +434,7 @@ HTML;
     <dl>
         <dt>Done?</dt>
         <dd><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button style="margin-left: 15px;">Manual backup</button>
+            <button id="manualBackup" style="margin-left: 15px;">Manual backup</button>
         </dd>
     </dl>
 </form>
@@ -473,6 +483,26 @@ HTML;
         $('select[data-setting]').each(function (index) {
             console.debug($(this).attr('name'), $(this).data('setting'));
             $(this).find('option[value="' + $(this).data('setting') + '"]').attr('selected', 'selected');
+        });
+
+
+        $('#manualBackup').on('click', function () {
+            swal({
+                title: "Proceed?",
+                text: "Are you sure you want to start a manual backup?",
+                type: 'warning',
+                html: true,
+                showCancelButton: true,
+                confirmButtonText: "Yep",
+                cancelButtonText: "Nah"
+            }, function () {
+                $.ajax(url, {
+                    data: {action: 'manualBackup'}
+                }).always(function (data) {
+                    $('#tab3').click();
+                });
+            });
+            return false;
         });
 
 

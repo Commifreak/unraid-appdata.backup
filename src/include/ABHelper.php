@@ -104,7 +104,14 @@ class ABHelper {
     }
 
     public static function stopContainer($container) {
-        global $dockerClient;
+        global $dockerClient, $abSettings;
+
+        $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+        if ($containerSettings['dontStop'] == 'yes') {
+            self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!", self::LOGLEVEL_WARN);
+            self::$skipStartContainers[] = $container['Name'];
+            return true;
+        }
 
         if ($container['Running'] && !$container['Paused']) {
             self::backupLog("Stopping " . $container['Name'] . "... ");
@@ -130,7 +137,7 @@ class ABHelper {
         global $dockerClient;
 
         if (in_array($container['Name'], self::$skipStartContainers)) {
-            self::backupLog($container['Name'] . " is being ignored, because it was not started before.");
+            self::backupLog($container['Name'] . " is being ignored, because it was not started before (or should not be started).");
             return;
         }
 
@@ -305,8 +312,7 @@ class ABHelper {
         self::backupLog("Generated tar command: " . $finalTarOptions, self::LOGLEVEL_DEBUG);
         self::backupLog("Backing up " . $container['Name'] . '...');
 
-        $state = ABSettings::$tempFolder . '/' . ABSettings::$stateFileBackupInProgress;
-        exec("tar " . $finalTarOptions . " 2>&1 & echo $! > $state && wait $!", $output, $resultcode);
+        exec("tar " . $finalTarOptions . " 2>&1", $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {
@@ -316,16 +322,20 @@ class ABHelper {
 
         self::backupLog("Backup created without issues");
 
+        if (ABHelper::abortRequested()) {
+            return true;
+        }
+
         if ($containerSettings['verifyBackup'] == 'yes') {
             self::backupLog("Verifying backup...");
             self::backupLog("Final verify command: " . $finalTarVerifyOptions, self::LOGLEVEL_DEBUG);
-            exec("tar " . $finalTarVerifyOptions . " 2>&1 & echo $! > $state && wait $!", $output, $resultcode);
+            exec("tar " . $finalTarVerifyOptions . " 2>&1", $output, $resultcode);
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
             if ($resultcode > 0) {
                 self::backupLog("tar verification failed! More output available inside debuglog, maybe.", $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
                 /**
-                 * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for tis container
+                 * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
                  */
                 exec("ps aux | grep docker", $output);
                 self::backupLog("ps aux docker:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
@@ -339,5 +349,23 @@ class ABHelper {
             }
         }
         return true;
+    }
+
+    public static function backupRunning() {
+        $pid = @file_get_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
+        if (!$pid) {
+            // lockfile not there: process not running anymore
+            return false;
+        }
+        if (file_exists('/proc/' . $pid)) {
+            return true;
+        } else {
+            @unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning); // Remove dead state file
+            return false;
+        }
+    }
+
+    public static function abortRequested() {
+        return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
     }
 }

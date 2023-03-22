@@ -16,9 +16,13 @@ require_once __DIR__ . '/../include/ABHelper.php';
 $errorOccured = false;
 
 
-if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileBackupInProgress) || file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileVerifyInProgress)) {
+if (ABHelper::backupRunning()) {
     ABHelper::notify("Still running", "There is something running already.");
     exit;
+}
+
+if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
+    unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
 }
 
 if (file_exists(ABSettings::$tempFolder)) {
@@ -27,7 +31,7 @@ if (file_exists(ABSettings::$tempFolder)) {
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 
-file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileBackupInProgress, getmypid());
+file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
 
 /**
  * Some basic checks
@@ -70,6 +74,9 @@ if (!mkdir($abDestination)) {
 }
 
 ABHelper::handlePrePostScript($abSettings->preRunScript);
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
 
 
 $dockerClient     = new DockerClient();
@@ -108,22 +115,53 @@ foreach ($sortedStopContainers as $container) {
 
 }
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 
 if ($abSettings->backupMethod == 'stopAll') {
     ABHelper::backupLog("Method: Stop all container before continuing.");
     foreach ($sortedStopContainers as $container) {
         ABHelper::stopContainer($container);
+
+        if (ABHelper::abortRequested()) {
+            goto abort;
+        }
     }
     ABHelper::handlePrePostScript($abSettings->preBackupScript);
+
+    if (ABHelper::abortRequested()) {
+        goto abort;
+    }
 } else {
     ABHelper::backupLog("Method: Stop/Backup/Start");
     ABHelper::handlePrePostScript($abSettings->preBackupScript);
+
+    if (ABHelper::abortRequested()) {
+        goto abort;
+    }
+
     foreach ($sortedStartContainers as $container) {
         ABHelper::stopContainer($container);
+
+        if (ABHelper::abortRequested()) {
+            goto abort;
+        }
+
         if (!ABHelper::backupContainer($container, $abDestination)) {
             $errorOccured = true;
         }
+
+        if (ABHelper::abortRequested()) {
+            goto abort;
+        }
+
         ABHelper::startContainer($container);
+
+        if (ABHelper::abortRequested()) {
+            goto abort;
+        }
     }
 
     goto continuationForAll;
@@ -134,13 +172,26 @@ foreach ($sortedStartContainers as $container) {
     if (!ABHelper::backupContainer($container, $abDestination)) {
         $errorOccured = true;
     }
+
+    if (ABHelper::abortRequested()) {
+        goto abort;
+    }
+
 }
 
 ABHelper::handlePrePostScript($abSettings->postBackupScript);
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 ABHelper::backupLog("Set containers to previous state");
 foreach ($sortedStartContainers as $container) {
     ABHelper::startContainer($container);
+
+    if (ABHelper::abortRequested()) {
+        goto abort;
+    }
 }
 
 
@@ -176,15 +227,11 @@ if ($abSettings->flashBackup == 'yes') {
 
 }
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
 
-/**
- * Retention
- */
 
-
-/**
- * Removing state files - backup file is there for sure (maybe empty), removeing verify is just a safety feature.
- */
 end:
 
 if ($errorOccured) {
@@ -233,7 +280,17 @@ if ($errorOccured) {
     }
 }
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 ABHelper::handlePrePostScript($abSettings->postRunScript);
+
+abort:
+if (ABHelper::abortRequested()) {
+    $errorOccured = true;
+    ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
+}
 
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
@@ -243,4 +300,7 @@ if ($errorOccured) {
 } else {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
 }
-unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileBackupInProgress);
+if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
+    unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
+}
+unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
