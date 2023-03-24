@@ -259,6 +259,63 @@ foreach ($sortedStopContainers as $container) {
 }
 
 
+if (!empty($abSettings->includeFiles)) {
+    ABHelper::backupLog("Include files is NOT empty:" . PHP_EOL . print_r($abSettings->includeFiles, true), ABHelper::LOGLEVEL_DEBUG);
+    $extras        = $excludes = explode("\r\n", $abSettings->includeFiles);
+    $extrasChecked = [];
+    foreach ($extras as $extra) {
+        $extra = trim($extra);
+        if (!empty($extra) && file_exists($extra)) {
+            $extrasChecked[] = $extra;
+        } else {
+            ABHelper::backupLog("Specified extra file/folder '$extra' is empty or does not exist!", ABHelper::LOGLEVEL_WARN);
+        }
+    }
+
+    if (empty($extrasChecked)) {
+        ABHelper::backupLog("The tested extra files list is empty! Skipping extra files", ABHelper::LOGLEVEL_WARN);
+    } else {
+        ABHelper::backupLog("Extra files to backup: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
+        $tarOptions = ['-c'];
+
+        $destination = $abDestination . '/extra_files.tar';
+
+        // '-f '.escapeshellarg($abDestination).'/extra_files'
+
+        switch ($abSettings->compression) {
+            case 'yes':
+                $tarOptions[] = '-z'; // GZip
+                $destination  .= '.gz';
+                break;
+            case 'yesMulticore':
+                $tarOptions[] = '-I zstdmt'; // zst multicore
+                $destination  .= '.zst';
+                break;
+        }
+        $tarOptions[] = '-f ' . escapeshellarg($destination); // Destination file
+        ABHelper::backupLog("Target archive: " . $destination, ABHelper::LOGLEVEL_DEBUG);
+
+        foreach ($extrasChecked as $extraChecked) {
+            $tarOptions[] = escapeshellarg($extraChecked);
+        }
+
+        $finalTarOptions = implode(" ", $tarOptions);
+
+        ABHelper::backupLog("Generated tar command: " . $finalTarOptions, ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog("Backing up extra files...");
+
+        exec("tar " . $finalTarOptions . " 2>&1", $output, $resultcode);
+        ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
+
+        if ($resultcode > 0) {
+            ABHelper::backupLog("tar creation failed! More output available inside debuglog, maybe.", ABHelper::LOGLEVEL_ERR);
+        } else {
+            ABHelper::backupLog("Backup created without issues");
+        }
+    }
+}
+
+
 end:
 
 if ($errorOccured) {
