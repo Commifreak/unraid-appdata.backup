@@ -1,13 +1,20 @@
 Menu="AB.Main:3"
 Title="Status / Log"
+Tag="icon-log"
 ---
 
 <?php
 
 use unraid\plugins\AppdataBackup\ABHelper;
+use unraid\plugins\AppdataBackup\ABSettings;
 
 if (!ABHelper::isArrayOnline()) {
     echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
+    return;
+}
+
+if (!file_exists(ABSettings::$dockerIniFile)) {
+    echo "<h1>Oooopsie!</h1><p>The docker config could not be found!</p>";
     return;
 }
 ?>

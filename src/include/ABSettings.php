@@ -7,6 +7,7 @@ namespace unraid\plugins\AppdataBackup;
  */
 class ABSettings {
 
+    public static $dockerIniFile = '/boot/config/docker.cfg';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
 
@@ -56,6 +57,21 @@ class ABSettings {
             }
         }
         ABHelper::$targetLogLevel = $this->notification;
+
+        require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
+
+        // Get containers and check if some of it is deleted but configured
+        $dockerClient = new \DockerClient();
+        foreach ($this->containerSettings as $name => $settings) {
+            if (!$dockerClient->doesContainerExist($name)) {
+                unset($this->containerSettings[$name]);
+                $sortKey = array_search($name, $this->containerOrder);
+                if ($sortKey) {
+                    unset($this->containerOrder[$sortKey]);
+                }
+            }
+        }
+
     }
 
     public static function getConfigPath() {

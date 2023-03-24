@@ -16,7 +16,7 @@ require_once __DIR__ . '/../include/ABHelper.php';
 $errorOccured = false;
 
 
-if (ABHelper::backupRunning()) {
+if (ABHelper::scriptRunning()) {
     ABHelper::notify("Still running", "There is something running already.");
     exit;
 }
@@ -280,8 +280,6 @@ if (!empty($abSettings->includeFiles)) {
 
         $destination = $abDestination . '/extra_files.tar';
 
-        // '-f '.escapeshellarg($abDestination).'/extra_files'
-
         switch ($abSettings->compression) {
             case 'yes':
                 $tarOptions[] = '-z'; // GZip
@@ -384,6 +382,7 @@ if (!empty($abDestination)) {
         exec('rm -rf ' . escapeshellarg($abDestination));
     } else {
         copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
+        copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     }
 }
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {

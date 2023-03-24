@@ -232,7 +232,7 @@ class ABHelper {
         $stripAppdataPath = '';
 
         // Get default docker storage path
-        $dockerCfgFile = '/boot/config/docker.cfg';
+        $dockerCfgFile = ABSettings::$dockerIniFile;
         if (file_exists($dockerCfgFile)) {
             self::backupLog("Parsing $dockerCfgFile", self::LOGLEVEL_DEBUG);
             $dockerCfg = parse_ini_file($dockerCfgFile);
@@ -353,7 +353,7 @@ class ABHelper {
         return true;
     }
 
-    public static function backupRunning() {
+    public static function scriptRunning() {
         $pid = @file_get_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
         if (!$pid) {
             // lockfile not there: process not running anymore

@@ -1,5 +1,6 @@
 Menu="AB.Main:1"
 Title="Settings"
+Tag="icon-archive"
 ---
 <?php
 
@@ -12,6 +13,11 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 if (!ABHelper::isArrayOnline()) {
     echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
+    return;
+}
+
+if (!file_exists(ABSettings::$dockerIniFile)) {
+    echo "<h1>Oooopsie!</h1><p>The docker config could not be found!</p>";
     return;
 }
 
@@ -35,6 +41,8 @@ $abSettings = new ABSettings();
 if ($_POST) {
     $abSettings->checkCron();
 }
+
+$dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
 
 
 ?>
@@ -96,10 +104,10 @@ if ($_POST) {
                    placeholder='Leave empty to disable'/></dd>
 
         <dt><b>Appdata Share (Source):</b></dt>
-        <dd>The source share is being read from the docker default appdata path. All container paths are read from their
-            volume configuration
+        <dd><?= $dockerCfg['DOCKER_APP_CONFIG_PATH'] ?><br/><small>The source share is being read from the docker
+                default appdata path. All container paths are read from their
+                volume configuration</small>
         </dd>
-
 
         <dt><b>Destination Share:</b></dt>
         <dd><input type='text' required class='ftAttach' id="destination" name="destination"
