@@ -231,6 +231,33 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+foreach ($sortedStopContainers as $container) {
+    $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+    if ($containerSettings['updateContainer'] == 'yes') {
+        ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled - checking for update...");
+        $dockerUpdate    = new \DockerUpdate();
+        $dockerTemplates = new \DockerTemplates();
+        ABHelper::backupLog("downloadTemplates", ABHelper::LOGLEVEL_DEBUG);
+        $dockerTemplates->downloadTemplates();
+        ABHelper::backupLog("reloadUpdateStatus", ABHelper::LOGLEVEL_DEBUG);
+        $dockerUpdate->reloadUpdateStatus($container['Image']);
+        ABHelper::backupLog("getUpdateStatus", ABHelper::LOGLEVEL_DEBUG);
+        $updateStatus = $dockerUpdate->getUpdateStatus($container['Image']);
+        ABHelper::backupLog(print_r($updateStatus, true), ABHelper::LOGLEVEL_DEBUG);
+
+        if ($updateStatus === false) {
+            ABHelper::backupLog("Update available! Installing...");
+            exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($container['Name']));
+            ABHelper::backupLog("Update finished (hopefully).");
+        } else {
+            ABHelper::backupLog("No update available.");
+        }
+    }
+    if (ABHelper::abortRequested()) {
+        goto abort;
+    }
+}
+
 
 end:
 
@@ -295,10 +322,12 @@ if (ABHelper::abortRequested()) {
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
 
-if ($errorOccured) {
-    exec('rm -rf ' . escapeshellarg($abDestination));
-} else {
-    copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
+if (!empty($abDestination)) {
+    if ($errorOccured) {
+        exec('rm -rf ' . escapeshellarg($abDestination));
+    } else {
+        copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
+    }
 }
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
     unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);

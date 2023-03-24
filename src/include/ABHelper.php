@@ -347,6 +347,8 @@ class ABHelper {
                 }
                 return $containerSettings['ignoreBackupErrors'] == 'yes';
             }
+        } else {
+            ABHelper::backupLog("Skipping verification for this container because its not wanted!", ABHelper::LOGLEVEL_WARN);
         }
         return true;
     }
