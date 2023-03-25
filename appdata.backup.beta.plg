@@ -19,18 +19,25 @@
 ]]>
     </CHANGES>
 
-    <!--
-    The 'source' file.
-    -->
-    <FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz"
-          Run="ROOT=&plugdir; upgradepkg --install-new">
-        <URL>https://github.com/&github;/releases/download/&version;/&name;-&version;-x86_64-1.txz</URL>
+    <FILE Run="/bin/bash">
+        <INLINE>
+            # Remove emhttp files so we can re-install.
+            rm -rf &plugdir; 2>/dev/null
+        </INLINE>
+    </FILE>
+
+    <FILE Name="/boot/config/plugins/&name;/&name;-&version;.tgz">
+        <URL>https://github.com/&github;/releases/download/&version;/&name;-&version;.tgz</URL>
         <SHA256>&sha256;</SHA256>
     </FILE>
 
-    <!--
-    The 'post-install' script
-    -->
+    <FILE Run="/bin/bash">
+        <INLINE>
+            mkdir &plugdir;
+            tar -C &plugdir; -zf /boot/config/plugins/&name;/&name;-&version;.tgz
+        </INLINE>
+    </FILE>
+
     <FILE Run="/bin/bash">
         <INLINE>
             php &plugdir;/scripts/checkCron.php
@@ -46,7 +53,7 @@
     <FILE Run="/bin/bash" Method="remove">
         <INLINE>
             php &plugdir;/scripts/checkCron.php --remove
-            removepkg &name;-&version;-x86_64-1
+            rm -rf &plugdir; 2>/dev/null
             rm -rf /boot/config/plugins/&name;
         </INLINE>
     </FILE>
