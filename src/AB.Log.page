@@ -39,7 +39,7 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
 
 <h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
 <div style='border: 1px solid red; height:500px; overflow:auto' id='abLog'>Loading...</div>
-<input type='button' id="abortBackup" value='Abort backup' disabled/>
+<input type='button' id="abortBtn" value='Abort' disabled/>
 
 
 <script>
@@ -50,10 +50,10 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
             checkBackup();
         }, 1000);
 
-        $('#abortBackup').on('click', function () {
+        $('#abortBtn').on('click', function () {
             swal({
                 title: "Proceed?",
-                text: "Are you sure you want to abort backup?",
+                text: "Are you sure you want to abort?",
                 type: 'warning',
                 html: true,
                 showCancelButton: true,
@@ -73,14 +73,14 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
                 data: {action: 'getBackupState'}
             }).done(function (data) {
             if (data.running) {
-                $('#abortBackup').removeAttr('disabled');
+                $('#abortBtn').removeAttr('disabled');
                 $('#backupStatusText').removeClass('backupNotRunning');
                 $('#backupStatusText').addClass('backupRunning');
                 $('#abLog').animate({
                     scrollTop: $('#abLog')[0].scrollHeight - $('#abLog')[0].clientHeight
                 }, 100);
             } else {
-                $('#abortBackup').attr('disabled', 'disabled');
+                $('#abortBtn').attr('disabled', 'disabled');
                 $('#backupStatusText').removeClass('backupRunning');
                 $('#backupStatusText').addClass('backupNotRunning');
             }
