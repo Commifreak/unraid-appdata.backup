@@ -43,7 +43,7 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
 
 
 <script>
-    let url = "/plugins/appdata.backup/include/http.php";
+    let url = "/plugins/<?= ABSettings::$appName ?>/include/http.php";
 
     $(function () {
         setInterval(function () {

@@ -7,6 +7,7 @@ namespace unraid\plugins\AppdataBackup;
  */
 class ABSettings {
 
+    public static $appName = 'appdata.backup';
     public static $dockerIniFile = '/boot/config/docker.cfg';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
@@ -130,4 +131,11 @@ class ABSettings {
         }
     }
 
+}
+
+// Init some default values
+if (str_contains(__DIR__, 'appdata.backup.beta')) {
+    ABSettings::$appName    .= '.beta';
+    ABSettings::$pluginDir  .= '.beta';
+    ABSettings::$tempFolder .= '.beta';
 }
