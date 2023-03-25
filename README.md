@@ -1,4 +1,6 @@
-# ca.backup2
+# Appdata Backup
+
+#### for Unraid
 
 ![GitHub all releases](https://img.shields.io/github/downloads/Commifreak/unraid-appdata.backup/total)
 ![GitHub release (latest by date)](https://img.shields.io/github/downloads/Commifreak/unraid-appdata.backup/latest/total)
