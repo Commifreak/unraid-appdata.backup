@@ -1,0 +1,50 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+        <!ENTITY name      "appdata.backup.beta">
+        <!ENTITY author    "Robin Kluth">
+        <!ENTITY version   "2023.03.25b1">
+        <!ENTITY sha256    "4855fa5cba9d12754b42d55f56d9ee38">
+        <!ENTITY launch    "Settings/AB.Main">
+        <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
+        <!ENTITY github    "Commifreak/unraid-appdata.backup">
+        <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/&name;.plg">
+        ]>
+
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="shield"
+        min="6.12">
+
+    <CHANGES>
+        <![CDATA[
+### Beta Test
+]]>
+    </CHANGES>
+
+    <!--
+    The 'source' file.
+    -->
+    <FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz"
+          Run="ROOT=&plugdir; upgradepkg --install-new">
+        <URL>https://github.com/&github;/releases/download/v&version;/&name;-&version;-x86_64-1.txz</URL>
+        <SHA256>&sha256;</SHA256>
+    </FILE>
+
+    <!--
+    The 'post-install' script
+    -->
+    <FILE Run="/bin/bash">
+        <INLINE>
+            php &plugdir;/scripts/checkCron.php
+        </INLINE>
+    </FILE>
+
+    <!--
+    The 'remove' script.
+    -->
+    <FILE Run="/bin/bash" Method="remove">
+        <INLINE>
+            php &plugdir;/scripts/checkCron.php --remove
+            removepkg &name;-&version;-x86_64-1
+            rm -rf /boot/config/plugins/&name;
+        </INLINE>
+    </FILE>
+</PLUGIN>
