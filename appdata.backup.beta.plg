@@ -24,7 +24,7 @@
     -->
     <FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz"
           Run="ROOT=&plugdir; upgradepkg --install-new">
-        <URL>https://github.com/&github;/releases/download/v&version;/&name;-&version;-x86_64-1.txz</URL>
+        <URL>https://github.com/&github;/releases/download/&version;/&name;-&version;-x86_64-1.txz</URL>
         <SHA256>&sha256;</SHA256>
     </FILE>
 
