@@ -1,0 +1,7 @@
+Menu="AB.Beta.Main:2"
+Title="Restore"
+Tag="icon-u-restart"
+---
+<?php
+include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/restore.php');
+?>

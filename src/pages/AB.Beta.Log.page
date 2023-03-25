@@ -1,0 +1,7 @@
+Menu="AB.Beta.Main:3"
+Title="Status / Log"
+Tag="icon-log"
+---
+<?php
+include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/log.php');
+?>

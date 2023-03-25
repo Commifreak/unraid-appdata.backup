@@ -1,0 +1,5 @@
+Menu="Utilities"
+Type="xmenu"
+Title="Backup/Restore Appdata BETA"
+Icon="shield"
+Tabs="true"
