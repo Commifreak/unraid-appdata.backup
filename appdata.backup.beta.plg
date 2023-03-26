@@ -2,9 +2,9 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.03.25">
-        <!ENTITY sha256    "54c30bee46ff80716ad53c2ff50834a5830dfb226d51237b6cf17ce16dfb188e">
-        <!ENTITY launch    "Settings/AB.Main">
+        <!ENTITY version   "2023.03.26">
+        <!ENTITY sha256    "69b28d246241da8e36f3e278c67f301033e182781c330b8bdffc4134604b35b8">
+        <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
         <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/&name;.plg">
@@ -19,10 +19,22 @@
 ]]>
     </CHANGES>
 
+    <ALERT><![CDATA[
+ALERT!!!
+]]></ALERT>
+
     <FILE Run="/bin/bash">
         <INLINE>
-            # Remove emhttp files so we can re-install.
-            rm -rf &plugdir; 2>/dev/null
+            echo "Checking some pre-install things..."
+            if [ -d "&plugdir;" ]
+            then
+            echo "Removing plugin files..."
+            rm -rf &plugdir;
+            else
+            echo "Plugin files were not present. Fresh install"
+            fi
+            echo "Creating plugin files directory..."
+            mkdir &plugdir;
         </INLINE>
     </FILE>
 
@@ -33,8 +45,8 @@
 
     <FILE Run="/bin/bash">
         <INLINE>
-            mkdir &plugdir;
-            tar -C &plugdir; -zf /boot/config/plugins/&name;/&name;-&version;.tgz
+            echo "Extracting plugin files..."
+            tar -C &plugdir; -xzf /boot/config/plugins/&name;/&name;-&version;.tgz 2>&amp;1
         </INLINE>
     </FILE>
 
@@ -52,9 +64,11 @@
     -->
     <FILE Run="/bin/bash" Method="remove">
         <INLINE>
+            echo "Uninstalling... 😭 Maybe I see you again soon. Bye!"
             php &plugdir;/scripts/checkCron.php --remove
             rm -rf &plugdir; 2>/dev/null
             rm -rf /boot/config/plugins/&name;
+            echo "Uninstall done."
         </INLINE>
     </FILE>
 </PLUGIN>
