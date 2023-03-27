@@ -91,7 +91,7 @@ class ABSettings {
      */
     public function getContainerSpecificSettings($name, $setEmptyToDefault = true) {
         if (!isset($this->containerSettings[$name])) {
-            return array_merge($this->defaults, ['skip' => 'no', 'exclude' => [], 'dontStop' => 'no']);
+            return array_merge($this->defaults, ['skip' => 'no', 'exclude' => '', 'dontStop' => 'no']);
         }
 
         $settings = $this->containerSettings[$name];

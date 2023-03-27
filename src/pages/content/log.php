@@ -35,6 +35,8 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
 <h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
 <div style='border: 1px solid red; height:500px; overflow:auto' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
+<input type='button' id="dlLogBtn" value='Download log' disabled/>
+<input type='button' id="dlDbgLogBtn" value='Download debug log' disabled/>
 
 
 <script>
@@ -60,6 +62,10 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
                 });
             });
         });
+
+        $('#dlLogBtn, #dlDbgLogBtn').on('click', function () {
+            window.location = url + '?action=dlLog&type=' + $(this).attr('id');
+        });
     });
 
     function checkBackup() {
@@ -69,6 +75,7 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
             }).done(function (data) {
             if (data.running) {
                 $('#abortBtn').removeAttr('disabled');
+                $('#dlLogBtn, #dlDbgLogBtn').attr('disabled', 'disabled');
                 $('#backupStatusText').removeClass('backupNotRunning');
                 $('#backupStatusText').addClass('backupRunning');
                 $('#abLog').animate({
@@ -76,6 +83,7 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
                 }, 100);
             } else {
                 $('#abortBtn').attr('disabled', 'disabled');
+                $('#dlLogBtn, #dlDbgLogBtn').removeAttr('disabled');
                 $('#backupStatusText').removeClass('backupRunning');
                 $('#backupStatusText').addClass('backupNotRunning');
             }

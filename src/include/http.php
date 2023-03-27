@@ -7,7 +7,11 @@ use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
 if (isset($_GET['action'])) {
-    header('Content-Type: application/json; charset=utf-8');
+
+    if ($_GET['action'] != 'dlLog') {
+        header('Content-Type: application/json; charset=utf-8');
+    }
+
     switch ($_GET['action']) {
         case 'getBackupState':
 
@@ -97,6 +101,27 @@ if (isset($_GET['action'])) {
             break;
         case 'startRestore':
             exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_GET)) . ' > /dev/null &');
+            break;
+        case 'dlLog':
+            $filename = ($_GET['type'] ?? 'dlLogBtn') == 'dlLogBtn' ? ABSettings::$logfile : ABSettings::$debugLogFile;
+            $filePath = ABSettings::$tempFolder . '/' . $filename;
+
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+
+            if (!file_exists($filePath)) {
+                echo "Log does not exist!";
+                exit;
+            }
+
+            header('Content-Length: ' . filesize($filePath));
+            readfile($filePath);
+            exit;
+
+
             break;
 
 

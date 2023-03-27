@@ -451,7 +451,7 @@ HTML;
 <p>If you need assistance, you can ask in the unraid community for help.</p>
 <dl>
     <dt>Plugin thread @ Unraid community</dt>
-    <dd><a href="https://forums.unraid.net/topic/132721-plugin-ca-appdata-backup-restore-v3" target="_blank">Open</a>
+    <dd><a href="<?= ABSettings::$supportUrl ?>" target="_blank">Open</a>
     </dd>
 
     <dt>Maintainer</dt>

@@ -3,7 +3,7 @@
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
         <!ENTITY version   "2023.03.27b1">
-        <!ENTITY sha256    "e0ed774bba1360147c47c028a58d96e6ca7f13690caeabb78ddd93249ff7996e">
+        <!ENTITY sha256    "5bd76d929c12bfc1cd0d8377600fede227507a653a883879207fbe784cad12ea">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
