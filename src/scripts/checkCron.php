@@ -7,7 +7,7 @@ require_once(dirname(__DIR__) . '/include/ABSettings.php');
 echo "Checking cron." . PHP_EOL;
 
 if (($argv[1] ?? null) == '--remove') {
-    @unlink('/etc/cron.d/appdata_backup');
+    @unlink(ABSettings::$cronFile);
     exit;
 }
 

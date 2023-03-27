@@ -13,6 +13,7 @@ class ABSettings {
     public static $dockerIniFile = '/boot/config/docker.cfg';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
+    public static $cronFile = '/etc/cron.d/appdata_backup';
 
     public static $tempFolder = '/tmp/appdata.backup';
 
@@ -30,7 +31,7 @@ class ABSettings {
     public string|int $keepMinBackups = '3';
     public string $destination = '';
     public string $compression = 'yes';
-    public array $defaults = ['verifyBackup' => 'no', 'ignoreBackupErrors' => 'no', 'updateContainer' => 'no'];
+    public array $defaults = ['verifyBackup' => 'yes', 'ignoreBackupErrors' => 'no', 'updateContainer' => 'no'];
     public string $flashBackup = 'yes';
     public string $notification = 'errors';
     public string $backupFrequency = 'disabled';
@@ -124,12 +125,12 @@ class ABSettings {
 
         if (!empty($cronSettings)) {
             $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php';
-            file_put_contents('/etc/cron.d/appdata_backup', $cronSettings);
+            file_put_contents(ABSettings::$cronFile, $cronSettings);
 
             // Restart dcron, that forces a re-read of /etc/cron.d. Otherwise, we have to wait one hour, because dcron read cron.d files once an hour.
             exec("/etc/rc.d/rc.crond restart");
-        } elseif (file_exists('/etc/cron.d/appdata_backup')) {
-            unlink('/etc/cron.d/appdata_backup');
+        } elseif (file_exists(ABSettings::$cronFile)) {
+            unlink(ABSettings::$cronFile);
         }
     }
 
@@ -140,4 +141,5 @@ if (str_contains(__DIR__, 'appdata.backup.beta')) {
     ABSettings::$appName    .= '.beta';
     ABSettings::$pluginDir  .= '.beta';
     ABSettings::$tempFolder .= '.beta';
+    ABSettings::$cronFile   .= '_beta';
 }
