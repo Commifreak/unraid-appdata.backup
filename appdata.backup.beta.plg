@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.03.27b2">
-        <!ENTITY sha256    "085775eea2685eed651dda57fbb758bb8feaeaa6998a60ae161d4fd8783cb74b">
+        <!ENTITY version   "2023.03.27b1">
+        <!ENTITY sha256    "5ce0e691a6cd427fb854d422b2a80c5d51b2cf2f117bfb5ad685a4a14b280877">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -11,21 +11,20 @@
         ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="shield"
-        min="6.12">
+        min="6.12" support="https://forums.unraid.net/topic/136995-pluginbeta-appdatabackup/">
 
     <CHANGES>
         <![CDATA[
-### Beta Test.
+### 2023.03.27b1
+- 1st beta
 ]]>
     </CHANGES>
 
-    <ALERT><![CDATA[
-ALERT!!!
-]]></ALERT>
 
     <FILE Run="/bin/bash">
         <INLINE>
             echo "Checking some pre-install things..."
+            rm $(ls /boot/config/plugins/&name;/*.tgz 2>/dev/null | grep -v '&version;')
             if [ -d "&plugdir;" ]
             then
             echo "Removing plugin files..."
@@ -56,6 +55,7 @@ ALERT!!!
             echo Adapting some things, because this is beta
             rm &plugdir;/*.page
             cp &plugdir;/pages/*.page &plugdir;
+            echo " BETA" >> &plugdir;/README.md
         </INLINE>
     </FILE>
 

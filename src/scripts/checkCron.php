@@ -8,6 +8,7 @@ echo "Checking cron." . PHP_EOL;
 
 if (($argv[1] ?? null) == '--remove') {
     @unlink(ABSettings::$cronFile);
+    echo "cronfile deleted!" . PHP_EOL;
     exit;
 }
 

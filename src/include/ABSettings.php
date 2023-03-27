@@ -14,6 +14,7 @@ class ABSettings {
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
     public static $cronFile = '/etc/cron.d/appdata_backup';
+    public static $supportUrl = '';
 
     public static $tempFolder = '/tmp/appdata.backup';
 
@@ -142,4 +143,5 @@ if (str_contains(__DIR__, 'appdata.backup.beta')) {
     ABSettings::$pluginDir  .= '.beta';
     ABSettings::$tempFolder .= '.beta';
     ABSettings::$cronFile   .= '_beta';
+    ABSettings::$supportUrl = 'https://forums.unraid.net/topic/136995-pluginbeta-appdatabackup/';
 }

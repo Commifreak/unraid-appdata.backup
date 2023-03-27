@@ -3,9 +3,15 @@ SUFFIX=""
 VERSION=$(date +"%Y.%m.%d")
 if [ ! -z $1 ]
 then
-  SUFFIX=".beta"
   VERSION=$VERSION$1
 fi
+
+if [ ! -z $2 ]
+then
+  SUFFIX=".beta"
+fi
+
+
 
 cd /usr/local/emhttp/plugins/appdata.backup
 if [ $? -ne 0 ]
