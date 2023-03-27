@@ -2,7 +2,7 @@
 
 namespace unraid\plugins\AppdataBackup;
 
-require_once __DIR__ . '/ABSettings.php';
+require_once __DIR__ . '/ABHelper.php';
 
 /**
  * This class offers a convenient way to retrieve settings
