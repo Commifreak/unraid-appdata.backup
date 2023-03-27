@@ -1,9 +1,10 @@
 #!/bin/bash
 SUFFIX=""
 VERSION=$(date +"%Y.%m.%d")
-if [ ! -z $1 ] && [ "$1" == "beta" ]
+if [ ! -z $1 ]
 then
   SUFFIX=".beta"
+  VERSION=$VERSION$1
 fi
 
 cd /usr/local/emhttp/plugins/appdata.backup
