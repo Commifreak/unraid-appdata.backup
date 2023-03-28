@@ -348,7 +348,7 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
 </dd>
 	
 <dt>Excluded folders/files<br />One folder/file per line. <a href="https://www.gnu.org/software/tar/manual/html_node/wildcards.html" target="_blank">tar's glob syntax</a> is used.</dt>
-<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
 <dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
 <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
@@ -438,7 +438,7 @@ HTML;
         <dt>Include extra files/folders</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea id="includeFiles" name="includeFiles"
-                                                                 onfocus="$('.ft').slideDown('fast');"
+                                                                 onfocus="$(this).next('.ft').slideDown('fast');"
                                                                  style="resize: vertical; width: 400px;"><?= $abSettings->includeFiles ?></textarea>
                 <div class="ft" style="display: none;">
                     <div class="fileTreeDiv"></div>
