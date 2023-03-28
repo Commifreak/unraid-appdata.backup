@@ -299,7 +299,7 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
                 foreach ($container['Volumes'] ?? [] as $volume) {
                     $volumes[] = explode(":", $volume)[0];
                 }
-                $volumes = implode("; ", $volumes);
+                $volumes = implode("<br />", $volumes);
 
                 if (empty($volumes)) {
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
@@ -321,7 +321,7 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
 <blockquote class='inline_help'>
 <dl>
 <dt>Configured volumes</dt>
-<dd>$volumes</dd>
+<dd><div style="display: table">$volumes</div></dd>
 
 <dt>Verify Backup?</dt>
 <dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
