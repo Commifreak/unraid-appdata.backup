@@ -231,6 +231,27 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+if ($abSettings->backupVMMeta == 'yes') {
+
+    if (!file_exists(ABSettings::$qemuFolder)) {
+        ABHelper::backupLog("VM meta should be backed up but VM manager is disabled!", ABHelper::LOGLEVEL_WARN);
+    } else {
+        ABHelper::backupLog("VM meta backup enabled! Backing up...");
+
+        exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " " . ABSettings::$qemuFolder . '/', $output, $resultcode);
+        ABHelper::backupLog("tar return: $resultcode and output: " . print_r($output), ABHelper::LOGLEVEL_DEBUG);
+        if ($resultcode != 0) {
+            ABHelper::backupLog("Error while backing up VM XMLs. Please see debug log!", ABHelper::LOGLEVEL_ERR);
+        } else {
+            ABHelper::backupLog("Done!");
+        }
+    }
+}
+
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 foreach ($sortedStopContainers as $container) {
     $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
     if ($containerSettings['updateContainer'] == 'yes') {

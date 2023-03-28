@@ -60,6 +60,10 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
                 paths!</small></dt>
         <dd><input type="checkbox" id="restoreItemExtraFiles" name="restoreItem[extraFiles]"> Yes</dd>
         <br/>
+        <dt><b>Restore VM meta?:</b><br/><small><b>CAUTION!</b> Restore will override /etc/libvirt/qemu contents!
+                Restart VM manager after restore!</small></dt>
+        <dd><input type="checkbox" id="restoreItemVmMeta" name="restoreItem[vmMeta]"> Yes</dd>
+        <br/>
         <dt><b>Restore templates?:</b></dt>
         <dd>
             <div style="display: table;" id="restoreTemplatesDD"></div>
@@ -125,6 +129,14 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
                 } else {
                     $('#restoreItemExtraFiles').removeAttr('disabled');
                     $('#restoreItemExtraFiles').prop('checked', false);
+                }
+
+                if (!data.result.vmMeta) {
+                    $('#restoreItemVmMeta').attr('disabled', 'disabled');
+                    $('#restoreItemVmMeta').prop('checked', false);
+                } else {
+                    $('#restoreItemVmMeta').removeAttr('disabled');
+                    $('#restoreItemVmMeta').prop('checked', false);
                 }
 
                 if (data.result.templateFiles) {

@@ -170,6 +170,18 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
         <p>This puts a compressed copy of your flash drive inside the backup as well.</p>
     </blockquote>
 
+    <dl>
+        <dt><b>Backup VM meta?</b></dt>
+        <dd><select id='backupVMMeta' name="backupVMMeta" data-setting="<?= $abSettings->backupVMMeta ?>">
+                <option value='yes'>Yes</option>
+                <option value='no'>No</option>
+            </select></dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p>This saves <code>/etc/libvirt/qemu</code></p>
+    </blockquote>
+
     <div class="title"><span class="left"><i
                     class="fa fa-clock-o title"></i>Notifications, scheduling and retention</span>
     </div>

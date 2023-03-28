@@ -26,6 +26,8 @@ class ABSettings {
 
     public static $emhttpVars = '/var/local/emhttp/var.ini';
 
+    public static $qemuFolder = '/etc/libvirt/qemu';
+
 
     public string|null $backupMethod = 'oneAfterTheOther';
     public string|int $deleteBackupsOlderThan = '7';
@@ -48,6 +50,7 @@ class ABSettings {
     public string $postBackupScript = '';
     public string $postRunScript = '';
     public string $includeFiles = '';
+    public string $backupVMMeta = 'yes';
 
     public function __construct() {
         $sFile = self::getConfigPath();

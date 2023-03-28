@@ -74,16 +74,24 @@ if (isset($_GET['action'])) {
                 'configFile'    => false,
                 'containers'    => false,
                 'extraFiles'    => false,
-                'templateFiles' => false
+                'templateFiles' => false,
+                'vmMeta'        => false
             ];
 
             $backupFiles = scandir($item);
+
+
+            /**
+             * @Todo: write a meta file to the backup which holds the following infos. Makes changes in the structure more compatible
+             */
 
             foreach ($backupFiles as $backupFile) {
                 if ($backupFile == ABSettings::$settingsFile) {
                     $config['configFile'] = $backupFile;
                 } elseif (str_starts_with($backupFile, 'extra_files.tar')) {
                     $config['extraFiles'] = $backupFile;
+                } elseif ($backupFile == 'vm_meta.tgz') {
+                    $config['vmMeta'] = $backupFile;
                 } elseif (str_ends_with($backupFile, '.xml')) {
                     if (!$config['templateFiles']) {
                         $config['templateFiles'] = [];

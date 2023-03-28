@@ -156,6 +156,30 @@ if (!isset($config['restoreItem']['extraFiles'])) {
     }
 }
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
+if (!isset($config['restoreItem']['vmMeta'])) {
+    ABHelper::backupLog("Not restoring VM meta: not wanted");
+} else {
+
+    ABHelper::backupLog("Restoring VM meta...");
+
+    if (!file_exists(ABSettings::$qemuFolder)) {
+        ABHelper::backupLog("VM manager is NOT enabled! Cannot restore VM meta", ABHelper::LOGLEVEL_ERR);
+    } else {
+        exec('tar -C / -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz'), $output, $resultcode);
+        ABHelper::backupLog("tar return: $resultcode, output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
+        if ($resultcode != 0) {
+            ABHelper::backupLog("restore failed, please see debug log.", ABHelper::LOGLEVEL_ERR);
+        } else {
+            ABHelper::backupLog("restoring vm meta succeeded!");
+        }
+    }
+
+}
+
 abort:
 
 ABHelper::backupLog("Restore complete!");
