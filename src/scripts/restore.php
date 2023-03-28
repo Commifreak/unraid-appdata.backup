@@ -20,6 +20,9 @@ if (file_exists(ABSettings::$tempFolder)) {
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP (in restore mode)!! :D");
 
+$unraidVersion = parse_ini_file('/etc/unraid-version');
+ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
+
 file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
 
 /**
