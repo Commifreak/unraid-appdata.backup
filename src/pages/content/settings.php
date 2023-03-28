@@ -514,6 +514,11 @@ HTML;
         });
 
 
+        if (typeof caPluginUpdateCheck === "function") {
+            caPluginUpdateCheck("appdata.backup<?= $beta ?>.plg", {name: "Appdata Backup"});
+        }
+
+
     });
 
     $('#submitBtn').on('click', function () {
