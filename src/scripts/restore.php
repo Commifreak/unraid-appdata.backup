@@ -109,7 +109,7 @@ if (!isset($config['restoreItem']['containers'])) {
             $finalTarCommand = 'tar ' . implode(' ', $tarOptions);
             ABHelper::backupLog("Final tar command: " . $finalTarCommand, ABHelper::LOGLEVEL_DEBUG);
 
-            exec($finalTarCommand . " 2>&1", $output, $resultcode);
+            exec($finalTarCommand . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
             if ($resultcode > 0) {
                 ABHelper::backupLog("restore failed! More output available inside debuglog, maybe.", ABHelper::LOGLEVEL_ERR);
@@ -150,7 +150,7 @@ if (!isset($config['restoreItem']['extraFiles'])) {
     $finalTarCommand = 'tar ' . implode(' ', $tarOptions);
     ABHelper::backupLog("Final tar command: " . $finalTarCommand, ABHelper::LOGLEVEL_DEBUG);
 
-    exec($finalTarCommand . " 2>&1", $output, $resultcode);
+    exec($finalTarCommand . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
     ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
     if ($resultcode > 0) {
         ABHelper::backupLog("restore failed! More output available inside debuglog, maybe.", ABHelper::LOGLEVEL_ERR);
@@ -172,7 +172,7 @@ if (!isset($config['restoreItem']['vmMeta'])) {
     if (!file_exists(ABSettings::$qemuFolder)) {
         ABHelper::backupLog("VM manager is NOT enabled! Cannot restore VM meta", ABHelper::LOGLEVEL_ERR);
     } else {
-        exec('tar -C / -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz'), $output, $resultcode);
+        exec('tar -C / -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz') . " " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog("tar return: $resultcode, output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("restore failed, please see debug log.", ABHelper::LOGLEVEL_ERR);

@@ -36,7 +36,12 @@ if (isset($_GET['action'])) {
         case 'abort':
             touch(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
             if (ABHelper::scriptRunning()) {
-                ABHelper::backupLog("User want to abort - please wait until current action is done.", ABHelper::LOGLEVEL_WARN);
+                ABHelper::backupLog("User want to abort! Please wait!", ABHelper::LOGLEVEL_WARN);
+                $extCmdPid = ABHelper::scriptRunning(true);
+                if ($extCmdPid) {
+                    ABHelper::backupLog("External cmd running, stopping PID " . $extCmdPid, ABHelper::LOGLEVEL_DEBUG);
+                    exec("kill " . $extCmdPid);
+                }
             }
             break;
         case 'checkRestoreSource':

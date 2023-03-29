@@ -23,10 +23,12 @@ class ABSettings {
 
     public static $stateFileScriptRunning = 'running';
     public static $stateFileAbort = 'abort';
+    public static $stateExtCmd = 'extCmd';
 
     public static $emhttpVars = '/var/local/emhttp/var.ini';
 
     public static $qemuFolder = '/etc/libvirt/qemu';
+    public static $externalCmdPidCapture = '';
 
 
     public string|null $backupMethod = 'oneAfterTheOther';
@@ -155,3 +157,4 @@ if (str_contains(__DIR__, 'appdata.backup.beta')) {
     ABSettings::$cronFile   .= '_beta';
     ABSettings::$supportUrl = 'https://forums.unraid.net/topic/136995-pluginbeta-appdatabackup/';
 }
+ABSettings::$externalCmdPidCapture = '& echo $! > ' . escapeshellarg(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd) . ' && wait $!';

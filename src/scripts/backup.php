@@ -210,7 +210,7 @@ if ($abSettings->flashBackup == 'yes') {
     if (!file_exists($script)) {
         ABHelper::backupLog("The flash backup script is not available!", ABHelper::LOGLEVEL_ERR);
     } else {
-        exec($script, $output);
+        exec($script . " " . ABSettings::$externalCmdPidCapture, $output);
         ABHelper::backupLog("flash backup returned: " . implode(", ", $output), ABHelper::LOGLEVEL_DEBUG);
         if (empty($output[0])) {
             ABHelper::backupLog("Flash backup failed: no answer from script!", ABHelper::LOGLEVEL_ERR);
@@ -241,7 +241,7 @@ if ($abSettings->backupVMMeta == 'yes') {
     } else {
         ABHelper::backupLog("VM meta backup enabled! Backing up...");
 
-        exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " " . ABSettings::$qemuFolder . '/', $output, $resultcode);
+        exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " " . ABSettings::$qemuFolder . '/ ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog("tar return: $resultcode and output: " . print_r($output), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("Error while backing up VM XMLs. Please see debug log!", ABHelper::LOGLEVEL_ERR);
@@ -326,7 +326,7 @@ if (!empty($abSettings->includeFiles)) {
         ABHelper::backupLog("Generated tar command: " . $finalTarOptions, ABHelper::LOGLEVEL_DEBUG);
         ABHelper::backupLog("Backing up extra files...");
 
-        exec("tar " . $finalTarOptions . " 2>&1", $output, $resultcode);
+        exec("tar " . $finalTarOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {

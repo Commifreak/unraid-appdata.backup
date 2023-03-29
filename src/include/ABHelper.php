@@ -312,7 +312,7 @@ class ABHelper {
         self::backupLog("Generated tar command: " . $finalTarOptions, self::LOGLEVEL_DEBUG);
         self::backupLog("Backing up " . $container['Name'] . '...');
 
-        exec("tar " . $finalTarOptions . " 2>&1", $output, $resultcode);
+        exec("tar " . $finalTarOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {
@@ -329,7 +329,7 @@ class ABHelper {
         if ($containerSettings['verifyBackup'] == 'yes') {
             self::backupLog("Verifying backup...");
             self::backupLog("Final verify command: " . $finalTarVerifyOptions, self::LOGLEVEL_DEBUG);
-            exec("tar " . $finalTarVerifyOptions . " 2>&1", $output, $resultcode);
+            exec("tar " . $finalTarVerifyOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
             if ($resultcode > 0) {
@@ -353,16 +353,17 @@ class ABHelper {
         return true;
     }
 
-    public static function scriptRunning() {
-        $pid = @file_get_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
+    public static function scriptRunning($externalCmd = false) {
+        $pid = @file_get_contents(ABSettings::$tempFolder . '/' . ($externalCmd ? ABSettings::$stateExtCmd : ABSettings::$stateFileScriptRunning));
         if (!$pid) {
             // lockfile not there: process not running anymore
             return false;
         }
+        $pid = preg_replace("/\D/", '', $pid); // Filter any non digit characters.
         if (file_exists('/proc/' . $pid)) {
-            return true;
+            return $pid;
         } else {
-            @unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning); // Remove dead state file
+            @unlink(ABSettings::$tempFolder . '/' . ($externalCmd ? ABSettings::$stateExtCmd : ABSettings::$stateFileScriptRunning)); // Remove dead state file
             return false;
         }
     }
