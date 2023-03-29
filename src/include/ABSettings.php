@@ -37,15 +37,15 @@ class ABSettings {
     public string $destination = '';
     public string $compression = 'yes';
     public array $defaults = [
-        'verifyBackup'        => 'yes',
-        'ignoreBackupErrorss' => 'no',
-        'updateContainer'     => 'no',
+        'verifyBackup'       => 'yes',
+        'ignoreBackupErrors' => 'no',
+        'updateContainer'    => 'no',
 
         // The following are hidden, container special default settings
-        'skip'                => 'no',
-        'exclude'             => '',
-        'dontStop'            => 'no',
-        'backupExtVolumes'    => 'no'
+        'skip'               => 'no',
+        'exclude'            => '',
+        'dontStop'           => 'no',
+        'backupExtVolumes'   => 'no'
     ];
     public string $flashBackup = 'yes';
     public string $notification = 'errors';

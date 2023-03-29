@@ -30,6 +30,76 @@ if ($_POST) {
         mkdir(ABSettings::$pluginDir);
     }
 
+    if (isset($_POST['migrateConfig'])) {
+        $abSettings = json_decode(file_get_contents(ABSettings::getConfigPath()), true);
+        if (empty($abSettings)) {
+            $abSettings = [];
+        }
+        $oldConfig = json_decode(file_get_contents('/boot/config/plugins/ca.backup2/BackupOptions.json'), true);
+
+        if (!empty($oldConfig['destinationShare'])) {
+            $abSettings['destination'] = $oldConfig['destinationShare'];
+        }
+        if (!empty($oldConfig['compression'])) {
+            $abSettings['compression'] = $oldConfig['compression'] == 'yes' ? 'yes' : 'no';
+        }
+        if (!empty($oldConfig['verify'])) {
+            $abSettings['defaults']['verifyBackup'] = $oldConfig['verify'] == 'yes' ? 'yes' : 'no';
+        }
+        if (!empty($oldConfig['usbDestination'])) {
+            $abSettings['flashBackup'] = 'yes';
+        } else {
+            $abSettings['flashBackup'] = 'no';
+        }
+        if (!empty($oldConfig['xmlDestination'])) {
+            $abSettings['backupVMMeta'] = 'yes';
+        } else {
+            $abSettings['backupVMMeta'] = 'no';
+        }
+
+        if (!empty($oldConfig['stopScript'])) {
+            $abSettings['preRunScript'] = $oldConfig['stopScript']; // Yes, the postScript is executed as custom stop script at the beginning!
+        }
+        if (!empty($oldConfig['preStartScript'])) {
+            $abSettings['postBackupScript'] = $oldConfig['preStartScript']; // preStart is right before docker starts.
+        }
+        if (!empty($oldConfig['startScript'])) {
+            $abSettings['postRunScript'] = $oldConfig['startScript']; // start was executed after all actions are done
+        }
+
+
+        if (!empty($oldConfig['updateApps'])) {
+            $abSettings['defaults']['updateContainer'] = $oldConfig['updateApps'] == 'yes' ? 'yes' : 'no';
+        }
+        if (!empty($oldConfig['deleteOldBackup'])) {
+            $abSettings['deleteBackupsOlderThan'] = $oldConfig['deleteOldBackup'];
+        }
+
+        $abSettings['backupFrequency']           = $oldConfig['cronSetting'];
+        $abSettings['backupFrequencyWeekday']    = $oldConfig['cronDay'];
+        $abSettings['backupFrequencyDayOfMonth'] = $oldConfig['cronMonth'];
+        $abSettings['backupFrequencyHour']       = $oldConfig['cronHour'];
+        $abSettings['backupFrequencyMinute']     = $oldConfig['cronMinute'];
+        $abSettings['backupFrequencyCustom']     = $oldConfig['cronCustom'];
+
+        if (!empty($oldConfig['dontStop'])) {
+            foreach ($oldConfig['dontStop'] as $container => $true) {
+                $abSettings['containerSettings'][$container]['skip'] = 'yes';
+            }
+        }
+
+        file_put_contents(ABSettings::getConfigPath(), json_encode($abSettings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+
+        echo "<h1 style='color: green'>Settings were migrated!</h1><p>Please wait...</p><hr />";
+        echo "<script>
+window.setTimeout(function() {
+    window.location=window.location.href;
+}, 5000);
+</script>";
+        exit;
+    }
+
     //Hack the order string
     parse_str($_POST['containerOrder'], $containerOrder);
     $_POST = array_merge($_POST, $containerOrder);
@@ -71,6 +141,13 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
         margin: 0 15px 15px 15px;
     }
 
+    .caBackupMigrationDiv {
+        border: 1px solid red;
+        border-radius: 25px;
+        background: rgba(250, 33, 0, 0.3);
+        padding: 0 10px 10px 10px;
+    }
+
 </style>
 
 <div class="title"><span class="left"><i class="fa fa-hand-peace-o title"></i>Welcome to appdata backup</span></div>
@@ -79,6 +156,23 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
     docker containers) including some extras (update docker containers)</p>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Main settings</span></div>
+
+<?php
+if (file_exists('/boot/config/plugins/ca.backup2/BackupOptions.json')) {
+    echo <<<HTML
+<div class="caBackupMigrationDiv">
+<h3>Found configuration from old CA.Backup2 plugin!</h3>
+<p>Do you want to migrate your existing settings herein? <small>This message will be displayed as long as the old config is found. Remove the plugin to get rid of this message.</small></p>
+</div>
+<form action="" method="post">
+<input type="hidden" name="migrateConfig" value="" />
+<button>Migrate settings</button>
+</form>
+<hr />
+HTML;
+
+}
+?>
 
 <form method="post">
     <dl>
@@ -313,8 +407,8 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
         <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
         <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
-            <option value="yes">Yes</option>
             <option value="no">No</option>
+            <option value="yes">Yes</option>
     </select>
     </dd>
         </dl>
