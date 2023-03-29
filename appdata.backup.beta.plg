@@ -18,7 +18,7 @@
         🔨New  🩹Fix 🔧Change
 
 ### 2023.03.29b1
-- 🩹 "External" volumes (volumes not within ypur appdata) path are now being ignored. A future update will bring options to save them as well
+- 🩹 "External" volumes (volumes not within your appdata) path are now being ignored. A future update will bring options to save them as well
 - 🩹 Container exclude list was not working as expected
 - 🩹 Fixed settings page issues for Safari users
 - 🩹 Fixed an issue during applying default settings to containers
