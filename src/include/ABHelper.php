@@ -292,6 +292,10 @@ class ABHelper {
                 foreach ($excludes as $exclude) {
                     $exclude = rtrim($exclude, "/");
                     if (!empty($exclude)) {
+                        if (str_starts_with($exclude, $dockerAppdataPath)) {
+                            self::backupLog("exclude is within appdata apth: stripping appdata path", self::LOGLEVEL_DEBUG);
+                            $exclude = ltrim(str_replace($dockerAppdataPath, '', $exclude), '/');
+                        }
                         array_unshift($tarOptions, '--exclude ' . escapeshellarg($exclude)); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
                         array_unshift($tarVerifyOptions, '--exclude ' . escapeshellarg($exclude)); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
                     }

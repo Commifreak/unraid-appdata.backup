@@ -363,6 +363,7 @@ if ($errorOccured) {
                 $backupDate    = date_create_from_format("??_Ymd_His", $correctedItem);
                 if (!$backupDate) {
                     ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_DEBUG);
+                    $toKeep[] = $backupItem; // Keep the errornous object - Better safe than sorry.
                     continue;
                 }
                 if ($backupDate >= $nowDate && !in_array($backupItem, $toKeep)) {
