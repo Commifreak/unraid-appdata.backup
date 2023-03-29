@@ -295,14 +295,15 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
 
             foreach ($allContainers as $container) {
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = [];
-                foreach ($container['Volumes'] ?? [] as $volume) {
-                    $volumes[] = explode(":", $volume)[0];
-                }
-                $volumes = implode("<br />", $volumes);
+                $volumes = ABHelper::examineContainerVolumes($container);
 
                 if (empty($volumes)) {
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
+                } else {
+                    foreach ($volumes as $index => $volume) {
+                        $volumes[$index] = '<span class="fa ' . (str_starts_with($volume, '/') ? 'fa-external-link' : 'fa-folder') . '"> <code>' . $volume . '</code></span>';
+                    }
+                    $volumes = implode('<br />', $volumes);
                 }
 
                 $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
@@ -322,6 +323,12 @@ $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
 <dl>
 <dt>Configured volumes</dt>
 <dd><div style="display: table">$volumes</div></dd>
+
+<!--<dt>Save external volumes? <small>Those with an <i class="fa fa-external-link"></i></small></dt>
+<dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
+		<option value='no'>No</option>
+		<option value='yes'>Yes</option>
+	</select></dd>-->
 
 <dt>Verify Backup?</dt>
 <dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >

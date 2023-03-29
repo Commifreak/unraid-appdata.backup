@@ -36,7 +36,17 @@ class ABSettings {
     public string|int $keepMinBackups = '3';
     public string $destination = '';
     public string $compression = 'yes';
-    public array $defaults = ['verifyBackup' => 'yes', 'ignoreBackupErrors' => 'no', 'updateContainer' => 'no'];
+    public array $defaults = [
+        'verifyBackup'        => 'yes',
+        'ignoreBackupErrorss' => 'no',
+        'updateContainer'     => 'no',
+
+        // The following are hidden, container special default settings
+        'skip'                => 'no',
+        'exclude'             => '',
+        'dontStop'            => 'no',
+        'backupExtVolumes'    => 'no'
+    ];
     public string $flashBackup = 'yes';
     public string $notification = 'errors';
     public string $backupFrequency = 'disabled';
@@ -61,7 +71,11 @@ class ABSettings {
             if ($config) {
                 foreach ($config as $key => $value) {
                     if (property_exists($this, $key)) {
-                        $this->$key = $value;
+                        if ($key == 'defaults') {
+                            $this->$key = array_merge($this->defaults, $value);
+                        } else {
+                            $this->$key = $value;
+                        }
                     }
                 }
             }
@@ -103,10 +117,10 @@ class ABSettings {
             foreach ($defaultSettings as $setting => $value) {
                 $defaultSettings[$setting] = '';
             }
-            return array_merge($defaultSettings, ['skip' => 'no', 'exclude' => '', 'dontStop' => 'no']);
+            return $defaultSettings;
         }
 
-        $settings = $this->containerSettings[$name];
+        $settings = array_merge($this->defaults, $this->containerSettings[$name]);
 
         if ($setEmptyToDefault) {
             foreach ($settings as $setting => $value) {

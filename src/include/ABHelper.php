@@ -12,6 +12,7 @@ class ABHelper {
     const LOGLEVEL_ERR = 'error';
 
     private static $skipStartContainers = [];
+    private static $dockerCfg = null;
 
     public static $targetLogLevel = '';
 
@@ -74,6 +75,13 @@ class ABHelper {
 
         if (!file_exists(ABSettings::$tempFolder)) {
             mkdir(ABSettings::$tempFolder);
+        }
+
+        /**
+         * Do not log, if the script is not running
+         */
+        if (!self::scriptRunning()) {
+            return;
         }
 
         if ($level != self::LOGLEVEL_DEBUG) {
@@ -227,33 +235,25 @@ class ABHelper {
     public static function backupContainer($container, $destination) {
         global $abSettings, $dockerClient;
 
+        $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
-        $stripAppdataPath = '';
-
-        // Get default docker storage path
-        $dockerCfgFile = ABSettings::$dockerIniFile;
-        if (file_exists($dockerCfgFile)) {
-            self::backupLog("Parsing $dockerCfgFile", self::LOGLEVEL_DEBUG);
-            $dockerCfg = parse_ini_file($dockerCfgFile);
-            if ($dockerCfg) {
-                if (isset($dockerCfg['DOCKER_APP_CONFIG_PATH'])) {
-                    $stripAppdataPath = $dockerCfg['DOCKER_APP_CONFIG_PATH'];
-                    self::backupLog("Got default appdataPath: $stripAppdataPath", self::LOGLEVEL_DEBUG);
-                }
-            } else {
-                self::backupLog("Could not parse $dockerCfgFile", self::LOGLEVEL_DEBUG);
-            }
+        $volumes           = self::examineContainerVolumes($container);
+        $dockerAppdataPath = self::getDockerAppdataPath();
+        if (empty($dockerAppdataPath)) {
+            ABHelper::backupLog("Docker appdata path could not be examined!", self::LOGLEVEL_ERR);
+            return false;
         }
 
-
-        $volumes = [];
-        foreach ($container['Volumes'] ?? [] as $volume) {
-            $hostPath = explode(":", $volume)[0];
-            if (!empty($stripAppdataPath) && strpos($volume, $stripAppdataPath) === 0) {
-                $hostPath = ltrim(str_replace($stripAppdataPath, '', $hostPath), '/');
+        if (true || $containerSettings['backupExtVolumes'] == 'no') {
+            self::backupLog("Should NOT backup ext volumes, sanitizing...", self::LOGLEVEL_DEBUG);
+            foreach ($volumes as $index => $volume) {
+                if (str_starts_with($volume, '/')) {
+                    self::backupLog("Removing volume " . $volume . " because ext volumes should be skipped", self::LOGLEVEL_DEBUG);
+                    unset($volumes[$index]);
+                }
             }
-            $volumes[] = $hostPath;
         }
 
         if (empty($volumes)) {
@@ -265,14 +265,10 @@ class ABHelper {
 
         $destination = $destination . "/" . $container['Name'] . '.tar';
 
-        $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
-
         $tarVerifyOptions = ['--diff'];
         $tarOptions       = ['-c'];
 
-        if (!empty($stripAppdataPath)) {
-            $tarOptions[] = $tarVerifyOptions[] = '-C ' . escapeshellarg($stripAppdataPath);
-        }
+        $tarOptions[] = $tarVerifyOptions[] = '-C ' . escapeshellarg($dockerAppdataPath);
 
         switch ($abSettings->compression) {
             case 'yes':
@@ -337,6 +333,7 @@ class ABHelper {
                 /**
                  * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
                  */
+                $output = null; // Reset exec lines
                 exec("ps aux | grep docker", $output);
                 self::backupLog("ps aux docker:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
                 $nowRunning = $dockerClient->getDockerContainers();
@@ -370,5 +367,50 @@ class ABHelper {
 
     public static function abortRequested() {
         return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
+    }
+
+    public static function getDockerAppdataPath() {
+        $dockerAppdataPath = '';
+
+        // Get default docker storage path
+        if (empty(self::$dockerCfg)) {
+            $dockerCfgFile = ABSettings::$dockerIniFile;
+            if (file_exists($dockerCfgFile)) {
+                self::backupLog("Parsing $dockerCfgFile", self::LOGLEVEL_DEBUG);
+                $dockerCfg = parse_ini_file($dockerCfgFile);
+                ABHelper::backupLog("dockerCfg: " . PHP_EOL . print_r($dockerCfg, true), self::LOGLEVEL_DEBUG);
+                if ($dockerCfg) {
+                    self::$dockerCfg = $dockerCfg;
+                } else {
+                    self::backupLog("Could not parse $dockerCfgFile", self::LOGLEVEL_ERR);
+                    return false;
+                }
+            }
+        } else {
+            ABHelper::backupLog("Got dockerCfg from cache.", ABHelper::LOGLEVEL_DEBUG);
+            $dockerCfg = self::$dockerCfg;
+        }
+
+        if (isset($dockerCfg['DOCKER_APP_CONFIG_PATH'])) {
+            $dockerAppdataPath = $dockerCfg['DOCKER_APP_CONFIG_PATH'];
+        } else {
+            self::backupLog("dockerCfg is there but no Appdata path iset set??", self::LOGLEVEL_ERR);
+        }
+        return $dockerAppdataPath;
+    }
+
+    public static function examineContainerVolumes($container) {
+
+        $dockerAppdataPath = self::getDockerAppdataPath();
+
+        $volumes = [];
+        foreach ($container['Volumes'] ?? [] as $volume) {
+            $hostPath = explode(":", $volume)[0];
+            if (!empty($dockerAppdataPath) && str_starts_with($volume, $dockerAppdataPath)) {
+                $hostPath = ltrim(str_replace($dockerAppdataPath, '', $hostPath), '/');
+            }
+            $volumes[] = rtrim($hostPath, '/');
+        }
+        return $volumes;
     }
 }

@@ -8,7 +8,7 @@ use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
-require_once __DIR__ . '/../include/ABHelper.php';
+require_once dirname(__DIR__) . '/include/ABHelper.php';
 
 /**
  * Helper for later renaming of the backup folder to suffix -failed
@@ -29,12 +29,12 @@ if (file_exists(ABSettings::$tempFolder)) {
     exec("rm " . ABSettings::$tempFolder . '/*.log');
 } // Creation of tempFolder is handled by backupLog
 
-ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
-
 $unraidVersion = parse_ini_file('/etc/unraid-version');
-ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
 
 file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
+
+ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
+ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
 
 /**
  * Some basic checks
@@ -362,7 +362,7 @@ if ($errorOccured) {
                 $correctedItem = array_reverse(explode("/", $backupItem))[0];
                 $backupDate    = date_create_from_format("??_Ymd_His", $correctedItem);
                 if (!$backupDate) {
-                    ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_ERR);
+                    ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_DEBUG);
                     continue;
                 }
                 if ($backupDate >= $nowDate && !in_array($backupItem, $toKeep)) {
@@ -402,11 +402,11 @@ ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)")
 ABHelper::backupLog("❤️");
 
 if (!empty($abDestination)) {
+    copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
+    copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if ($errorOccured) {
-        exec('rm -rf ' . escapeshellarg($abDestination));
-    } else {
-        copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
-        copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
+        copy(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $abDestination . '/backup.debug.log');
+        rename($abDestination, $abDestination . '-failed');
     }
 }
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
