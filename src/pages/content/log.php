@@ -74,16 +74,16 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
                 data: {action: 'getBackupState'}
             }).done(function (data) {
             if (data.running) {
-                $('#abortBtn').removeAttr('disabled');
-                $('#dlLogBtn, #dlDbgLogBtn').attr('disabled', 'disabled');
+                $('#abortBtn').prop('disabled', false);
+                $('#dlLogBtn, #dlDbgLogBtn').prop('disabled', true);
                 $('#backupStatusText').removeClass('backupNotRunning');
                 $('#backupStatusText').addClass('backupRunning');
                 $('#abLog').animate({
                     scrollTop: $('#abLog')[0].scrollHeight - $('#abLog')[0].clientHeight
                 }, 100);
             } else {
-                $('#abortBtn').attr('disabled', 'disabled');
-                $('#dlLogBtn, #dlDbgLogBtn').removeAttr('disabled');
+                $('#abortBtn').prop('disabled', true);
+                $('#dlLogBtn, #dlDbgLogBtn').prop('disabled', false);
                 $('#backupStatusText').removeClass('backupRunning');
                 $('#backupStatusText').addClass('backupNotRunning');
             }

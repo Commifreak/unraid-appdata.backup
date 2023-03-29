@@ -116,26 +116,26 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
 
                 $('#restoreItemsDiv').show();
                 if (!data.result.configFile) {
-                    $('#restoreItemConfig').attr('disabled', 'disabled');
+                    $('#restoreItemConfig').prop('disabled', true);
                     $('#restoreItemConfig').prop('checked', false);
                 } else {
-                    $('#restoreItemConfig').removeAttr('disabled');
+                    $('#restoreItemConfig').prop('disabled', false);
                     $('#restoreItemConfig').prop('checked', false);
                 }
 
                 if (!data.result.extraFiles) {
-                    $('#restoreItemExtraFiles').attr('disabled', 'disabled');
+                    $('#restoreItemExtraFiles').prop('disabled', true);
                     $('#restoreItemExtraFiles').prop('checked', false);
                 } else {
-                    $('#restoreItemExtraFiles').removeAttr('disabled');
+                    $('#restoreItemExtraFiles').prop('disabled', false);
                     $('#restoreItemExtraFiles').prop('checked', false);
                 }
 
                 if (!data.result.vmMeta) {
-                    $('#restoreItemVmMeta').attr('disabled', 'disabled');
+                    $('#restoreItemVmMeta').prop('disabled', true);
                     $('#restoreItemVmMeta').prop('checked', false);
                 } else {
-                    $('#restoreItemVmMeta').removeAttr('disabled');
+                    $('#restoreItemVmMeta').prop('disabled', false);
                     $('#restoreItemVmMeta').prop('checked', false);
                 }
 

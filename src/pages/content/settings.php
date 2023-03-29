@@ -502,7 +502,7 @@ HTML;
         console.debug('Setting select settings...');
         $('select[data-setting]').each(function (index) {
             console.debug($(this).attr('name'), $(this).data('setting'));
-            $(this).find('option[value="' + $(this).data('setting') + '"]').attr('selected', 'selected');
+            $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
         });
 
 
