@@ -337,9 +337,12 @@ class ABHelper {
                 /**
                  * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
                  */
-                $output = null; // Reset exec lines
-                exec("ps aux | grep docker", $output);
-                self::backupLog("ps aux docker:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+                foreach ($volumes as $volume) {
+                    $output = null; // Reset exec lines
+                    exec("lsof -nl +D " . escapeshellarg($dockerAppdataPath) . "/" . escapeshellarg($volume), $output);
+                    self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+                }
+
                 $nowRunning = $dockerClient->getDockerContainers();
                 foreach ($nowRunning as $nowRunningContainer) {
                     if ($nowRunningContainer["Name"] == $container['Name']) {
@@ -400,7 +403,7 @@ class ABHelper {
         } else {
             self::backupLog("dockerCfg is there but no Appdata path iset set??", self::LOGLEVEL_ERR);
         }
-        return $dockerAppdataPath;
+        return rtrim($dockerAppdataPath, '/');
     }
 
     public static function examineContainerVolumes($container) {
