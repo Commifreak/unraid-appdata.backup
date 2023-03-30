@@ -56,8 +56,8 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
         <dt><b>Restore backup config?:</b></dt>
         <dd><input type="checkbox" id="restoreItemConfig" name="restoreItem[config]"> Yes</dd>
 
-        <dt><b>Restore extra files?:</b><br/><small><b>CAUTION!</b> The files will be restored on the ORIGINAL
-                paths!</small></dt>
+        <dt><b>Restore extra files?:</b><br/><small><b>CAUTION!</b> The files will be restored to the ORIGINAL
+                location!</small></dt>
         <dd><input type="checkbox" id="restoreItemExtraFiles" name="restoreItem[extraFiles]"> Yes</dd>
         <br/>
         <dt><b>Restore VM meta?:</b><br/><small><b>CAUTION!</b> Restore will override /etc/libvirt/qemu contents!
@@ -69,7 +69,8 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
             <div style="display: table;" id="restoreTemplatesDD"></div>
         </dd>
 
-        <dt><b>Restore containers?:</b></dt>
+        <dt><b>Restore containers?:</b><br/><small><b>CAUTION!</b> The files will be restored to the ORIGINAL
+                location!</small></dt>
         <dd>
             <div style="display: table;" id="restoreContainersDD"></div>
         </dd>
