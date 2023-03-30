@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.03.29b2">
-        <!ENTITY sha256    "f4a660fd3d819d95fb559b041776ed388408f0471f4dcdafbbf20c0182bd64e0">
+        <!ENTITY version   "2023.03.30b1">
+        <!ENTITY sha256    "772dd2b3dea441e040fe5a6c4caf6921716512d61c588187084f1ed593e7d280">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -17,7 +17,11 @@
         <![CDATA[
         🔨New  🩹Fix 🔧Change
 
-### 2023.03.29b1
+### 2023.03.30b1
+- 🔨 If a `ca.backup2` config file is detected, the plugin now offers a config migration
+- 🔧 Changed the way "internal" volumes are detected: `/mnt/{user,cache}/appdata` and optionally the docker set folder are treated as such. Any other volume mapping (`/mnt/user/downloads/myDownloads` as example) is "external". You can optionally backup those too (disabled by default)
+
+### 2023.03.29b2
 - 🩹 "External" volumes (volumes not within your appdata) path are now being ignored. A future update will bring options to save them as well
 - 🩹 Container exclude list was not working as expected
 - 🩹 Fixed settings page issues for Safari users
