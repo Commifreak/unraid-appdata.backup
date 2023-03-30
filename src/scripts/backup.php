@@ -300,7 +300,7 @@ if (!empty($abSettings->includeFiles)) {
         ABHelper::backupLog("The tested extra files list is empty! Skipping extra files", ABHelper::LOGLEVEL_WARN);
     } else {
         ABHelper::backupLog("Extra files to backup: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
-        $tarOptions = ['-c'];
+        $tarOptions = ['-c', '-P'];
 
         $destination = $abDestination . '/extra_files.tar';
 

@@ -389,13 +389,13 @@ HTML;
 
             foreach ($allContainers as $container) {
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = ABHelper::examineContainerVolumes($container);
+                $volumes = ABHelper::getContainerVolumes($container);
 
                 if (empty($volumes)) {
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $volumes[$index] = '<span class="fa ' . (str_starts_with($volume, '/') ? 'fa-external-link' : 'fa-folder') . '"> <code>' . $volume . '</code></span>';
+                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"> <code>' . $volume . '</code></span>';
                     }
                     $volumes = implode('<br />', $volumes);
                 }
@@ -415,14 +415,15 @@ HTML;
 
 <blockquote class='inline_help'>
 <dl>
-<dt>Configured volumes</dt>
+<dt>Configured volumes<br /><small><i class="fa fa-folder"></i> Appdata volume | <i class="fa fa-external-link"></i> Other/Extra volume</small></dt>
 <dd><div style="display: table">$volumes</div></dd>
+<br />
 
-<!--<dt>Save external volumes? <small>Those with an <i class="fa fa-external-link"></i></small></dt>
+<dt>Save external volumes?</dt>
 <dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
 		<option value='no'>No</option>
 		<option value='yes'>Yes</option>
-	</select></dd>-->
+	</select></dd>
 
 <dt>Verify Backup?</dt>
 <dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >

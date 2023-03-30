@@ -18,12 +18,12 @@ if (file_exists(ABSettings::$tempFolder)) {
     exec("rm " . ABSettings::$tempFolder . '/*.log');
 } // Creation of tempFolder is handled by backupLog
 
+file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
+
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP (in restore mode)!! :D");
 
 $unraidVersion = parse_ini_file('/etc/unraid-version');
 ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
-
-file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
 
 /**
  * Some basic checks
@@ -84,18 +84,11 @@ if (ABHelper::abortRequested()) {
 if (!isset($config['restoreItem']['containers'])) {
     ABHelper::backupLog("Not restoring containers: not wanted");
 } else {
-    $dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
-    if ($dockerCfg && isset($dockerCfg['DOCKER_APP_CONFIG_PATH'])) {
-        $appdataPath = $dockerCfg['DOCKER_APP_CONFIG_PATH'];
         foreach ($config['restoreItem']['containers'] as $container => $on) {
-            if (file_exists($appdataPath . '/' . explode('.', $container)[0])) {
-                ABHelper::backupLog("The destination already exists! Skipping.", ABHelper::LOGLEVEL_WARN);
-                continue;
-            }
             ABHelper::backupLog("Restoring $container");
 
             $tarOptions = [
-                '-C ' . escapeshellarg($appdataPath),
+                '-C /',
                 '-x',
                 '-f ' . escapeshellarg($restoreSource . '/' . $container)
             ];
@@ -121,9 +114,6 @@ if (!isset($config['restoreItem']['containers'])) {
                 goto abort;
             }
         }
-    } else {
-        ABHelper::backupLog("docker.cfg not found!", ABHelper::LOGLEVEL_ERR);
-    }
 }
 
 

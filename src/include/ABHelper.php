@@ -239,18 +239,17 @@ class ABHelper {
 
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
-        $volumes           = self::examineContainerVolumes($container);
-        $dockerAppdataPath = self::getDockerAppdataPath();
-        if (empty($dockerAppdataPath)) {
+        $volumes            = self::getContainerVolumes($container);
+        $dockerAppdataPaths = self::getDockerAppdataPaths();
+        if (empty($dockerAppdataPaths)) {
             ABHelper::backupLog("Docker appdata path could not be examined!", self::LOGLEVEL_ERR);
             return false;
         }
 
-        if (true || $containerSettings['backupExtVolumes'] == 'no') {
+        if ($containerSettings['backupExtVolumes'] == 'no') {
             self::backupLog("Should NOT backup ext volumes, sanitizing...", self::LOGLEVEL_DEBUG);
             foreach ($volumes as $index => $volume) {
-                if (str_starts_with($volume, '/')) {
-                    self::backupLog("Removing volume " . $volume . " because ext volumes should be skipped", self::LOGLEVEL_DEBUG);
+                if (!self::isVolumeWithinAppdata($volume)) {
                     unset($volumes[$index]);
                 }
             }
@@ -266,9 +265,7 @@ class ABHelper {
         $destination = $destination . "/" . $container['Name'] . '.tar';
 
         $tarVerifyOptions = ['--diff'];
-        $tarOptions       = ['-c'];
-
-        $tarOptions[] = $tarVerifyOptions[] = '-C ' . escapeshellarg($dockerAppdataPath);
+        $tarOptions       = ['-c', '-P'];
 
         switch ($abSettings->compression) {
             case 'yes':
@@ -292,10 +289,6 @@ class ABHelper {
                 foreach ($excludes as $exclude) {
                     $exclude = rtrim($exclude, "/");
                     if (!empty($exclude)) {
-                        if (str_starts_with($exclude, $dockerAppdataPath)) {
-                            self::backupLog("exclude is within appdata apth: stripping appdata path", self::LOGLEVEL_DEBUG);
-                            $exclude = ltrim(str_replace($dockerAppdataPath, '', $exclude), '/');
-                        }
                         array_unshift($tarOptions, '--exclude ' . escapeshellarg($exclude)); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
                         array_unshift($tarVerifyOptions, '--exclude ' . escapeshellarg($exclude)); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
                     }
@@ -339,7 +332,7 @@ class ABHelper {
                  */
                 foreach ($volumes as $volume) {
                     $output = null; // Reset exec lines
-                    exec("lsof -nl +D " . escapeshellarg($dockerAppdataPath) . "/" . escapeshellarg($volume), $output);
+                    exec("lsof -nl +D " . escapeshellarg($volume), $output);
                     self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
                 }
 
@@ -372,12 +365,19 @@ class ABHelper {
         }
     }
 
+    /**
+     * @return bool
+     * @todo: register_shutdown_function? in beiden Scripts? Damit kill und goto :end?
+     */
     public static function abortRequested() {
         return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
     }
 
-    public static function getDockerAppdataPath() {
-        $dockerAppdataPath = '';
+    public static function getDockerAppdataPaths() {
+        $dockerAppdataPaths = [
+            '/mnt/user/appdata', // no trailing /!
+            '/mnt/cache/appdata'
+        ];
 
         // Get default docker storage path
         if (empty(self::$dockerCfg)) {
@@ -398,26 +398,33 @@ class ABHelper {
             $dockerCfg = self::$dockerCfg;
         }
 
-        if (isset($dockerCfg['DOCKER_APP_CONFIG_PATH'])) {
-            $dockerAppdataPath = $dockerCfg['DOCKER_APP_CONFIG_PATH'];
-        } else {
-            self::backupLog("dockerCfg is there but no Appdata path iset set??", self::LOGLEVEL_ERR);
+        if (isset($dockerCfg['DOCKER_APP_CONFIG_PATH']) && !in_array(rtrim($dockerCfg['DOCKER_APP_CONFIG_PATH'], '/'), $dockerAppdataPaths)) {
+            $dockerAppdataPaths[] = rtrim($dockerCfg['DOCKER_APP_CONFIG_PATH'], '/');
         }
-        return rtrim($dockerAppdataPath, '/');
+
+        return $dockerAppdataPaths;
     }
 
-    public static function examineContainerVolumes($container) {
-
-        $dockerAppdataPath = self::getDockerAppdataPath();
+    public static function getContainerVolumes($container) {
 
         $volumes = [];
         foreach ($container['Volumes'] ?? [] as $volume) {
-            $hostPath = explode(":", $volume)[0];
-            if (!empty($dockerAppdataPath) && str_starts_with($volume, $dockerAppdataPath)) {
-                $hostPath = ltrim(str_replace($dockerAppdataPath, '', $hostPath), '/');
-            }
+            $hostPath  = explode(":", $volume)[0];
             $volumes[] = rtrim($hostPath, '/');
         }
         return $volumes;
+    }
+
+    public static function isVolumeWithinAppdata($volume) {
+        $dockerAppdataPaths = self::getDockerAppdataPaths();
+
+        foreach ($dockerAppdataPaths as $appdataPath) {
+            ABHelper::backupLog("$appdataPath within $volume?", ABHelper::LOGLEVEL_DEBUG);
+            if (str_starts_with($volume, $appdataPath)) {
+                ABHelper::backupLog("YES!", ABHelper::LOGLEVEL_DEBUG);
+                return true;
+            }
+        }
+        return false;
     }
 }
