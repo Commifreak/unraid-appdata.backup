@@ -4,6 +4,7 @@ use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
 /** @var $dockerCfg array */
+/** @var $abSettings ABSettings */
 
 if (!ABHelper::isArrayOnline()) {
     echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
@@ -33,13 +34,15 @@ if (!file_exists(ABSettings::$dockerIniFile)) {
     <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 1: Select source</span></div>
     <dt><b>Backup source:</b></dt>
     <dd><input type='text' required class='ftAttach' id="restoreSource" name="restoreSource"
+               value="<?= empty($abSettings->destination) ? '' : $abSettings->destination ?>"
                data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true">
         <button onclick="checkRestoreSource(); return false;">Check</button>
     </dd>
 
-    <dt><b>Backup destination:</b><br/><small>Only applicable for container appdata</small></dt>
-    <dd><?= $dockerCfg['DOCKER_APP_CONFIG_PATH'] ?><br/><small>The source share is being read from the docker default
-            appdata path. If it does not seem correct, <a href="/Settings/DockerSettings">change it</a></small></dd>
+    <dt><b>Backup destination:</b></dt>
+    <dd>The destination will be the same as it were during backup. If the destination does not exist, it will be
+        created. Any existing data will be overwritten!
+    </dd>
 
     <div id="restoreBackupDiv" style="display: none">
         <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 2: Select backup</span></div>
