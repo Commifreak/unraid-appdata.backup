@@ -26,7 +26,11 @@ if ($_POST) {
     }
 
     if (isset($_POST['migrateConfig'])) {
-        $abSettings = json_decode(file_get_contents(ABSettings::getConfigPath()), true);
+        $abSettings = null;
+        if (file_exists(ABSettings::getConfigPath())) {
+            $abSettings = json_decode(file_get_contents(ABSettings::getConfigPath()), true);
+        }
+
         if (empty($abSettings)) {
             $abSettings = [];
         }
@@ -35,6 +39,16 @@ if ($_POST) {
         if (!empty($oldConfig['destinationShare'])) {
             $abSettings['destination'] = $oldConfig['destinationShare'];
         }
+
+        $abSettings['allowedSources'] = ['/mnt/user/appdata', '/mnt/cache/appdata'];
+
+        if (!empty($oldConfig['source'])) {
+            if (!in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
+                $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
+            }
+            $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅
+        }
+
         if (!empty($oldConfig['compression'])) {
             $abSettings['compression'] = $oldConfig['compression'] == 'yes' ? 'yes' : 'no';
         }
