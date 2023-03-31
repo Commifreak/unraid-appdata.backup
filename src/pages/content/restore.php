@@ -22,56 +22,85 @@ if (!ABHelper::isArrayOnline()) {
     <li>Restore extra files</li>
     <li>Restore backup configuration</li>
 </ul>
-<p><b>You have to create the docker containers by its restored template yourself!</b></p>
+<br/>
+<p>The restore process <b>is NOT able to</b>:</p>
+<ul>
+    <li>Create your docker containers</li>
+    <li>Take care of stopping containers prior restore
+        <ul>
+            <li>Please stop all maybe affected containers yourself prior to the restore!</li>
+        </ul>
+    </li>
+</ul>
 
 <form id="restoreForm">
 
     <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 1: Select source</span></div>
-    <dt><b>Backup source:</b></dt>
-    <dd><input type='text' required class='ftAttach' id="restoreSource" name="restoreSource"
-               value="<?= empty($abSettings->destination) ? '' : $abSettings->destination ?>"
-               data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true">
-        <button onclick="checkRestoreSource(); return false;">Check</button>
-    </dd>
+    <dl>
+        <dt><b>Backup source:</b></dt>
+        <dd><input type='text' required class='ftAttach' id="restoreSource" name="restoreSource"
+                   value="<?= empty($abSettings->destination) ? '' : $abSettings->destination ?>"
+                   data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true">
+        </dd>
+    </dl>
 
-    <dt><b>Backup destination:</b></dt>
-    <dd>The destination will be the same as it were during backup. If the destination does not exist, it will be
-        created. Any existing data will be overwritten!
-    </dd>
+    <blockquote class='inline_help'>
+        <p>The folder which contains <code>ab_xxx</code> folders.</p>
+    </blockquote>
+
+
+    <dl>
+        <dt><b>Backup destination:</b></dt>
+        <dd>
+            <div style="display: table">The <b>default</b> destination will be the same as it were during backup. If the
+                destination does not exist, it will be
+                created. Any existing data will be overwritten!<br/>
+                <b>If you want to force a custom destination</b>, enter it below. The archive will be extracted
+                there<br/>
+                <b>THIS IS ONLY APPLICABLE TO ARCHIVES!</b><br/>
+                <input type='text' class='ftAttach' id="customRestoreDestination" name="customRestoreDestination"
+                       placeholder="Force custom destination"
+                       data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"><br/><br/>
+                <button onclick="checkRestoreSource(); return false;">Next</button>
+            </div>
+        </dd>
+    </dl>
+
 
     <div id="restoreBackupDiv" style="display: none">
         <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 2: Select backup</span></div>
-        <dt><b>Select backup:</b></dt>
-        <dd><select required id="restoreBackupList" name="restoreBackupList"></select>
-            <button onclick="checkRestoreItem(); return false;">Next</button>
-        </dd>
+        <dl>
+            <dt><b>Select backup:</b></dt>
+            <dd><select required id="restoreBackupList" name="restoreBackupList"></select>
+                <button onclick="checkRestoreItem(); return false;">Next</button>
+            </dd>
+        </dl>
     </div>
 
     <div id="restoreItemsDiv" style="display: none">
         <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 3: Select items</span></div>
         <p><b>Note:</b> If one item is not selectable, the chosen backup does not contain needed data.</p>
 
-        <dt><b>Restore backup config?:</b></dt>
-        <dd><input type="checkbox" id="restoreItemConfig" name="restoreItem[config]"> Yes</dd>
+        <dl>
+            <dt><b>Restore backup config?:</b></dt>
+            <dd><input type="checkbox" id="restoreItemConfig" name="restoreItem[config]"> Yes</dd>
 
-        <dt><b>Restore extra files?:</b><br/><small><b>CAUTION!</b> The files will be restored to the ORIGINAL
-                location!</small></dt>
-        <dd><input type="checkbox" id="restoreItemExtraFiles" name="restoreItem[extraFiles]"> Yes</dd>
-        <br/>
-        <dt><b>Restore VM meta?:</b><br/><small><b>CAUTION!</b> Restore will override /etc/libvirt/qemu contents!
-                Restart VM manager after restore!</small></dt>
-        <dd><input type="checkbox" id="restoreItemVmMeta" name="restoreItem[vmMeta]"> Yes</dd>
-        <br/>
-        <dt><b>Restore templates?:</b></dt>
-        <dd>
-            <div style="display: table;" id="restoreTemplatesDD"></div>
-        </dd>
+            <dt><b>Restore extra files?:</b></dt>
+            <dd><input type="checkbox" id="restoreItemExtraFiles" name="restoreItem[extraFiles]"> Yes</dd>
+            <br/>
+            <dt><b>Restore VM meta?:</b></dt>
+            <dd><input type="checkbox" id="restoreItemVmMeta" name="restoreItem[vmMeta]"> Yes</dd>
+            <br/>
+            <dt><b>Restore templates?:</b></dt>
+            <dd>
+                <div style="display: table;" id="restoreTemplatesDD"></div>
+            </dd>
 
-        <dt><b>Restore containers?:</b><br/><small><b>CAUTION!</b> The files will be restored to the ORIGINAL
-                location!</small></dt>
-        <dd>
-            <div style="display: table;" id="restoreContainersDD"></div>
-        </dd>
+            <dt><b>Restore containers?:</b></dt>
+            <dd>
+                <div style="display: table;" id="restoreContainersDD"></div>
+            </dd>
+        </dl>
 
         <button onclick="startRestore(); return false;">Do it!</button>
     </div>
