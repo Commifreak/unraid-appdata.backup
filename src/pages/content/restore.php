@@ -3,7 +3,6 @@
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
-/** @var $dockerCfg array */
 /** @var $abSettings ABSettings */
 
 if (!ABHelper::isArrayOnline()) {
@@ -11,10 +10,6 @@ if (!ABHelper::isArrayOnline()) {
     return;
 }
 
-if (!file_exists(ABSettings::$dockerIniFile)) {
-    echo "<h1>Oooopsie!</h1><p>The docker config could not be found!</p>";
-    return;
-}
 
 ?>
 

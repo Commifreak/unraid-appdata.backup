@@ -8,10 +8,6 @@ if (!ABHelper::isArrayOnline()) {
     return;
 }
 
-if (!file_exists(ABSettings::$dockerIniFile)) {
-    echo "<h1>Oooopsie!</h1><p>The docker config could not be found!</p>";
-    return;
-}
 ?>
 
 <style>

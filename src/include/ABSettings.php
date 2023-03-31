@@ -10,7 +10,6 @@ require_once __DIR__ . '/ABHelper.php';
 class ABSettings {
 
     public static $appName = 'appdata.backup';
-    public static $dockerIniFile = '/boot/config/docker.cfg';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
     public static $cronFile = '/etc/cron.d/appdata_backup';
@@ -34,6 +33,7 @@ class ABSettings {
     public string|null $backupMethod = 'oneAfterTheOther';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
+    public array $allowedSources = ['/mnt/user/appdata', '/mnt/cache/appdata'];
     public string $destination = '';
     public string $compression = 'yes';
     public array $defaults = [
@@ -71,10 +71,16 @@ class ABSettings {
             if ($config) {
                 foreach ($config as $key => $value) {
                     if (property_exists($this, $key)) {
-                        if ($key == 'defaults') {
-                            $this->$key = array_merge($this->defaults, $value);
-                        } else {
-                            $this->$key = $value;
+                        switch ($key) {
+                            case 'defaults':
+                                $this->$key = array_merge($this->defaults, $value);
+                                break;
+                            case 'allowedSources':
+                                $this->$key = explode("\r\n", $value);
+                                break;
+                            default:
+                                $this->$key = $value;
+                                break;
                         }
                     }
                 }

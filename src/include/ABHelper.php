@@ -12,7 +12,6 @@ class ABHelper {
     const LOGLEVEL_ERR = 'error';
 
     private static $skipStartContainers = [];
-    private static $dockerCfg = null;
 
     public static $targetLogLevel = '';
 
@@ -240,11 +239,6 @@ class ABHelper {
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
         $volumes            = self::getContainerVolumes($container);
-        $dockerAppdataPaths = self::getDockerAppdataPaths();
-        if (empty($dockerAppdataPaths)) {
-            ABHelper::backupLog("Docker appdata path could not be examined!", self::LOGLEVEL_ERR);
-            return false;
-        }
 
         if ($containerSettings['backupExtVolumes'] == 'no') {
             self::backupLog("Should NOT backup ext volumes, sanitizing...", self::LOGLEVEL_DEBUG);
@@ -373,38 +367,6 @@ class ABHelper {
         return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
     }
 
-    public static function getDockerAppdataPaths() {
-        $dockerAppdataPaths = [
-            '/mnt/user/appdata', // no trailing /!
-            '/mnt/cache/appdata'
-        ];
-
-        // Get default docker storage path
-        if (empty(self::$dockerCfg)) {
-            $dockerCfgFile = ABSettings::$dockerIniFile;
-            if (file_exists($dockerCfgFile)) {
-                self::backupLog("Parsing $dockerCfgFile", self::LOGLEVEL_DEBUG);
-                $dockerCfg = parse_ini_file($dockerCfgFile);
-                ABHelper::backupLog("dockerCfg: " . PHP_EOL . print_r($dockerCfg, true), self::LOGLEVEL_DEBUG);
-                if ($dockerCfg) {
-                    self::$dockerCfg = $dockerCfg;
-                } else {
-                    self::backupLog("Could not parse $dockerCfgFile", self::LOGLEVEL_ERR);
-                    return false;
-                }
-            }
-        } else {
-            ABHelper::backupLog("Got dockerCfg from cache.", ABHelper::LOGLEVEL_DEBUG);
-            $dockerCfg = self::$dockerCfg;
-        }
-
-        if (isset($dockerCfg['DOCKER_APP_CONFIG_PATH']) && !in_array(rtrim($dockerCfg['DOCKER_APP_CONFIG_PATH'], '/'), $dockerAppdataPaths)) {
-            $dockerAppdataPaths[] = rtrim($dockerCfg['DOCKER_APP_CONFIG_PATH'], '/');
-        }
-
-        return $dockerAppdataPaths;
-    }
-
     public static function getContainerVolumes($container) {
 
         $volumes = [];
@@ -416,9 +378,10 @@ class ABHelper {
     }
 
     public static function isVolumeWithinAppdata($volume) {
-        $dockerAppdataPaths = self::getDockerAppdataPaths();
+        global $abSettings;
 
-        foreach ($dockerAppdataPaths as $appdataPath) {
+        foreach ($abSettings->allowedSources as $appdataPath) {
+            $appdataPath = rtrim($appdataPath, '/');
             ABHelper::backupLog("$appdataPath within $volume?", ABHelper::LOGLEVEL_DEBUG);
             if (str_starts_with($volume, $appdataPath)) {
                 ABHelper::backupLog("YES!", ABHelper::LOGLEVEL_DEBUG);

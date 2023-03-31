@@ -16,11 +16,6 @@ if (!ABHelper::isArrayOnline()) {
     return;
 }
 
-if (!file_exists(ABSettings::$dockerIniFile)) {
-    echo "<h1>Oooopsie!</h1><p>The docker config could not be found!</p>";
-    return;
-}
-
 
 /**
  * POST Handling
@@ -102,6 +97,9 @@ window.setTimeout(function() {
 
     //Hack the order string
     parse_str($_POST['containerOrder'], $containerOrder);
+    if (empty($containerOrder)) {
+        $containerOrder = [];
+    }
     $_POST = array_merge($_POST, $containerOrder);
     file_put_contents(ABSettings::getConfigPath(), json_encode($_POST, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
@@ -111,8 +109,6 @@ $abSettings = new ABSettings();
 if ($_POST) {
     $abSettings->checkCron();
 }
-
-$dockerCfg = parse_ini_file(ABSettings::$dockerIniFile);
 
 
 ?>
@@ -174,7 +170,7 @@ HTML;
 }
 ?>
 
-<form method="post">
+<form id="abSettingsForm" method="post">
     <dl>
         <dt><b>Backup type</b></dt>
         <dd><select id="backupMethod" name="backupMethod" data-setting="<?= $abSettings->backupMethod ?>">
@@ -197,13 +193,41 @@ HTML;
         <dd><input id='keepMinBackups' name="keepMinBackups" type='number' value='<?= $abSettings->keepMinBackups ?>'
                    placeholder='Leave empty to disable'/></dd>
 
-        <dt><b>Appdata Share (Source):</b></dt>
-        <dd><?= $dockerCfg['DOCKER_APP_CONFIG_PATH'] ?><br/><small>The source share is being read from the docker
-                default appdata path. All container paths are read from their
-                volume configuration</small>
-        </dd>
 
-        <dt><b>Destination Share:</b></dt>
+        <dt><b>Appdata source(s)</b></dt>
+        <dd>
+            <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
+                                                                 onfocus="$(this).next('.ft').slideDown('fast');"
+                                                                 style="resize: vertical; width: 400px;"
+                                                                 onchange="$('#abSettingsForm').submit();"><?= implode("\r\n", $abSettings->allowedSources) ?></textarea>
+                <div class="ft" style="display: none;">
+                    <div class="fileTreeDiv"></div>
+                    <button onclick="addSelectionToList(this);  return false;">Add to list</button>
+                </div>
+            </div>
+        </dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p>Please set all of your appdata paths here. Appdata paths are paths, in which you place your docker data. The
+            default path is <code>/mnt/user/appdata</code> or <code>/mnt/cache/appdata</code>.<br/>
+            If you use any other path, replace it here. If you use multiple appdata paths, set every path via the file
+            browser or paste it here.</p>
+        <p><b>IMPORTANT:</b> This plugin differentiates between internal and external volume paths.<br/>
+            <b>Internal</b> ones are volume mappings, which store the main appdata
+            (<code>/mnt/user/appdata/mariadb/</code> would be such a volume). These will be backed up always!<br/>
+            <b>External</b> ones are volume mappings, which can hold extra data,
+            (<code>/mnt/user/Downloads/jDownlaoder</code> would be such a volume). These will be backed up optionally
+            only.
+        </p>
+        <p>The plugin detects every volume mapping within your set "appdata source(s)" as internal ones. Everything else
+            is being detected as external.</p>
+        <p>The list of volume mappings is directly read from your container configuration!</p>
+    </blockquote>
+
+    <dl>
+
+        <dt><b>Backup destination:</b></dt>
         <dd><input type='text' required class='ftAttach' id="destination" name="destination"
                    value="<?= $abSettings->destination ?>"
                    data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"></dd>
@@ -415,7 +439,7 @@ HTML;
 
 <blockquote class='inline_help'>
 <dl>
-<dt>Configured volumes<br /><small><i class="fa fa-folder"></i> Appdata volume | <i class="fa fa-external-link"></i> Other/Extra volume</small></dt>
+<dt>Configured volumes<br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
 <dd><div style="display: table">$volumes</div></dd>
 <br />
 
@@ -635,7 +659,7 @@ HTML;
 
     });
 
-    $('#submitBtn').on('click', function () {
+    $('#abSettingsForm').on('submit', function () {
         $('#containerOrder').val($('#containerOrderSortable').sortable('serialize', {
             expression: /(.+?)[-=_](.+)/
         }));
