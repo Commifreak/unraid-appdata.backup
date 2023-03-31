@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.03.30b1">
-        <!ENTITY sha256    "772dd2b3dea441e040fe5a6c4caf6921716512d61c588187084f1ed593e7d280">
+        <!ENTITY version   "2023.03.31b1">
+        <!ENTITY sha256    "4eb9103501474bc867a7b25141fbcc36e97471d40bf600e74a3fc59c17be58e2">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -15,7 +15,12 @@
 
     <CHANGES>
         <![CDATA[
-        🔨New  🩹Fix 🔧Change
+        🔧New  🩹Fix 🔧Change
+
+### 2023.03.31b1
+- 🔨 The restore default source path defaults now to the current set destination path
+- 🔧 You can choose a custom restore path now. This could be useful for advanced restoring. **This only applies to extracted archives, not for the config/xmls!**
+- 🔧 Changed the internal/external volume mapping detection again: You can choose ALL of your valid appdata sources now. **Open help for `Appdata source(s)` for further explanation**
 
 ### 2023.03.30b1
 - 🔨 If a `ca.backup2` config file is detected, the plugin now offers a config migration
