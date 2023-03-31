@@ -4,6 +4,9 @@ namespace unraid\plugins\AppdataBackup;
 
 require_once __DIR__ . '/ABSettings.php';
 
+/**
+ * This is a helper class for some useful things
+ */
 class ABHelper {
 
     const LOGLEVEL_DEBUG = 'debug';
@@ -11,6 +14,9 @@ class ABHelper {
     const LOGLEVEL_WARN = 'warning';
     const LOGLEVEL_ERR = 'error';
 
+    /**
+     * @var array Store some temporary data about containers, which should skipped during start routine
+     */
     private static $skipStartContainers = [];
 
     public static $targetLogLevel = '';
@@ -36,6 +42,11 @@ class ABHelper {
         return false;
     }
 
+    /**
+     * Takes care of every hook script execution
+     * @param $script string
+     * @return bool
+     */
     public static function handlePrePostScript($script) {
         if (empty($script)) {
             self::backupLog("Not executing script: Not set!", self::LOGLEVEL_DEBUG);
@@ -110,6 +121,11 @@ class ABHelper {
         shell_exec($command);
     }
 
+    /**
+     * Stops a container
+     * @param $container array
+     * @return true|void
+     */
     public static function stopContainer($container) {
         global $dockerClient, $abSettings;
 
@@ -140,6 +156,11 @@ class ABHelper {
         }
     }
 
+    /**
+     * Starts a container
+     * @param $container array
+     * @return void
+     */
     public static function startContainer($container) {
         global $dockerClient;
 
@@ -231,6 +252,12 @@ class ABHelper {
     }
 
 
+    /**
+     * The heart func: take care of creating a backup!
+     * @param $container array
+     * @param $destination string The generated backup folder for this backup run
+     * @return bool
+     */
     public static function backupContainer($container, $destination) {
         global $abSettings, $dockerClient;
 
@@ -238,7 +265,7 @@ class ABHelper {
 
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
-        $volumes            = self::getContainerVolumes($container);
+        $volumes = self::getContainerVolumes($container);
 
         if ($containerSettings['backupExtVolumes'] == 'no') {
             self::backupLog("Should NOT backup ext volumes, sanitizing...", self::LOGLEVEL_DEBUG);
@@ -344,6 +371,11 @@ class ABHelper {
         return true;
     }
 
+    /**
+     * Checks, if backup/restore is running
+     * @param $externalCmd bool Check external commands (tar or something else) which was started by backup/restore?
+     * @return array|false|string|string[]|null
+     */
     public static function scriptRunning($externalCmd = false) {
         $pid = @file_get_contents(ABSettings::$tempFolder . '/' . ($externalCmd ? ABSettings::$stateExtCmd : ABSettings::$stateFileScriptRunning));
         if (!$pid) {
@@ -367,6 +399,11 @@ class ABHelper {
         return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
     }
 
+    /**
+     * Helper, to get all host paths of a container
+     * @param $container
+     * @return array
+     */
     public static function getContainerVolumes($container) {
 
         $volumes = [];
@@ -377,6 +414,11 @@ class ABHelper {
         return $volumes;
     }
 
+    /**
+     * Is a given volume internal or external mapping?
+     * @param $volume
+     * @return bool
+     */
     public static function isVolumeWithinAppdata($volume) {
         global $abSettings;
 
