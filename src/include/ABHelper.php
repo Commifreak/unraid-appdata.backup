@@ -58,6 +58,8 @@ class ABHelper {
                 self::backupLog($script . ' is not executable! Skipping!', self::LOGLEVEL_ERR);
                 return false;
             }
+
+            $output = $resultcode = null;
             self::backupLog("Executing script $script...");
             exec(escapeshellarg($script), $output, $resultcode);
             self::backupLog($script . " CODE: " . $resultcode . " - " . print_r($output, true), self::LOGLEVEL_DEBUG);
@@ -326,6 +328,7 @@ class ABHelper {
         self::backupLog("Generated tar command: " . $finalTarOptions, self::LOGLEVEL_DEBUG);
         self::backupLog("Backing up " . $container['Name'] . '...');
 
+        $output = $resultcode = null;
         exec("tar " . $finalTarOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
@@ -343,6 +346,8 @@ class ABHelper {
         if ($containerSettings['verifyBackup'] == 'yes') {
             self::backupLog("Verifying backup...");
             self::backupLog("Final verify command: " . $finalTarVerifyOptions, self::LOGLEVEL_DEBUG);
+
+            $output = $resultcode = null;
             exec("tar " . $finalTarVerifyOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
@@ -352,7 +357,7 @@ class ABHelper {
                  * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
                  */
                 foreach ($volumes as $volume) {
-                    $output = null; // Reset exec lines
+                    $output = null;
                     exec("lsof -nl +D " . escapeshellarg($volume), $output);
                     self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
                 }
