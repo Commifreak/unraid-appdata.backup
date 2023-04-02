@@ -223,10 +223,11 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Please set all of your appdata paths here. Appdata paths are paths, in which you place your docker data. The
+        <p>Please set your appdata paths here. Appdata paths are paths, which holds your docker data. The
             default path is <code>/mnt/user/appdata</code> or <code>/mnt/cache/appdata</code>.<br/>
-            If you use any other path, replace it here. If you use multiple appdata paths, set every path via the file
-            browser or paste it here.</p>
+            If you use any other path, put it in here. If you use multiple appdata paths, set every path via the file
+            browser or paste it here. <b>Everything within those set paths</b> will be considered as "internal" volume
+            (see below).</p>
         <p><b>IMPORTANT:</b> This plugin differentiates between internal and external volume paths.<br/>
             <b>Internal</b> ones are volume mappings, which store the main appdata
             (<code>/mnt/user/appdata/mariadb/</code> would be such a volume). These will be backed up always!<br/>

@@ -429,9 +429,8 @@ class ABHelper {
 
         foreach ($abSettings->allowedSources as $appdataPath) {
             $appdataPath = rtrim($appdataPath, '/');
-            ABHelper::backupLog("$appdataPath within $volume?", ABHelper::LOGLEVEL_DEBUG);
             if (str_starts_with($volume, $appdataPath)) {
-                ABHelper::backupLog("YES!", ABHelper::LOGLEVEL_DEBUG);
+                ABHelper::backupLog(__METHOD__ . ": $appdataPath IS within $volume.", ABHelper::LOGLEVEL_DEBUG);
                 return true;
             }
         }
