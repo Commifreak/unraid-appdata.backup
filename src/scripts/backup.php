@@ -10,6 +10,8 @@ use unraid\plugins\AppdataBackup\ABSettings;
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
 require_once dirname(__DIR__) . '/include/ABHelper.php';
 
+//set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
+
 /**
  * Helper for later renaming of the backup folder to suffix -failed
  */

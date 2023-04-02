@@ -371,7 +371,7 @@ class ABHelper {
                 return $containerSettings['ignoreBackupErrors'] == 'yes';
             }
         } else {
-            ABHelper::backupLog("Skipping verification for this container because its not wanted!", ABHelper::LOGLEVEL_WARN);
+            self::backupLog("Skipping verification for this container because its not wanted!", self::LOGLEVEL_WARN);
         }
         return true;
     }
@@ -430,10 +430,17 @@ class ABHelper {
         foreach ($abSettings->allowedSources as $appdataPath) {
             $appdataPath = rtrim($appdataPath, '/');
             if (str_starts_with($volume, $appdataPath)) {
-                ABHelper::backupLog(__METHOD__ . ": $appdataPath IS within $volume.", ABHelper::LOGLEVEL_DEBUG);
+                self::backupLog(__METHOD__ . ": $appdataPath IS within $volume.", self::LOGLEVEL_DEBUG);
                 return true;
             }
         }
         return false;
+    }
+
+    public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline): bool {
+        self::notify("Appdata Backup PHP error", "Appdata Backup PHP error", "got PHP error: $errno / $errstr $errfile:$errline", 'alert');
+        self::backupLog("got PHP error: $errno / $errstr $errfile:$errline", self::LOGLEVEL_ERR);
+
+        return true;
     }
 }
