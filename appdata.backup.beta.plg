@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.03.31b2">
-        <!ENTITY sha256    "1dca8e4966d50c3e5bb7102c5d2f2d5964521fb39d151669f35399f017bcb4c0">
+        <!ENTITY version   "2023.04.03b1">
+        <!ENTITY sha256    "e6c1a6dfd0ddfb669a3ba0409296fea89fa6e29f42e35a49e831ec4e0f738b87">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         🔧New  🩹Fix 🔧Change
+
+###2023.04.03b1
+- 🩹 Fixed file selector for dark themes __(Unraids global config variable handling needs a revamp...)__
 
 ### 2023.03.31b2
 - 🩹 ca.backup2 migration: Migrate old source path as well

@@ -125,10 +125,16 @@ if ($_POST) {
 }
 
 
+/**
+ * Please stop using global variables 🤐
+ */
+$bgcolor = strstr('white,azure', $display['theme']) ? '#f2f2f2' : '#1c1c1c';
+
 ?>
 <link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.filetree.css') ?>">
 <style>
     .fileTree {
+        background: <?=$bgcolor?>;
         width: 300px;
         max-height: 150px;
         overflow-y: scroll;
