@@ -18,7 +18,7 @@
         🔧New  🩹Fix 🔧Change
 
 ###2023.04.03b1
-- 🩹 Fixed file selector for dark themes *(Unraids global config variable handling needs a revamp...)*
+- 🩹 Fixed file selector for dark themes _(Unraids global config variable handling needs a revamp...)_
 
 ### 2023.03.31b2
 - 🩹 ca.backup2 migration: Migrate old source path as well
