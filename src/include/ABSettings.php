@@ -13,7 +13,7 @@ class ABSettings {
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
     public static $cronFile = '/etc/cron.d/appdata_backup';
-    public static $supportUrl = '';
+    public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
     public static $tempFolder = '/tmp/appdata.backup';
 

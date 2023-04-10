@@ -619,9 +619,10 @@ HTML;
                 href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
 
     <dt>Want to say "Thank You"?</dt>
-    <dd>Thanks! 😊 Thanks for using! You must know, <abbr title="All community developers">we</abbr> make those plugins
-        with ❤️ (and a lot of ☕). If you like, you can donate via <a href="https://paypal.me/robinkluth/"
-                                                                     target="_blank"><i class="fa fa-paypal"></i> PayPal</a>.
+    <dd>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins
+        with ❤️ (and a lot of ☕). If you like the work, you can donate via <a href="https://paypal.me/robinkluth/"
+                                                                              target="_blank"><i
+                    class="fa fa-paypal"></i> PayPal</a>.
     </dd>
 
     <dt>GitHub repository</dt>
