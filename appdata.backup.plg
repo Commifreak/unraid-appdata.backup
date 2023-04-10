@@ -16,6 +16,8 @@
     <CHANGES>
         <![CDATA[
         🔧New  🩹Fix 🔧Change
+###2023.04.10
+- 🚀 First stable version!
 
 ###2023.04.03b1
 - 🩹 Fixed file selector for dark themes _(Unraids global config variable handling needs a revamp...)_
