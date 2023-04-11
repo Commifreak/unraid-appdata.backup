@@ -523,7 +523,9 @@ HTML;
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
                 foreach ($sortedContainers as $container) {
                     $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-
+                    echo <<<HTML
+<li id="containerOrder_{$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+HTML;
 
                 }
                 ?>
