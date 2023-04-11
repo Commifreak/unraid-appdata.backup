@@ -78,6 +78,10 @@ class ABSettings {
                             case 'allowedSources':
                                 $this->$key = explode("\r\n", $value);
                                 break;
+                            case 'containerOrder':
+                                // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
+                                $this->$key = is_array($value) ? $value : [];
+                                break;
                             default:
                                 $this->$key = $value;
                                 break;

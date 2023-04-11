@@ -112,9 +112,10 @@ window.setTimeout(function() {
     //Hack the order string
     parse_str($_POST['containerOrder'], $containerOrder);
     if (empty($containerOrder)) {
-        $containerOrder = [];
+        $_POST['containerOrder'] = [];
+    } else {
+        $_POST = array_merge($_POST, $containerOrder);
     }
-    $_POST = array_merge($_POST, $containerOrder);
     file_put_contents(ABSettings::getConfigPath(), json_encode($_POST, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
 
@@ -522,9 +523,7 @@ HTML;
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
                 foreach ($sortedContainers as $container) {
                     $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                    echo <<<HTML
-<li id="containerOrder_{$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
-HTML;
+
 
                 }
                 ?>
