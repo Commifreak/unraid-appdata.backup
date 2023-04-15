@@ -90,9 +90,9 @@ class ABHelper {
         }
 
         /**
-         * Do not log, if the script is not running
+         * Do not log, if the script is not running or the requesting pid is not the script pid
          */
-        if (!self::scriptRunning()) {
+        if (!self::scriptRunning() || self::scriptRunning() != getmypid()) {
             return;
         }
 
@@ -270,12 +270,14 @@ class ABHelper {
         $volumes = self::getContainerVolumes($container);
 
         if ($containerSettings['backupExtVolumes'] == 'no') {
-            self::backupLog("Should NOT backup ext volumes, sanitizing...", self::LOGLEVEL_DEBUG);
+            self::backupLog("Should NOT backup ext volumes, sanitizing them...", self::LOGLEVEL_DEBUG);
             foreach ($volumes as $index => $volume) {
                 if (!self::isVolumeWithinAppdata($volume)) {
                     unset($volumes[$index]);
                 }
             }
+        } else {
+            self::backupLog("Backing up EXTERNAL volumes, because its enabled!", self::LOGLEVEL_WARN);
         }
 
         if (empty($volumes)) {
@@ -430,7 +432,7 @@ class ABHelper {
         foreach ($abSettings->allowedSources as $appdataPath) {
             $appdataPath = rtrim($appdataPath, '/');
             if (str_starts_with($volume, $appdataPath)) {
-                self::backupLog(__METHOD__ . ": $appdataPath IS within $volume.", self::LOGLEVEL_DEBUG);
+                self::backupLog("Volume '$volume' IS within AppdataPath '$appdataPath'!", self::LOGLEVEL_DEBUG);
                 return true;
             }
         }

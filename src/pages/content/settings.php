@@ -129,7 +129,11 @@ if ($_POST) {
 /**
  * Please stop using global variables 🤐
  */
-$bgcolor = strstr('white,azure', $display['theme']) ? '#f2f2f2' : '#1c1c1c';
+if (strstr('white,azure', $display['theme'])) {
+    $bgcolor = '#f2f2f2';
+} else {
+    $bgcolor = '#1c1c1c';
+}
 
 ?>
 <link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.filetree.css') ?>">
@@ -143,6 +147,14 @@ $bgcolor = strstr('white,azure', $display['theme']) ? '#f2f2f2' : '#1c1c1c';
         position: absolute;
         z-index: 100;
         display: none
+    }
+
+    blockquote select, blockquote textarea {
+        color: black;
+    }
+
+    blockquote textarea:focus {
+        background-color: unset;
     }
 
     .dockerSettings dt {
