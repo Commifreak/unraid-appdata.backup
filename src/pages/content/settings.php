@@ -439,7 +439,8 @@ HTML;
 
     <div style="display: flex;">
         <div class="dockerSettings" style="flex-grow: 1; flex-basis: 0;">
-            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings</span></div>
+            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings. <b>Click on container name to open</b></span>
+            </div>
 
             <?php
             $dockerClient  = new DockerClient();
