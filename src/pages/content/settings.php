@@ -132,7 +132,8 @@ if ($_POST) {
 if (strstr('white,azure', $display['theme'])) {
     $bgcolor = '#f2f2f2';
 } else {
-    $bgcolor = '#1c1c1c';
+    $bgcolor      = '#1c1c1c';
+    $selectBorder = '1px solid #1c1b1b';
 }
 
 ?>
@@ -156,6 +157,13 @@ if (strstr('white,azure', $display['theme'])) {
     blockquote textarea:focus {
         background-color: unset;
     }
+
+    <?php if(isset($selectBorder)): ?>
+    blockquote select, blockquote textarea {
+        border-bottom: <?= $selectBorder ?>;
+    }
+
+    <?php endif; ?>
 
     .dockerSettings dt {
         width: 54%;
