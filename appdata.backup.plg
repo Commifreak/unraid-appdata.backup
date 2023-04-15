@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.04.15">
-        <!ENTITY sha256    "63ce6f1c4f274af6405e1c9ecb15503175a31efc344d02d390810a2153debe47">
+        <!ENTITY version   "2023.04.15a">
+        <!ENTITY sha256    "b3c2368eb35bfb3f98b1eb95cb534d698351666978b8a578b6a42c4c2c0b0305">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         🔧New  🩹Fix 🔧Change
+####2023.04.15a
+- Fix CSS bottom border for dark themes
+- Optimize volume detection for useless mappings (from our point of view)
+
 ###2023.04.15
 - Fix colors on dark themes inside per-container-settings section
 - Add a warning to the log, if "external volume backup" is enabled for a container
