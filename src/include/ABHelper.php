@@ -415,7 +415,11 @@ class ABHelper {
 
         $volumes = [];
         foreach ($container['Volumes'] ?? [] as $volume) {
-            $hostPath  = explode(":", $volume)[0];
+            $hostPath = rtrim(explode(":", $volume)[0], '/');
+            if (empty($hostPath)) {
+                self::backupLog("This volume is empty (rootfs mapped??)! Ignoring.", self::LOGLEVEL_DEBUG);
+                continue;
+            }
             $volumes[] = rtrim($hostPath, '/');
         }
         return $volumes;
