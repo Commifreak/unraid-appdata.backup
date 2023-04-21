@@ -22,7 +22,7 @@
 - 🩹 Remove container volume mapping, if it is listed in allowed sources
 - 🩹 Scheduling no longer sends mails like "cron for user root ....."
 - 🔧 Ignore volumes which match against exact exclusion path within container settings
-- 🔧 Ignore nested volume (`/mnt/user/appdata/test`, `/mnt/ser/appdata/text/config` => The latter would be ignored now)
+- 🔧 Ignore nested volume (`/mnt/user/appdata/test`, `/mnt/user/appdata/text/config` => The latter would be ignored now)
 
 ###2023.04.15a
 - 🩹 Fix CSS bottom border for dark themes
