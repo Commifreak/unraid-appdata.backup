@@ -430,6 +430,23 @@ class ABHelper {
             }
             $volumes[] = rtrim($hostPath, '/');
         }
+
+        usort($volumes, function ($a, $b) {
+            return strlen($a) <=> strlen($b);
+        });
+        self::backupLog("usorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
+
+        /**
+         * Check volumes against nesting
+         */
+        foreach ($volumes as $volume) {
+            foreach ($volumes as $key2 => $volume2) {
+                if (str_starts_with($volume2, $volume) && $volume !== $volume2) {
+                    self::backupLog("'$volume2' is within mapped volume '$volume'! Ignoring!", self::LOGLEVEL_WARN);
+                    unset($volumes[$key2]);
+                }
+            }
+        }
         return $volumes;
     }
 
