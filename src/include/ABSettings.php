@@ -167,7 +167,7 @@ class ABSettings {
         }
 
         if (!empty($cronSettings)) {
-            $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php';
+            $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null 2>&1';
             file_put_contents(ABSettings::$cronFile, $cronSettings);
 
             // Restart dcron, that forces a re-read of /etc/cron.d. Otherwise, we have to wait one hour, because dcron read cron.d files once an hour.
