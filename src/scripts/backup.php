@@ -31,11 +31,13 @@ if (file_exists(ABSettings::$tempFolder)) {
     exec("rm " . ABSettings::$tempFolder . '/*.log');
 } // Creation of tempFolder is handled by backupLog
 
-$unraidVersion = parse_ini_file('/etc/unraid-version');
-
 file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
+$unraidVersion           = parse_ini_file('/etc/unraid-version');
+$emhttpPluginVersionPath = '/usr/local/emhttp/plugins/' . ABSettings::$appName . '/version';
+$pluginVersion           = file_exists($emhttpPluginVersionPath) ? file_get_contents($emhttpPluginVersionPath) : null;
+ABHelper::backupLog("plugin-version: " . $pluginVersion, ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
 
 /**

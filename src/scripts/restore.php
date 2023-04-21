@@ -24,7 +24,10 @@ file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRu
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP (in restore mode)!! :D");
 
-$unraidVersion = parse_ini_file('/etc/unraid-version');
+$unraidVersion           = parse_ini_file('/etc/unraid-version');
+$emhttpPluginVersionPath = '/usr/local/emhttp/plugins/' . ABSettings::$appName . '/version';
+$pluginVersion           = file_exists($emhttpPluginVersionPath) ? file_get_contents($emhttpPluginVersionPath) : null;
+ABHelper::backupLog("plugin-version: " . $pluginVersion, ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
 
 /**
