@@ -412,12 +412,17 @@ class ABHelper {
      * @return array
      */
     public static function getContainerVolumes($container) {
+        global $abSettings;
 
         $volumes = [];
         foreach ($container['Volumes'] ?? [] as $volume) {
             $hostPath = rtrim(explode(":", $volume)[0], '/');
             if (empty($hostPath)) {
                 self::backupLog("This volume is empty (rootfs mapped??)! Ignoring.", self::LOGLEVEL_DEBUG);
+                continue;
+            }
+            if (in_array($hostPath, $abSettings->allowedSources)) {
+                self::backupLog("Removing container mapping \"$hostPath\" because it is a source path!", self::LOGLEVEL_WARN);
                 continue;
             }
             $volumes[] = rtrim($hostPath, '/');
@@ -434,7 +439,6 @@ class ABHelper {
         global $abSettings;
 
         foreach ($abSettings->allowedSources as $appdataPath) {
-            $appdataPath = rtrim($appdataPath, '/');
             if (str_starts_with($volume, $appdataPath)) {
                 self::backupLog("Volume '$volume' IS within AppdataPath '$appdataPath'!", self::LOGLEVEL_DEBUG);
                 return true;

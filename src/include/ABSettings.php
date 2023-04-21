@@ -33,6 +33,10 @@ class ABSettings {
     public string|null $backupMethod = 'oneAfterTheOther';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
+
+    /**
+     * @var array|string[] Allowed sources - WITHOUT trailing slash!
+     */
     public array $allowedSources = ['/mnt/user/appdata', '/mnt/cache/appdata'];
     public string $destination = '';
     public string $compression = 'yes';
@@ -76,7 +80,11 @@ class ABSettings {
                                 $this->$key = array_merge($this->defaults, $value);
                                 break;
                             case 'allowedSources':
-                                $this->$key = explode("\r\n", $value);
+                                $sources = explode("\r\n", $value);
+                                foreach ($sources as $sourceKey => $source) {
+                                    $sources[$sourceKey] = rtrim($source, '/');
+                                }
+                                $this->$key = $sources;
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
