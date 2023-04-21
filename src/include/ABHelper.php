@@ -263,12 +263,11 @@ class ABHelper {
     public static function backupContainer($container, $destination) {
         global $abSettings, $dockerClient;
 
-        $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
-
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
         $volumes = self::getContainerVolumes($container);
 
+        $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
         if ($containerSettings['backupExtVolumes'] == 'no') {
             self::backupLog("Should NOT backup ext volumes, sanitizing them...", self::LOGLEVEL_DEBUG);
             foreach ($volumes as $index => $volume) {
@@ -280,6 +279,25 @@ class ABHelper {
             self::backupLog("Backing up EXTERNAL volumes, because its enabled!", self::LOGLEVEL_WARN);
         }
 
+        $tarExcludes = [];
+        if (!empty($containerSettings['exclude'])) {
+            self::backupLog("Container got excludes! " . PHP_EOL . print_r($containerSettings['exclude'], true), self::LOGLEVEL_DEBUG);
+            $excludes = explode("\r\n", $containerSettings['exclude']);
+            if (!empty($excludes)) {
+                foreach ($excludes as $exclude) {
+                    $exclude = rtrim($exclude, "/");
+                    if (!empty($exclude)) {
+                        if (($volumeKey = array_search($exclude, $volumes)) !== false) {
+                            self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair", self::LOGLEVEL_WARN);
+                            unset($volumes[$volumeKey]);
+                            continue;
+                        }
+                        $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
+                    }
+                }
+            }
+        }
+
         if (empty($volumes)) {
             self::backupLog($container['Name'] . " does not have any volume to back up! Skipping");
             return true;
@@ -289,8 +307,8 @@ class ABHelper {
 
         $destination = $destination . "/" . $container['Name'] . '.tar';
 
-        $tarVerifyOptions = ['--diff'];
-        $tarOptions       = ['-c', '-P'];
+        $tarVerifyOptions = array_merge($tarExcludes, ['--diff']);      // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
+        $tarOptions       = array_merge($tarExcludes, ['-c', '-P']);    // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
 
         switch ($abSettings->compression) {
             case 'yes':
@@ -305,21 +323,6 @@ class ABHelper {
         self::backupLog("Target archive: " . $destination, self::LOGLEVEL_DEBUG);
 
         $tarOptions[] = $tarVerifyOptions[] = '-f ' . escapeshellarg($destination); // Destination file
-
-
-        if (!empty($containerSettings['exclude'])) {
-            self::backupLog("Container got excludes! " . PHP_EOL . print_r($containerSettings['exclude'], true), self::LOGLEVEL_DEBUG);
-            $excludes = explode("\r\n", $containerSettings['exclude']);
-            if (!empty($excludes)) {
-                foreach ($excludes as $exclude) {
-                    $exclude = rtrim($exclude, "/");
-                    if (!empty($exclude)) {
-                        array_unshift($tarOptions, '--exclude ' . escapeshellarg($exclude)); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
-                        array_unshift($tarVerifyOptions, '--exclude ' . escapeshellarg($exclude)); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
-                    }
-                }
-            }
-        }
 
         foreach ($volumes as $volume) {
             $tarOptions[] = $tarVerifyOptions[] = escapeshellarg($volume);
