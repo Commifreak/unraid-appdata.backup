@@ -15,7 +15,7 @@
 
     <CHANGES>
         <![CDATA[
-        🔧New  🩹Fix 🔧Change
+        🔨New  🩹Fix 🔧Change
 
 ###2023.04.21b1
 - 🩹 Fix applying default settings to per-container settings for new config options [Bug report](https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1252597)
