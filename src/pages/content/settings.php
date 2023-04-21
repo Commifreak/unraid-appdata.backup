@@ -467,9 +467,11 @@ HTML;
                     $volumes = implode('<br />', $volumes);
                 }
 
-                $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
+                $containerSetting     = $abSettings->getContainerSpecificSettings($container['Name'], false);
+                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
                 echo <<<HTML
+<div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl>
         <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
         <dd><label for="{$container['Name']}_skip">Skip?</label>

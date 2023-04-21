@@ -120,14 +120,12 @@ class ABSettings {
      */
     public function getContainerSpecificSettings($name, $setEmptyToDefault = true) {
         if (!isset($this->containerSettings[$name])) {
-            $defaultSettings = $this->defaults;
             /**
              * Container is unknown, init its values with empty strings = 'use default'
              */
-            foreach ($defaultSettings as $setting => $value) {
-                $defaultSettings[$setting] = '';
+            foreach ($this->defaults as $setting => $value) {
+                $this->containerSettings[$name][$setting] = '';
             }
-            return $defaultSettings;
         }
 
         $settings = array_merge($this->defaults, $this->containerSettings[$name]);
