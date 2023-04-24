@@ -169,7 +169,7 @@ class ABSettings {
                 $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " " . $this->backupFrequencyDayOfMonth . " * *";
                 break;
             default:
-                $cronSettings .= '';
+                $cronSettings = '';
         }
 
         if (!empty($cronSettings)) {
