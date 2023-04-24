@@ -1,11 +1,12 @@
 # Appdata Backup
-![GitHub all releases](https://img.shields.io/github/downloads/Commifreak/unraid-appdata.backup/total)
-
 
 ### for Unraid 6.12+
 Support: https://forums.unraid.net/topic/137710-plugin-appdatabackup/
 
 ### Stats
+
+Overall downloads ever:  
+![GitHub all releases](https://img.shields.io/github/downloads/Commifreak/unraid-appdata.backup/total)
 
 Stable:  
 ![GitHub release (latest by date)](https://img.shields.io/github/downloads/Commifreak/unraid-appdata.backup/latest/total)
