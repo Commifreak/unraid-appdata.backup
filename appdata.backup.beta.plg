@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.04.21b1">
-        <!ENTITY sha256    "14d20a8b25975bf4b2cfd6408e7337853bfeb97c2047a334fbd5335f65e0f665">
+        <!ENTITY version   "2023.04.24b5">
+        <!ENTITY sha256    "5dc03439f1b1dc5db103c3751d182ed9381ce3a229709437dd31755a27bc1ba6">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,11 @@
     <CHANGES>
         <![CDATA[
         🔨New  🩹Fix 🔧Change
+
+###2023.04.24b5
+- 🩹 Fix cronjob again: Scheduling got lost after reboot - now using the right way for cron update
+- 🩹 Fix nested volume check
+- 🩹 Apply nested volume check only with paths within appdata (allowed sources)
 
 ###2023.04.21b1
 - 🩹 Fix applying default settings to per-container settings for new config options [Bug report](https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1252597)
@@ -109,7 +114,17 @@
 
     <FILE Run="/bin/bash">
         <INLINE>
+            # Because we used the wrong way for reloading cron, we should remove the old remnants...
+            if [ -f "/etc/cron.d/appdata_backup_beta" ]; then
+            rm /etc/cron.d/appdata_backup_beta
+            echo "Found old cron file, refreshing it..."
+            fi
             php &plugdir;/scripts/checkCron.php
+        </INLINE>
+    </FILE>
+
+    <FILE Run="/bin/bash">
+        <INLINE>
             echo Adapting some things, because this is beta
             rm &plugdir;/*.page
             cp &plugdir;/pages/*.page &plugdir;
@@ -143,9 +158,9 @@
     <FILE Run="/bin/bash" Method="remove">
         <INLINE>
             echo "Uninstalling... 😭 Maybe I see you again soon. Bye!"
-            php &plugdir;/scripts/checkCron.php --remove
             rm -rf &plugdir; 2>/dev/null
             rm -rf /boot/config/plugins/&name;
+            update_cron # Let cron know, we removed the target files :P
             echo "Uninstall done."
         </INLINE>
     </FILE>
