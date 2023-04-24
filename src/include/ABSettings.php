@@ -175,12 +175,11 @@ class ABSettings {
         if (!empty($cronSettings)) {
             $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null 2>&1';
             file_put_contents(ABSettings::$pluginDir . '/' . ABSettings::$cronFile, $cronSettings . PHP_EOL);
-
-            // Let dcron know our changes via update_cron
-            exec("update_cron");
         } elseif (file_exists(ABSettings::$pluginDir . '/' . ABSettings::$cronFile)) {
             unlink(ABSettings::$pluginDir . '/' . ABSettings::$cronFile);
         }
+        // Let dcron know our changes via update_cron
+        exec("update_cron");
     }
 
 }
