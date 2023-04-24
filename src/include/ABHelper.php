@@ -18,6 +18,7 @@ class ABHelper {
      * @var array Store some temporary data about containers, which should skipped during start routine
      */
     private static $skipStartContainers = [];
+    public static $currentContainerName;
 
     public static $targetLogLevel = '';
 
@@ -96,10 +97,14 @@ class ABHelper {
             return;
         }
 
+        $section = empty(self::$currentContainerName) ? 'Main' : self::$currentContainerName;
+
+        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][$section][$level]") . " $msg" . ($newLine ? "\n" : '');
+
         if ($level != self::LOGLEVEL_DEBUG) {
-            file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$logfile, ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][$level]") . " $msg" . ($newLine ? "\n" : ''), FILE_APPEND);
+            file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $logLine, FILE_APPEND);
         }
-        file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][$level]") . " $msg" . ($newLine ? "\n" : ''), FILE_APPEND);
+        file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $logLine, FILE_APPEND);
 
         if ($level == self::LOGLEVEL_ERR && self::$targetLogLevel == self::LOGLEVEL_ERR) {
             self::notify("Error occured!", "Please check the backup log tab!", $msg, 'alert');
@@ -425,7 +430,7 @@ class ABHelper {
                 continue;
             }
             if (in_array($hostPath, $abSettings->allowedSources)) {
-                self::backupLog("Removing container mapping \"$hostPath\" because it is a source path!", self::LOGLEVEL_WARN);
+                self::backupLog("Removing container mapping \"$hostPath\" because it is a source path!");
                 continue;
             }
             $volumes[] = rtrim($hostPath, '/');
@@ -441,8 +446,8 @@ class ABHelper {
          */
         foreach ($volumes as $volume) {
             foreach ($volumes as $key2 => $volume2) {
-                if (str_starts_with($volume2, $volume) && $volume !== $volume2) {
-                    self::backupLog("'$volume2' is within mapped volume '$volume'! Ignoring!", self::LOGLEVEL_WARN);
+                if ($volume !== $volume2 && self::isVolumeWithinAppdata($volume) && str_starts_with($volume2, $volume . '/')) { // Trailing slash assures whole directory name => https://forums.unraid.net/topic/136995-pluginbeta-appdatabackup/?do=findComment&comment=1255260
+                    self::backupLog("'$volume2' is within mapped volume '$volume'! Ignoring!");
                     unset($volumes[$key2]);
                 }
             }

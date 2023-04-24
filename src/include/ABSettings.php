@@ -12,7 +12,7 @@ class ABSettings {
     public static $appName = 'appdata.backup';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
-    public static $cronFile = '/etc/cron.d/appdata_backup';
+    public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
     public static $tempFolder = '/tmp/appdata.backup';
@@ -100,20 +100,25 @@ class ABSettings {
         }
         ABHelper::$targetLogLevel = $this->notification;
 
-        require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
+        /**
+         * Check obsolete containers only if array is online, socket error otherwise!
+         */
+        if (ABHelper::isArrayOnline()) {
 
-        // Get containers and check if some of it is deleted but configured
-        $dockerClient = new \DockerClient();
-        foreach ($this->containerSettings as $name => $settings) {
-            if (!$dockerClient->doesContainerExist($name)) {
-                unset($this->containerSettings[$name]);
-                $sortKey = array_search($name, $this->containerOrder);
-                if ($sortKey) {
-                    unset($this->containerOrder[$sortKey]);
+            require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
+
+            // Get containers and check if some of it is deleted but configured
+            $dockerClient = new \DockerClient();
+            foreach ($this->containerSettings as $name => $settings) {
+                if (!$dockerClient->doesContainerExist($name)) {
+                    unset($this->containerSettings[$name]);
+                    $sortKey = array_search($name, $this->containerOrder);
+                    if ($sortKey) {
+                        unset($this->containerOrder[$sortKey]);
+                    }
                 }
             }
         }
-
     }
 
     public static function getConfigPath() {
@@ -149,31 +154,32 @@ class ABSettings {
     }
 
     public function checkCron() {
+        $cronSettings = '# Appdata.Backup cron settings' . PHP_EOL;
         switch ($this->backupFrequency) {
             case 'custom':
-                $cronSettings = $this->backupFrequencyCustom;
+                $cronSettings .= $this->backupFrequencyCustom;
                 break;
             case 'daily':
-                $cronSettings = $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * *";
+                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * *";
                 break;
             case 'weekly':
-                $cronSettings = $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * " . $this->backupFrequencyWeekday;
+                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * " . $this->backupFrequencyWeekday;
                 break;
             case 'monthly':
-                $cronSettings = $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " " . $this->backupFrequencyDayOfMonth . " * *";
+                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " " . $this->backupFrequencyDayOfMonth . " * *";
                 break;
             default:
-                $cronSettings = '';
+                $cronSettings .= '';
         }
 
         if (!empty($cronSettings)) {
             $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null 2>&1';
-            file_put_contents(ABSettings::$cronFile, $cronSettings);
+            file_put_contents(ABSettings::$pluginDir . '/' . ABSettings::$cronFile, $cronSettings . PHP_EOL);
 
-            // Restart dcron, that forces a re-read of /etc/cron.d. Otherwise, we have to wait one hour, because dcron read cron.d files once an hour.
-            exec("/etc/rc.d/rc.crond restart");
-        } elseif (file_exists(ABSettings::$cronFile)) {
-            unlink(ABSettings::$cronFile);
+            // Let dcron know our changes via update_cron
+            exec("update_cron");
+        } elseif (file_exists(ABSettings::$pluginDir . '/' . ABSettings::$cronFile)) {
+            unlink(ABSettings::$pluginDir . '/' . ABSettings::$cronFile);
         }
     }
 

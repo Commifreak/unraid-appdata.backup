@@ -130,12 +130,15 @@ if (ABHelper::abortRequested()) {
 if ($abSettings->backupMethod == 'stopAll') {
     ABHelper::backupLog("Method: Stop all container before continuing.");
     foreach ($sortedStopContainers as $container) {
+        ABHelper::$currentContainerName = $container['Name'];
         ABHelper::stopContainer($container);
 
         if (ABHelper::abortRequested()) {
             goto abort;
         }
     }
+    ABHelper::$currentContainerName = null;
+
     ABHelper::handlePrePostScript($abSettings->preBackupScript);
 
     if (ABHelper::abortRequested()) {
@@ -150,6 +153,7 @@ if ($abSettings->backupMethod == 'stopAll') {
     }
 
     foreach ($sortedStartContainers as $container) {
+        ABHelper::$currentContainerName = $container['Name'];
         ABHelper::stopContainer($container);
 
         if (ABHelper::abortRequested()) {
@@ -170,12 +174,14 @@ if ($abSettings->backupMethod == 'stopAll') {
             goto abort;
         }
     }
+    ABHelper::$currentContainerName = null;
 
     goto continuationForAll;
 }
 
 ABHelper::backupLog("Starting backup for containers");
 foreach ($sortedStartContainers as $container) {
+    ABHelper::$currentContainerName = $container['Name'];
     if (!ABHelper::backupContainer($container, $abDestination)) {
         $errorOccured = true;
     }
@@ -185,6 +191,7 @@ foreach ($sortedStartContainers as $container) {
     }
 
 }
+ABHelper::$currentContainerName = null;
 
 ABHelper::handlePrePostScript($abSettings->postBackupScript);
 
@@ -194,12 +201,14 @@ if (ABHelper::abortRequested()) {
 
 ABHelper::backupLog("Set containers to previous state");
 foreach ($sortedStartContainers as $container) {
+    ABHelper::$currentContainerName = $container['Name'];
     ABHelper::startContainer($container);
 
     if (ABHelper::abortRequested()) {
         goto abort;
     }
 }
+ABHelper::$currentContainerName = null;
 
 
 continuationForAll:
@@ -401,6 +410,7 @@ if (ABHelper::abortRequested()) {
 ABHelper::handlePrePostScript($abSettings->postRunScript);
 
 abort:
+ABHelper::$currentContainerName = null;
 if (ABHelper::abortRequested()) {
     $errorOccured = true;
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
