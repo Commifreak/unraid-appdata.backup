@@ -308,7 +308,7 @@ class ABHelper {
             return true;
         }
 
-        self::backupLog("Final volumes: " . implode(", ", $volumes), self::LOGLEVEL_DEBUG);
+        self::backupLog("Calculated volumes to back up: " . implode(", ", $volumes));
 
         $destination = $destination . "/" . $container['Name'] . '.tar';
 

@@ -4,7 +4,7 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 require_once(dirname(__DIR__) . '/include/ABSettings.php');
 
-echo "Manually checking cron." . PHP_EOL;
+echo "Checking cron." . PHP_EOL;
 
 $abSettings = new ABSettings();
 $abSettings->checkCron();
