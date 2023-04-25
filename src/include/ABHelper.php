@@ -293,7 +293,7 @@ class ABHelper {
                     $exclude = rtrim($exclude, "/");
                     if (!empty($exclude)) {
                         if (($volumeKey = array_search($exclude, $volumes)) !== false) {
-                            self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair", self::LOGLEVEL_WARN);
+                            self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair");
                             unset($volumes[$volumeKey]);
                             continue;
                         }
@@ -464,7 +464,7 @@ class ABHelper {
         global $abSettings;
 
         foreach ($abSettings->allowedSources as $appdataPath) {
-            if (str_starts_with($volume, $appdataPath)) {
+            if (str_starts_with($volume, $appdataPath . '/')) { // Add trailing slash to get exact match! Assures whole dir name!
                 self::backupLog("Volume '$volume' IS within AppdataPath '$appdataPath'!", self::LOGLEVEL_DEBUG);
                 return true;
             }
