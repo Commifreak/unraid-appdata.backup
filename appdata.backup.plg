@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.04.15a">
-        <!ENTITY sha256    "b3c2368eb35bfb3f98b1eb95cb534d698351666978b8a578b6a42c4c2c0b0305">
+        <!ENTITY version   "2023.04.26">
+        <!ENTITY sha256    "ce27a0b58b16ffb66d31156895bf28bc9f83bc7766c4419c68096d6b88a374ee">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -15,14 +15,26 @@
 
     <CHANGES>
         <![CDATA[
-        🔧New  🩹Fix 🔧Change
-####2023.04.15a
-- Fix CSS bottom border for dark themes
-- Optimize volume detection for useless mappings (from our point of view)
+        🔨New  🩹Fix 🔧Change
+
+###2023.04.26
+- 🩹 Another small fix for rare nested volume detection issue
+- 🩹 Fix cronjob again: Scheduling got lost after reboot - now using the right way for cron update
+- 🩹 Fix nested volume check
+- 🩹 Apply nested volume check only with paths within appdata (allowed sources)
+- 🩹 Fix applying default settings to per-container settings for new config options [Bug report](https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1252597)
+- 🩹 Remove container volume mapping, if it is listed in allowed sources
+- 🩹 Scheduling no longer sends mails like "cron for user root ....."
+- 🔧 Ignore volumes which match against exact exclusion path within container settings
+- 🔧 Ignore nested volume (`/mnt/user/appdata/test`, `/mnt/user/appdata/text/config` => The latter would be ignored now)
+
+###2023.04.15a
+- 🩹 Fix CSS bottom border for dark themes
+- 🩹 Optimize volume detection for useless mappings (from our point of view)
 
 ###2023.04.15
-- Fix colors on dark themes inside per-container-settings section
-- Add a warning to the log, if "external volume backup" is enabled for a container
+- 🩹 Fix colors on dark themes inside per-container-settings section
+- 🔧 Add a warning to the log, if "external volume backup" is enabled for a container
 
 ###2023.04.11
 - 🩹 Saving the settings with no docker containers yet, results in a blank page
@@ -101,7 +113,18 @@
 
     <FILE Run="/bin/bash">
         <INLINE>
+            # Because we used the wrong way for reloading cron, we should remove the old remnants...
+            if [ -f "/etc/cron.d/appdata_backup" ]; then
+            rm /etc/cron.d/appdata_backup
+            echo "Found old cron file, refreshing it..."
+            fi
             php &plugdir;/scripts/checkCron.php
+        </INLINE>
+    </FILE>
+
+    <FILE Run="/bin/bash">
+        <INLINE>
+            echo -n "&version;" > &plugdir;/version
         </INLINE>
     </FILE>
 
@@ -125,9 +148,9 @@
     <FILE Run="/bin/bash" Method="remove">
         <INLINE>
             echo "Uninstalling... 😭 Maybe I see you again soon. Bye!"
-            php &plugdir;/scripts/checkCron.php --remove
             rm -rf &plugdir; 2>/dev/null
             rm -rf /boot/config/plugins/&name;
+            update_cron # Let cron know, we removed the target files :P
             echo "Uninstall done."
         </INLINE>
     </FILE>
