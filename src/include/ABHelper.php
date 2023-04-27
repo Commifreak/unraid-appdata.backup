@@ -429,12 +429,18 @@ class ABHelper {
                 self::backupLog("This volume is empty (rootfs mapped??)! Ignoring.", self::LOGLEVEL_DEBUG);
                 continue;
             }
+            if (!file_exists($hostPath)) {
+                self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_WARN);
+                continue;
+            }
             if (in_array($hostPath, $abSettings->allowedSources)) {
                 self::backupLog("Removing container mapping \"$hostPath\" because it is a source path!");
                 continue;
             }
-            $volumes[] = rtrim($hostPath, '/');
+            $volumes[] = $hostPath;
         }
+
+        $volumes = array_unique($volumes); // Remove duplicate Array values => https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1256267
 
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
@@ -443,6 +449,7 @@ class ABHelper {
 
         /**
          * Check volumes against nesting
+         * Maybe someone has a better idea how to solve it efficiently?
          */
         foreach ($volumes as $volume) {
             foreach ($volumes as $key2 => $volume2) {
