@@ -462,7 +462,7 @@ HTML;
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"> <code>' . $volume . '</code></span>';
+                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code></span>';
                     }
                     $volumes = implode('<br />', $volumes);
                 }
@@ -484,7 +484,7 @@ HTML;
 
 <blockquote class='inline_help'>
 <dl>
-<dt>Configured volumes<br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
+<dt>Configured volumes <small>(Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
 <dd><div style="display: table">$volumes</div></dd>
 <br />
 
@@ -736,5 +736,20 @@ HTML;
         $(element).parent().slideUp('fast', function () {
             $el.prop('checked', false);
         });
+    }
+
+    function addVolumeToExclude(element) {
+        $path = $(element).text();
+        $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
+
+        if ($excludeTextarea.val().indexOf($path) !== -1) { // If existing inside textarea
+            return;
+        }
+
+        if ($excludeTextarea.val() === "") {
+            $excludeTextarea.val($path);
+        } else {
+            $excludeTextarea.val($excludeTextarea.val() + "\n" + $path);
+        }
     }
 </script>
