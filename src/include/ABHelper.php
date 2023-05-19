@@ -274,7 +274,7 @@ class ABHelper {
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
         if ($containerSettings['backupExtVolumes'] == 'no') {
-            self::backupLog("Should NOT backup ext volumes, sanitizing them...", self::LOGLEVEL_DEBUG);
+            self::backupLog("Should NOT backup external volumes, sanitizing them...");
             foreach ($volumes as $index => $volume) {
                 if (!self::isVolumeWithinAppdata($volume)) {
                     unset($volumes[$index]);
