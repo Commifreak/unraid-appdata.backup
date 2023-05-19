@@ -82,6 +82,9 @@ class ABSettings {
                             case 'allowedSources':
                                 $sources = explode("\r\n", $value);
                                 foreach ($sources as $sourceKey => $source) {
+                                    if (empty($source)) {
+                                        continue; // Skip empty lines
+                                    }
                                     $sources[$sourceKey] = rtrim($source, '/');
                                 }
                                 $this->$key = $sources;
