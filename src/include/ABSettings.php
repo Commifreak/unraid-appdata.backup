@@ -82,7 +82,7 @@ class ABSettings {
                             case 'allowedSources':
                                 $sources = explode("\r\n", $value);
                                 foreach ($sources as $sourceKey => $source) {
-                                    if (empty($source)) {
+                                    if (empty(trim($source))) {
                                         continue; // Skip empty lines
                                     }
                                     $sources[$sourceKey] = rtrim($source, '/');
