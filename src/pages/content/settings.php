@@ -356,7 +356,8 @@ HTML;
         </dd>
 
         <dt><b>Scheduled Backup Frequency</b></dt>
-        <dd><select id='backupFrequency' name="backupFrequency" data-setting="<?= $abSettings->backupFrequency ?>">
+        <dd><select id='backupFrequency' name="backupFrequency" onchange="checkBackupFrequency();"
+                    data-setting="<?= $abSettings->backupFrequency ?>">
                 <option value='disabled'>Disabled</option>
                 <option value='daily'>Daily</option>
                 <option value='weekly'>Weekly</option>
@@ -703,6 +704,9 @@ HTML;
         }
 
 
+        checkBackupFrequency();
+
+
     });
 
     $('#abSettingsForm').on('submit', function () {
@@ -750,6 +754,28 @@ HTML;
             $excludeTextarea.val($path);
         } else {
             $excludeTextarea.val($excludeTextarea.val() + "\n" + $path);
+        }
+    }
+
+    function checkBackupFrequency() {
+        console.log($('#backupFrequency').val());
+        $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
+        switch ($('#backupFrequency').val()) {
+            case 'disabled':
+                $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
+                break;
+            case 'daily':
+                $('#backupFrequencyHour, #backupFrequencyMinute').prop('disabled', false);
+                break;
+            case 'weekly':
+                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDay').prop('disabled', false);
+                break;
+            case 'monthly':
+                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDayOfMonth').prop('disabled', false);
+                break;
+            default:
+                $('#backupFrequencyCustom').prop('disabled', false);
+                break;
         }
     }
 </script>
