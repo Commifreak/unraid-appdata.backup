@@ -105,7 +105,7 @@ if (!isset($config['restoreItem']['containers'])) {
 
             if (str_ends_with($container, 'zst')) {
                 $tarOptions[] = '-I zstd';
-            } else {
+            } elseif (str_ends_with($container, 'gz')) {
                 $tarOptions[] = '-z';
             }
 
@@ -134,7 +134,17 @@ if (!isset($config['restoreItem']['extraFiles'])) {
 
     ABHelper::backupLog("Restoring extra files...");
 
-    $extraFile = file_exists($restoreSource . '/extra_files.tar.zst') ? 'extra_files.tar.zst' : 'extra_files.tar.gz';
+
+    /**
+     * Improve this (for containers as well)
+     */
+    if (file_exists($restoreSource . '/extra_files.tar.zst')) {
+        $extraFile = 'extra_files.tar.zst';
+    } elseif (file_exists($restoreSource . '/extra_files.tar.gz')) {
+        $extraFile = 'extra_files.tar.gz';
+    } else {
+        $extraFile = 'extra_files.tar';
+    }
 
     $tarOptions = [
         '-C ' . escapeshellarg($tarDestination),
@@ -144,7 +154,7 @@ if (!isset($config['restoreItem']['extraFiles'])) {
 
     if (str_ends_with($extraFile, 'zst')) {
         $tarOptions[] = '-I zstd';
-    } else {
+    } elseif (str_ends_with($extraFile, 'gz')) {
         $tarOptions[] = '-z';
     }
 
