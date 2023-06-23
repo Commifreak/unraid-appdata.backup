@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.05.31">
-        <!ENTITY sha256    "3c9e952d8775235da88743e60286daa0607edcea5d9b791fe2695a82780b5926">
+        <!ENTITY version   "2023.06.23">
+        <!ENTITY sha256    "f9d5c1d59889e19b0ee8ab78e882fbeba7b9b5b6f82835698032ecbc624f7b02">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         🔨New  🩹Fix 🔧Change
+
+###2023.06.23
+- 🩹 PostBackup script was not executed (only if method was `Stop/Backup/Start`)
+- 🩹 Restore non-compressed backups (containers as well as extra data) was not working
 
 ###2023.05.31
 - 🩹 Settings: Not needed backup frequency fields are now disabled
