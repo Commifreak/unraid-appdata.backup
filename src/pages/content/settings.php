@@ -235,7 +235,7 @@ HTML;
                    placeholder='Leave empty to disable'/></dd>
 
 
-        <dt><b>Appdata source(s)</b></dt>
+        <dt><b>Appdata source(s)</b> Please note the infos inside help block!</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
                                                                  onfocus="$(this).next('.ft').slideDown('fast');"
