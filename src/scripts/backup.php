@@ -63,7 +63,7 @@ if (empty($abSettings->destination)) {
 }
 
 if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
-    ABHelper::backupLog("Destination is available or not writeable!", ABHelper::LOGLEVEL_ERR);
+    ABHelper::backupLog("Destination is unavailable or not writeable!", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
 
