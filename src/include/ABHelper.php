@@ -144,13 +144,13 @@ class ABHelper {
         }
 
         if ($container['Running'] && !$container['Paused']) {
-            self::backupLog("Stopping " . $container['Name'] . "... ");
+            self::backupLog("Stopping " . $container['Name'] . "... ", self::LOGLEVEL_INFO, false);
             $stopTimer      = time();
             $dockerStopCode = $dockerClient->stopContainer($container['Name']);
             if ($dockerStopCode != 1) {
-                self::backupLog("Error while stopping container! Code: " . $dockerStopCode, self::LOGLEVEL_ERR);
+                self::backupLog("Error while stopping container! Code: " . $dockerStopCode, self::LOGLEVEL_ERR, true, true);
             } else {
-                self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)");
+                self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
             }
 
         } else {
@@ -194,11 +194,11 @@ class ABHelper {
         }
 
         do {
-            self::backupLog("Starting {$container['Name']}... (try #$dockerStartTry)");
+            self::backupLog("Starting {$container['Name']}... (try #$dockerStartTry) ", self::LOGLEVEL_INFO, false);
             $dockerStartCode = $dockerClient->startContainer($container['Name']);
             if ($dockerStartCode != 1) {
                 if ($dockerStartCode == "Container already started") {
-                    self::backupLog("Hmm - container is already started!");
+                    self::backupLog("Hmm - container is already started!", self::LOGLEVEL_WARN, true, true);
                     $nowRunning = $dockerClient->getDockerContainers();
                     foreach ($nowRunning as $nowRunningContainer) {
                         if ($nowRunningContainer["Name"] == $container['Name']) {
@@ -209,7 +209,7 @@ class ABHelper {
                     continue;
                 }
 
-                self::backupLog("Container did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN);
+                self::backupLog("Container did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
                 if ($dockerStartTry < 3) {
                     $dockerStartTry++;
                     sleep(5);
@@ -218,6 +218,7 @@ class ABHelper {
                     break; // Exit do-while
                 }
             } else {
+                self::backupLog("done!", self::LOGLEVEL_INFO, true, true);
                 $dockerContainerStarted = true;
             }
         } while (!$dockerContainerStarted);
