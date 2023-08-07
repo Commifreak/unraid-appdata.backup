@@ -31,8 +31,8 @@ if (!ABHelper::isArrayOnline()) {
 <h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
 <div style='border: 1px solid red; height:500px; overflow:auto' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
-<input type='button' id="dlLogBtn" value='Download log' disabled/>
-<input type='button' id="dlDbgLogBtn" value='Download debug log' disabled/>
+<input type='button' id="shareDbgLogBtn" value='Share debug log' disabled/>
+<p id="didContainer" style="display: none; width: 200px;">Your debug log ID: <span id="did"></span></p>
 
 
 <script>
@@ -59,8 +59,18 @@ if (!ABHelper::isArrayOnline()) {
             });
         });
 
-        $('#dlLogBtn, #dlDbgLogBtn').on('click', function () {
-            window.location = url + '?action=dlLog&type=' + $(this).attr('id');
+        $('#shareDbgLogBtn').on('click', function () {
+            swal({
+                title: "Share log?",
+                text: "With this function, you can share the backup log with the developer (and only the developer) for diagnostic purposes!<br />This will send the log via a secure connection to the developers server.<br />You will receive a unique debug log ID and share it publicly without sharing its sensitive contents.<br /><br />You can also find the log at <code><?= ABSettings::$tempFolder ?></code>",
+                type: 'warning',
+                html: true,
+                showCancelButton: true,
+                confirmButtonText: "Share",
+                cancelButtonText: "Abort"
+            }, function () {
+                shareLog();
+            });
         });
     });
 
@@ -71,7 +81,7 @@ if (!ABHelper::isArrayOnline()) {
             }).done(function (data) {
             if (data.running) {
                 $('#abortBtn').prop('disabled', false);
-                $('#dlLogBtn, #dlDbgLogBtn').prop('disabled', true);
+                $('#shareDbgLogBtn').prop('disabled', true);
                 $('#backupStatusText').removeClass('backupNotRunning');
                 $('#backupStatusText').addClass('backupRunning');
                 $('#abLog').animate({
@@ -79,7 +89,7 @@ if (!ABHelper::isArrayOnline()) {
                 }, 100);
             } else {
                 $('#abortBtn').prop('disabled', true);
-                $('#dlLogBtn, #dlDbgLogBtn').prop('disabled', false);
+                $('#shareDbgLogBtn').prop('disabled', false);
                 $('#backupStatusText').removeClass('backupRunning');
                 $('#backupStatusText').addClass('backupNotRunning');
             }
@@ -90,6 +100,18 @@ if (!ABHelper::isArrayOnline()) {
             }
         }).fail(function () {
             $("#abLog").html("Something went wrong while talking to the backend :(");
+        });
+    }
+
+    function shareLog() {
+        $.ajax(url, {
+            data: {action: 'shareLog'}
+        }).fail(function (data) {
+            $('#did').html('Error during HTTP request!');
+        }).done(function (data) {
+            $('#did').html(data.msg);
+        }).always(function () {
+            $('#didContainer').css('display', 'inline');
         });
     }
 </script>
