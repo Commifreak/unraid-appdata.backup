@@ -124,7 +124,7 @@ class ABHelper {
      * @return void
      */
     public static function notify($subject, $description, $message = "", $type = "normal") {
-        $command = '/usr/local/emhttp/plugins/dynamix/scripts/notify -e "Appdata Backup" -s "' . $subject . '" -d "' . $description . '" -m "' . $message . '" -i "' . $type . '" -l "/Settings/AB.Main"';
+        $command = '/usr/local/emhttp/webGui/scripts/notify -e "Appdata Backup" -s "' . $subject . '" -d "' . $description . '" -m "' . $message . '" -i "' . $type . '" -l "/Settings/AB.Main"';
         shell_exec($command);
     }
 

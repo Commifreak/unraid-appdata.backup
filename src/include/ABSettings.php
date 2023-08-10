@@ -12,6 +12,7 @@ class ABSettings {
     public static $appName = 'appdata.backup';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
+    public static $settingsVersion = 2;
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
@@ -52,7 +53,7 @@ class ABSettings {
         'backupExtVolumes'   => 'no'
     ];
     public string $flashBackup = 'yes';
-    public string $notification = 'errors';
+    public string $notification = ABHelper::LOGLEVEL_ERR;
     public string $backupFrequency = 'disabled';
     public string|int $backupFrequencyWeekday = '1';
     public string|int $backupFrequencyDayOfMonth = '1';
@@ -69,6 +70,9 @@ class ABSettings {
     public string $backupVMMeta = 'yes';
 
     public function __construct() {
+
+        self::migrateConfig();
+
         $sFile = self::getConfigPath();
         if (file_exists($sFile)) {
             $config = json_decode(file_get_contents($sFile), true);
@@ -126,6 +130,54 @@ class ABSettings {
 
     public static function getConfigPath() {
         return self::$pluginDir . DIRECTORY_SEPARATOR . self::$settingsFile;
+    }
+
+    /**
+     * Execute config migration, if necessary
+     * @return void
+     */
+    public static function migrateConfig() {
+        $sFile = self::getConfigPath();
+        if (file_exists($sFile)) {
+            $config = json_decode(file_get_contents($sFile), true);
+            if ($config) {
+                if (!isset($config['settingsVersion'])) {
+                    $config['settingsVersion'] = 1; // No version set, set the current one
+                }
+                for ($curMigrationStep = $config['settingsVersion']; $curMigrationStep < ABSettings::$settingsVersion; $curMigrationStep++) {
+                    exec('logger -t "' . self::$appName . '" Found migrations! Running Migration ' . $curMigrationStep . ' of ' . (ABSettings::$settingsVersion - $curMigrationStep));
+
+                    $migrationSuccess = false;
+                    switch ($curMigrationStep) {
+                        case 1:
+                            /**
+                             * Correct notification setting errors to error
+                             */
+                            if ($config['notification'] == 'errors') {
+                                $config['notification'] = ABHelper::LOGLEVEL_ERR;
+                            }
+                            $migrationSuccess = true;
+                            break;
+                    }
+                    if ($migrationSuccess) {
+                        exec('logger -t "' . self::$appName . '" Migration was successful!');
+                        $config['settingsVersion']++;
+                        self::store($config);
+                    } else {
+                        exec('logger -t "' . self::$appName . '" ERROR: Migration was NOT successful!');
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Stores a config to disk
+     * @param array $config
+     * @return void
+     */
+    public static function store(array $config) {
+        file_put_contents(ABSettings::getConfigPath(), json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     /**

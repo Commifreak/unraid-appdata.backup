@@ -97,7 +97,7 @@ if ($_POST) {
             }
         }
 
-        file_put_contents(ABSettings::getConfigPath(), json_encode($abSettings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        ABSettings::store($abSettings);
 
 
         echo "<h1 style='color: green'>Settings were migrated!</h1><p>Please wait...</p><hr />";
@@ -116,7 +116,7 @@ window.setTimeout(function() {
     } else {
         $_POST = array_merge($_POST, $containerOrder);
     }
-    file_put_contents(ABSettings::getConfigPath(), json_encode($_POST, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    ABSettings::store($_POST);
 }
 
 $abSettings = new ABSettings();
@@ -349,8 +349,8 @@ HTML;
     <dl>
         <dt><b>Notification Settings:</b></dt>
         <dd><select id='notification' name="notification" data-setting="<?= $abSettings->notification ?>">
-                <option value='errors'>Errors Only</option>
-                <option value='warning'>Warnings and errors</option>
+                <option value='<?= ABHelper::LOGLEVEL_ERR ?>'>Errors Only</option>
+                <option value='<?= ABHelper::LOGLEVEL_WARN ?>'>Warnings and errors</option>
                 <option value='disabled'>Disabled</option>
             </select>
         </dd>
