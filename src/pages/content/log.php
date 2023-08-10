@@ -88,6 +88,7 @@ if (!ABHelper::isArrayOnline()) {
             }
 
             if (data.running) {
+                $('#didContainer').css('display', 'none');
                 $('#abortBtn').prop('disabled', false);
                 $('#shareDbgLogBtn').prop('disabled', true);
                 $('#backupStatusText').removeClass('backupNotRunning');
