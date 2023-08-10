@@ -32,7 +32,8 @@ if (!ABHelper::isArrayOnline()) {
 <div style='border: 1px solid red; height:500px; overflow:auto' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
 <input type='button' id="shareDbgLogBtn" value='Share debug log' disabled/>
-<p id="didContainer" style="display: none; width: 200px;">Your debug log ID: <span id="did"></span></p>
+<p id="didContainer" style="display: none; width: 200px;">Your debug log ID: <input type="text" id="did"
+                                                                                    onmouseover="$(this).select()"/></p>
 
 
 <script>
@@ -109,9 +110,9 @@ if (!ABHelper::isArrayOnline()) {
         $.ajax(url, {
             data: {action: 'shareLog'}
         }).fail(function (data) {
-            $('#did').html('Error during HTTP request!');
+            $('#did').val('Error during HTTP request!');
         }).done(function (data) {
-            $('#did').html(data.msg);
+            $('#did').val(data.msg);
         }).always(function () {
             $('#didContainer').css('display', 'inline');
         });
