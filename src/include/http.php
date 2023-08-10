@@ -8,6 +8,10 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 if (isset($_GET['action'])) {
 
+    if ($_GET['action'] != 'dlLog') {
+        header('Content-Type: application/json; charset=utf-8');
+    }
+
     switch ($_GET['action']) {
         case 'getBackupState':
 

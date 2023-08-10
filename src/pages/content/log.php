@@ -79,6 +79,13 @@ if (!ABHelper::isArrayOnline()) {
             {
                 data: {action: 'getBackupState'}
             }).done(function (data) {
+            console.log(data);
+            if (data.log == "") {
+                $("#abLog").html("The log is not existing or empty");
+            } else {
+                $("#abLog").html(data.log);
+            }
+
             if (data.running) {
                 $('#abortBtn').prop('disabled', false);
                 $('#shareDbgLogBtn').prop('disabled', true);
@@ -92,11 +99,6 @@ if (!ABHelper::isArrayOnline()) {
                 $('#shareDbgLogBtn').prop('disabled', false);
                 $('#backupStatusText').removeClass('backupRunning');
                 $('#backupStatusText').addClass('backupNotRunning');
-            }
-            if (data.log == "") {
-                $("#abLog").html("The log is not existing or empty");
-            } else {
-                $("#abLog").html(data.log);
             }
         }).fail(function () {
             $("#abLog").html("Something went wrong while talking to the backend :(");
