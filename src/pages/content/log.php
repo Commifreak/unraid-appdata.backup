@@ -62,8 +62,8 @@ if (!ABHelper::isArrayOnline()) {
 
         $('#shareDbgLogBtn').on('click', function () {
             swal({
-                title: "Share log?",
-                text: "With this function, you can share the backup log with the developer (and only the developer) for diagnostic purposes!<br />This will send the log via a secure connection to the developers server.<br />You will receive a unique debug log ID and share it publicly without sharing its sensitive contents.<br /><br />You can also find the log at <code><?= ABSettings::$tempFolder ?></code>",
+                title: "Share debug log?",
+                text: "With this function, you can share the detailed backup log with the developer (and only the developer) for diagnostic purposes!<br />This will send the log via a secure connection to the developers server.<br />You will receive a unique debug log ID and share it publicly without its sensitive contents.<br /><br />You can also find the log at <code><?= ABSettings::$tempFolder ?></code>",
                 type: 'warning',
                 html: true,
                 showCancelButton: true,
