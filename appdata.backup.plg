@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.06.23">
-        <!ENTITY sha256    "f9d5c1d59889e19b0ee8ab78e882fbeba7b9b5b6f82835698032ecbc624f7b02">
+        <!ENTITY version   "2023.08.14">
+        <!ENTITY sha256    "86af4212180973a708705747b8108fe21419b19ff6b96ca23e539fd20fe118ad">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         🔨New  🩹Fix 🔧Change
+
+###2023.08.14
+- 🩹 Notifications were not sent, if notification level was set to `Errors only`
+- 🔨 `Download (debug) log` were replaced with a `Share log` dialog, which uploads the log to the developer (me)
 
 ###2023.06.23
 - 🩹 PostBackup script was not executed (only if method was `Stop/Backup/Start`)
