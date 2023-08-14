@@ -55,8 +55,6 @@ if (!file_exists(ABSettings::getConfigPath())) {
 
 $abSettings = new ABSettings();
 
-ABHelper::backupLog("Config:" . PHP_EOL . print_r($abSettings, true), ABHelper::LOGLEVEL_DEBUG);
-
 if (empty($abSettings->destination)) {
     ABHelper::backupLog("Destination is not set!", ABHelper::LOGLEVEL_ERR);
     goto end;

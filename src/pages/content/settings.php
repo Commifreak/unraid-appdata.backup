@@ -343,7 +343,7 @@ HTML;
     </blockquote>
 
     <div class="title"><span class="left"><i
-                    class="fa fa-clock-o title"></i>Notifications, scheduling and retention</span>
+                    class="fa fa-clock-o title"></i>Notifications and scheduling</span>
     </div>
 
     <dl>
