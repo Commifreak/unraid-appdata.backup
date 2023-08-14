@@ -730,7 +730,7 @@ HTML;
                 })
                 .get()
                 .join('\n');
-            console.debug(checked);
+
             if ($textarea.val() === "") {
                 $textarea.val(checked);
             } else {
@@ -758,7 +758,6 @@ HTML;
     }
 
     function checkBackupFrequency() {
-        console.log($('#backupFrequency').val());
         $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
         switch ($('#backupFrequency').val()) {
             case 'disabled':

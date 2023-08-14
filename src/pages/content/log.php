@@ -80,7 +80,7 @@ if (!ABHelper::isArrayOnline()) {
             {
                 data: {action: 'getBackupState'}
             }).done(function (data) {
-            console.log(data);
+
             if (data.log == "") {
                 $("#abLog").html("The log is not existing or empty");
             } else {

@@ -117,7 +117,6 @@ if (!ABHelper::isArrayOnline()) {
                 $('#restoreBackupList').html('');
                 $('#restoreBackupDiv').show();
                 $.each(data.result, function (i) {
-                    console.log(data.result[i]);
                     var name = data.result[i]['name'];
                     $('#restoreBackupList').append('<option value="' + data.result[i]['path'] + '">' + name + '</option>');
                 });
