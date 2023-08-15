@@ -343,7 +343,7 @@ if (!empty($abSettings->includeFiles)) {
         ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {
-            ABHelper::backupLog("tar creation failed! More output available inside debuglog, maybe.", ABHelper::LOGLEVEL_ERR);
+            ABHelper::backupLog("tar creation failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {
             ABHelper::backupLog("Backup created without issues");
         }

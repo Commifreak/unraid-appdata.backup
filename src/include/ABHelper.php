@@ -355,7 +355,7 @@ class ABHelper {
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {
-            self::backupLog("tar creation failed! More output available inside debuglog, maybe.", $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
+            self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
             return $containerSettings['ignoreBackupErrors'] == 'yes';
         }
 
@@ -374,7 +374,7 @@ class ABHelper {
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
             if ($resultcode > 0) {
-                self::backupLog("tar verification failed! More output available inside debuglog, maybe.", $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
+                self::backupLog("tar verification failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
                 /**
                  * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
                  */

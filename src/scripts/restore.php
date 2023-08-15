@@ -116,7 +116,7 @@ if (!isset($config['restoreItem']['containers'])) {
             exec($finalTarCommand . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
             if ($resultcode > 0) {
-                ABHelper::backupLog("restore failed! More output available inside debuglog, maybe.", ABHelper::LOGLEVEL_ERR);
+                ABHelper::backupLog("restore failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
             } else {
                 ABHelper::backupLog("restore succeeded!");
             }
@@ -165,7 +165,7 @@ if (!isset($config['restoreItem']['extraFiles'])) {
     exec($finalTarCommand . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
     ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
     if ($resultcode > 0) {
-        ABHelper::backupLog("restore failed! More output available inside debuglog, maybe.", ABHelper::LOGLEVEL_ERR);
+        ABHelper::backupLog("restore failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
     } else {
         ABHelper::backupLog("restore succeeded!");
     }
