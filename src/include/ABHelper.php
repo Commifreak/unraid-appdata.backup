@@ -106,12 +106,16 @@ class ABHelper {
         }
         file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $logLine, FILE_APPEND);
 
-        if ($level == self::LOGLEVEL_ERR && self::$targetLogLevel == self::LOGLEVEL_ERR) {
-            self::notify("Error occured!", "Please check the backup log tab!", $msg, 'alert');
+        if (!in_array(self::$targetLogLevel, [self::LOGLEVEL_INFO, self::LOGLEVEL_WARN, self::LOGLEVEL_ERR])) {
+            return; // No notification wanted!
         }
 
-        if ($level == self::LOGLEVEL_WARN && in_array(self::$targetLogLevel, [self::LOGLEVEL_WARN, self::LOGLEVEL_ERR])) {
-            self::notify("Warning", "Please check the backup log tab!", $msg, 'warning');
+        if ($level == self::LOGLEVEL_ERR) { // Log errors always
+            self::notify("[AppdataBackup] Error!", "Please check the backup log!", $msg, 'alert');
+        }
+
+        if ($level == self::LOGLEVEL_WARN && self::$targetLogLevel == self::LOGLEVEL_WARN) {
+            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", $msg, 'warning');
         }
     }
 
