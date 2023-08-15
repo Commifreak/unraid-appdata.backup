@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.08.14">
-        <!ENTITY sha256    "86af4212180973a708705747b8108fe21419b19ff6b96ca23e539fd20fe118ad">
+        <!ENTITY version   "2023.08.15">
+        <!ENTITY sha256    "57853d411ad91410daa8ac08efd383c151fb6b0665c5832a6799af9c40d09d71">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         🔨New  🩹Fix 🔧Change
+
+###2023.08.15
+- 🩹 Instead of no notifications, a new bug sent too much. Fixed! 😅
+- 🔧 If a container stop-command fails, the plugin now tries again with `docker stop` variant.
 
 ###2023.08.14
 - 🩹 Notifications were not sent, if notification level was set to `Errors only`
