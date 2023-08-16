@@ -19,7 +19,7 @@ $errorOccured = false;
 
 
 if (ABHelper::scriptRunning()) {
-    ABHelper::notify("Still running", "There is something running already.");
+    ABHelper::notify("Appdata Backup", "Still running", "There is something running already.");
     exit;
 }
 
@@ -271,17 +271,15 @@ foreach ($sortedStopContainers as $container) {
     $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
     if ($containerSettings['updateContainer'] == 'yes') {
         ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled - checking for update...");
-        $dockerUpdate    = new \DockerUpdate();
-        $dockerTemplates = new \DockerTemplates();
-        ABHelper::backupLog("downloadTemplates", ABHelper::LOGLEVEL_DEBUG);
-        $dockerTemplates->downloadTemplates();
-        ABHelper::backupLog("reloadUpdateStatus", ABHelper::LOGLEVEL_DEBUG);
-        $dockerUpdate->reloadUpdateStatus($container['Image']);
-        ABHelper::backupLog("getUpdateStatus", ABHelper::LOGLEVEL_DEBUG);
-        $updateStatus = $dockerUpdate->getUpdateStatus($container['Image']);
-        ABHelper::backupLog(print_r($updateStatus, true), ABHelper::LOGLEVEL_DEBUG);
 
-        if ($updateStatus === false) {
+        if (!isset($allInfo)) {
+            ABHelper::backupLog("Requesting docker template meta...", ABHelper::LOGLEVEL_DEBUG);
+            $dockerTemplates = new \DockerTemplates();
+            $allInfo         = $dockerTemplates->getAllInfo(true, true);
+            ABHelper::backupLog(print_r($allInfo, true), ABHelper::LOGLEVEL_DEBUG);
+        }
+
+        if (isset($allInfo[$container['Name']]) && !$allInfo[$container['Name']]['updated']) {
             ABHelper::backupLog("Update available! Installing...");
             exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($container['Name']));
             ABHelper::backupLog("Update finished (hopefully).");
