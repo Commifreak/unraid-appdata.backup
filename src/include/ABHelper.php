@@ -152,7 +152,7 @@ class ABHelper {
             $stopTimer      = time();
             $dockerStopCode = $dockerClient->stopContainer($container['Name']);
             if ($dockerStopCode != 1) {
-                self::backupLog("Error while stopping container! Code: " . $dockerStopCode . " - trying 'docker stop' method", self::LOGLEVEL_ERR, true, true);
+                self::backupLog("Error while stopping container! Code: " . $dockerStopCode . " - trying 'docker stop' method", self::LOGLEVEL_WARN, true, true);
                 $out = $code = null;
                 exec("docker stop " . escapeshellarg($container['Name']) . " -t 30", $out, $code);
                 if ($code == 0) {
