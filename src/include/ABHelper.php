@@ -18,6 +18,12 @@ class ABHelper {
      * @var array Store some temporary data about containers, which should skipped during start routine
      */
     private static $skipStartContainers = [];
+
+    private static $emojiLevels = [
+        self::LOGLEVEL_INFO => 'ℹ️',
+        self::LOGLEVEL_WARN => '⚠️',
+        self::LOGLEVEL_ERR  => '❌'
+    ];
     public static $currentContainerName;
 
     public static $targetLogLevel = '';
@@ -98,13 +104,8 @@ class ABHelper {
         }
 
         $section = empty(self::$currentContainerName) ? 'Main' : self::$currentContainerName;
-        $emojiLevel = [
-            self::LOGLEVEL_INFO => 'ℹ️',
-            self::LOGLEVEL_WARN => '⚠️',
-            self::LOGLEVEL_ERR  => '❌'
-        ];
 
-        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][" . ($emojiLevel[$level] ?? $level) . "][$section]") . " $msg" . ($newLine ? "\n" : '');
+        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][" . (self::$emojiLevels[$level] ?? $level) . "][$section]") . " $msg" . ($newLine ? "\n" : '');
 
         if ($level != self::LOGLEVEL_DEBUG) {
             file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $logLine, FILE_APPEND);
