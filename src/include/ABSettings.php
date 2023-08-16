@@ -120,7 +120,7 @@ class ABSettings {
                 if (!$dockerClient->doesContainerExist($name)) {
                     unset($this->containerSettings[$name]);
                     $sortKey = array_search($name, $this->containerOrder);
-                    if ($sortKey) {
+                    if ($sortKey !== false) {
                         unset($this->containerOrder[$sortKey]);
                     }
                 }
