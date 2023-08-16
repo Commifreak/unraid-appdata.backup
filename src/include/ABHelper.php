@@ -98,8 +98,13 @@ class ABHelper {
         }
 
         $section = empty(self::$currentContainerName) ? 'Main' : self::$currentContainerName;
+        $emojiLevel = [
+            self::LOGLEVEL_INFO => 'ℹ️',
+            self::LOGLEVEL_WARN => '⚠️',
+            self::LOGLEVEL_ERR  => '❌'
+        ];
 
-        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][$section][$level]") . " $msg" . ($newLine ? "\n" : '');
+        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][" . ($emojiLevel[$level] ?? $level) . "][$section]") . " $msg" . ($newLine ? "\n" : '');
 
         if ($level != self::LOGLEVEL_DEBUG) {
             file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $logLine, FILE_APPEND);

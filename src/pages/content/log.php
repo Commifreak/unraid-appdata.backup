@@ -29,7 +29,7 @@ if (!ABHelper::isArrayOnline()) {
 </style>
 
 <h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
-<div style='border: 1px solid red; height:500px; overflow:auto' id='abLog'>Loading...</div>
+<div style='border: 1px solid red; height:500px; overflow:auto;' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
 <input type='button' id="shareDbgLogBtn" value='Share debug log' disabled/>
 <p id="didContainer" style="display: none; width: 200px;">Your debug log ID: <input type="text" id="did"
