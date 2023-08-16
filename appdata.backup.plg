@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.08.15">
-        <!ENTITY sha256    "57853d411ad91410daa8ac08efd383c151fb6b0665c5832a6799af9c40d09d71">
+        <!ENTITY version   "2023.08.16">
+        <!ENTITY sha256    "51293fe817d06f409fc2cb4fe0a6ee8ec3f4cb22b52008ec7ac7ea1c1fb810ab">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,11 @@
     <CHANGES>
         <![CDATA[
         🔨New  🩹Fix 🔧Change
+
+###2023.08.16
+- 🩹 Booting the system could result in `rm: missing operand`.
+- 🩹 `XML file for was not found` message - caused by deleted container - is fixed
+- 🩹 Docker update would only update one container, if multiple containers using the same image.
 
 ###2023.08.15
 - 🩹 Instead of no notifications, a new bug sent too much. Fixed! 😅
