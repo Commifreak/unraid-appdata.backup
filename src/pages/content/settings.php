@@ -212,6 +212,7 @@ HTML;
 ?>
 
 <form id="abSettingsForm" method="post">
+    <input type="hidden" name="settingsVersion" value="<?= ABSettings::$settingsVersion ?>"/>
     <dl>
         <dt><b>Backup type</b></dt>
         <dd><select id="backupMethod" name="backupMethod" data-setting="<?= $abSettings->backupMethod ?>">
