@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.08.16">
-        <!ENTITY sha256    "51293fe817d06f409fc2cb4fe0a6ee8ec3f4cb22b52008ec7ac7ea1c1fb810ab">
+        <!ENTITY version   "2023.08.28">
+        <!ENTITY sha256    "1ce1c9b6459a94f7e3356b5bd4172d3b2b9efe9b0e9604c65d821ce6e8642288">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         🔨New  🩹Fix 🔧Change
+
+###2023.08.28
+- 🩹 Fix docker auto update always showing `no update available`
 
 ###2023.08.16
 - 🩹 Booting the system could result in `rm: missing operand`.
