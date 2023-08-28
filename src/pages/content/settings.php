@@ -700,9 +700,9 @@ HTML;
         });
 
 
-        if (typeof caPluginUpdateCheck === "function") {
-            caPluginUpdateCheck("appdata.backup<?= $beta ?>.plg", {name: "Appdata Backup"});
-        }
+        //if (typeof caPluginUpdateCheck === "function") {
+        //    caPluginUpdateCheck("appdata.backup<?= $beta ?>.plg", {name: "Appdata Backup"});
+        //}
 
 
         checkBackupFrequency();
