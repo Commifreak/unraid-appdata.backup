@@ -300,6 +300,10 @@ if (!empty($abSettings->includeFiles)) {
     foreach ($extras as $extra) {
         $extra = trim($extra);
         if (!empty($extra) && file_exists($extra)) {
+            if (is_link($extra)) {
+                ABHelper::backupLog("Specified extra file/folder '$extra' is a symlink. Will convert it to its real path!", ABHelper::LOGLEVEL_WARN);
+                $extra = readlink($extra); // file_exists checks symlinks for target existence, so at this point, we know, the symlink exists!
+            }
             $extrasChecked[] = $extra;
         } else {
             ABHelper::backupLog("Specified extra file/folder '$extra' is empty or does not exist!", ABHelper::LOGLEVEL_WARN);
