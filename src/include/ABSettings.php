@@ -85,13 +85,14 @@ class ABSettings {
                                 break;
                             case 'allowedSources':
                                 $sources = explode("\r\n", $value);
+                                $newSources = [];
                                 foreach ($sources as $sourceKey => $source) {
                                     if (empty(trim($source))) {
                                         continue; // Skip empty lines
                                     }
-                                    $sources[$sourceKey] = rtrim($source, '/');
+                                    $newSources[] = rtrim($source, '/');
                                 }
-                                $this->$key = $sources;
+                                $this->$key = $newSources;
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
