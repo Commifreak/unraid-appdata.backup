@@ -65,6 +65,8 @@ if (!file_exists($abSettings->destination) || !is_writable($abSettings->destinat
     goto end;
 }
 
+ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSources));
+
 /**
  * At this point, we have something to work with.
  * Patch the destination for further usage
@@ -103,6 +105,11 @@ if (empty($sortedStopContainers)) {
     ABHelper::backupLog("There are no docker containers (after sorting) to back up!", ABHelper::LOGLEVEL_WARN);
     goto continuationForAll;
 }
+
+$alSortedContainers = array_column($sortedStopContainers, 'Name');
+natsort($alSortedContainers);
+
+ABHelper::backupLog("Selected containers: " . implode(', ', $alSortedContainers));
 
 ABHelper::backupLog("Sorted Stop : " . implode(", ", array_column($sortedStopContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("Sorted Start: " . implode(", ", array_column($sortedStartContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
