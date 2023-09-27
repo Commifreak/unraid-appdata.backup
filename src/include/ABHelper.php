@@ -54,7 +54,7 @@ class ABHelper {
      * @param $script string
      * @return bool
      */
-    public static function handlePrePostScript($script) {
+    public static function handlePrePostScript($script, ...$args) {
         if (empty($script)) {
             self::backupLog("Not executing script: Not set!", self::LOGLEVEL_DEBUG);
             return true;
@@ -66,9 +66,16 @@ class ABHelper {
                 return false;
             }
 
+            $arguments = '';
+            foreach ($args as $arg) {
+                $arguments .= ' ' . escapeshellarg($arg);
+            }
+
+            $cmd = escapeshellarg($script) . " " . $arguments;
+
             $output = $resultcode = null;
-            self::backupLog("Executing script $script...");
-            exec(escapeshellarg($script), $output, $resultcode);
+            self::backupLog("Executing script $cmd...");
+            exec($cmd, $output, $resultcode);
             self::backupLog($script . " CODE: " . $resultcode . " - " . print_r($output, true), self::LOGLEVEL_DEBUG);
             self::backupLog("Script executed!");
 
