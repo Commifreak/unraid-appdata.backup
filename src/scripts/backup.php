@@ -16,6 +16,7 @@ require_once dirname(__DIR__) . '/include/ABHelper.php';
  * Helper for later renaming of the backup folder to suffix -failed
  */
 $errorOccured = false;
+$backupStarted = new DateTime();
 
 
 if (ABHelper::scriptRunning()) {
@@ -80,7 +81,7 @@ if (!mkdir($abDestination)) {
     goto end;
 }
 
-ABHelper::handlePrePostScript($abSettings->preRunScript);
+ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 if (ABHelper::abortRequested()) {
     goto abort;
 }
@@ -131,7 +132,7 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
-ABHelper::handlePrePostScript($abSettings->preBackupScript);
+ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre-backup', $abDestination);
 
 
 if ($abSettings->backupMethod == 'stopAll') {
@@ -215,7 +216,7 @@ ABHelper::$currentContainerName = null;
 
 continuationForAll:
 
-ABHelper::handlePrePostScript($abSettings->postBackupScript);
+ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
 
 /**
  * FlashBackup
@@ -413,8 +414,6 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
-ABHelper::handlePrePostScript($abSettings->postRunScript);
-
 abort:
 ABHelper::$currentContainerName = null;
 if (ABHelper::abortRequested()) {
@@ -422,8 +421,17 @@ if (ABHelper::abortRequested()) {
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
 }
 
+ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, ($errorOccured ? 'false' : 'true'));
+
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
+
+if (!$errorOccured) {
+    $backupEnded    = new DateTime();
+    $diff           = $backupStarted->diff($backupEnded);
+    $backupDuration = $diff->h . "h, " . $diff->i . "m";
+    ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
+}
 
 if (!empty($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
