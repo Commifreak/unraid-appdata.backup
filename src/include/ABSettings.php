@@ -235,7 +235,9 @@ class ABSettings {
             unlink(ABSettings::$pluginDir . '/' . ABSettings::$cronFile);
         }
         // Let dcron know our changes via update_cron
-        exec("update_cron");
+        $out = $code = 0;
+        exec("update_cron", $out, $code);
+        return [$code, $out];
     }
 
 }

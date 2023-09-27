@@ -122,7 +122,7 @@ window.setTimeout(function() {
 $abSettings = new ABSettings();
 
 if ($_POST) {
-    $abSettings->checkCron();
+    list($code, $out) = $abSettings->checkCron();
 }
 
 
@@ -208,6 +208,10 @@ if (file_exists('/boot/config/plugins/ca.backup2/BackupOptions.json')) {
 <hr />
 HTML;
 
+}
+
+if ($code != 0) {
+    echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
 }
 ?>
 
