@@ -8,7 +8,7 @@ require_once __DIR__ . '/../include/ABHelper.php';
 //set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
 if (ABHelper::scriptRunning()) {
-    ABHelper::notify("Still running", "There is something running already.");
+    ABHelper::notify("Appdata Backup", "Still running", "There is something running already.");
     exit;
 }
 
