@@ -569,7 +569,8 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script BEFORE ANYTHING is done.</p>
+        <p>Runs the selected script BEFORE ANYTHING is done. Sent arguments: <code>pre-run</code>, <code>destination
+                path</code></p>
     </blockquote>
 
     <dl>
@@ -580,7 +581,8 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script BEFORE the backup is starting.</p>
+        <p>Runs the selected script BEFORE the backup is starting. Sent arguments: <code>pre-backup</code>, <code>destination
+                path</code></p>
     </blockquote>
 
     <dl>
@@ -591,7 +593,8 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script AFTER the backup is done (before containers would start).</p>
+        <p>Runs the selected script AFTER the backup is done (before containers would start). Sent arguments: <code>post-backup</code>,
+            <code>destination path</code></p>
     </blockquote>
 
     <dl>
@@ -602,7 +605,8 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script AFTER everything is done.</p>
+        <p>Runs the selected script AFTER everything is done. Sent arguments: <code>post-run</code>, <code>destination
+                path</code>, <code>true|false</code> (true on backup success, false otherwise)</p>
     </blockquote>
 
     <div class="title"><span class="left"><i class="fa fa-plus-square title"></i>Some extra options</span></div>
