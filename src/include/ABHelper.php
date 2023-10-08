@@ -80,7 +80,7 @@ class ABHelper {
             self::backupLog("Script executed!");
 
             if ($resultcode != 0) {
-                self::backupLog("Script did not returned 0!", self::LOGLEVEL_WARN);
+                self::backupLog("Script did not returned 0 (it returned $resultcode)!", self::LOGLEVEL_WARN);
             }
         } else {
             self::backupLog($script . ' is not existing! Skipping!', self::LOGLEVEL_ERR);

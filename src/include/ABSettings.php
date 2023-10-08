@@ -209,6 +209,9 @@ class ABSettings {
         return $settings;
     }
 
+    /**
+     * @return array
+     */
     public function checkCron() {
         $cronSettings = '# Appdata.Backup cron settings' . PHP_EOL;
         switch ($this->backupFrequency) {
