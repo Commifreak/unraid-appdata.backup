@@ -426,7 +426,7 @@ ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestina
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
 
-if (!$errorOccured) {
+if (!$errorOccured && $abSettings->successLogWanted == 'yes') {
     $backupEnded    = new DateTime();
     $diff           = $backupStarted->diff($backupEnded);
     $backupDuration = $diff->h . "h, " . $diff->i . "m";

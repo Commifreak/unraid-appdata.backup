@@ -360,6 +360,13 @@ if ($code != 0) {
             </select>
         </dd>
 
+        <dt><b>Create success notification:</b></dt>
+        <dd><select id='successLogWanted' name="successLogWanted" data-setting="<?= $abSettings->successLogWanted ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
         <dt><b>Scheduled Backup Frequency</b></dt>
         <dd><select id='backupFrequency' name="backupFrequency" onchange="checkBackupFrequency();"
                     data-setting="<?= $abSettings->backupFrequency ?>">

@@ -68,6 +68,7 @@ class ABSettings {
     public string $postRunScript = '';
     public string $includeFiles = '';
     public string $backupVMMeta = 'yes';
+    public string $successLogWanted = 'no';
 
     public function __construct() {
 
