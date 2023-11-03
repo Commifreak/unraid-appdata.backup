@@ -336,7 +336,7 @@ class ABHelper {
         }
 
         if (empty($volumes)) {
-            self::backupLog($container['Name'] . " does not have any volume to back up! Skipping");
+            self::backupLog($container['Name'] . " does not have any volume to back up! Skipping. Please consider ignoring this container.", self::LOGLEVEL_WARN);
             return true;
         }
 
