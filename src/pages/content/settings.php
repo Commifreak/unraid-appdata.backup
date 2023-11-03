@@ -367,6 +367,13 @@ if ($code != 0) {
             </select>
         </dd>
 
+        <dt><b>Send notification if containers were updated:</b></dt>
+        <dd><select id='updateLogWanted' name="updateLogWanted" data-setting="<?= $abSettings->updateLogWanted ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
         <dt><b>Scheduled Backup Frequency</b></dt>
         <dd><select id='backupFrequency' name="backupFrequency" onchange="checkBackupFrequency();"
                     data-setting="<?= $abSettings->backupFrequency ?>">

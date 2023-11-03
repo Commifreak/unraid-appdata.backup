@@ -70,6 +70,7 @@ class ABSettings {
     public array $globalExclusions = [];
     public string $backupVMMeta = 'yes';
     public string $successLogWanted = 'no';
+    public string $updateLogWanted = 'no';
 
     public function __construct() {
 

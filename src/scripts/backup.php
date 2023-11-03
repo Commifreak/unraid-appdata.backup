@@ -294,6 +294,10 @@ foreach ($sortedStopContainers as $container) {
         if (isset($allInfo[$container['Name']]) && ($allInfo[$container['Name']]['updated'] ?? 'true') == 'false') { # string 'false' = Update available!
             ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available!! Installing...");
             exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($container['Name']));
+
+            if ($abSettings->updateLogWanted == 'yes') {
+                ABHelper::notify("Appdata Backup", "Container '{$container['Name']}' updated!", "Container '{$container['Name']}' was successfully updated during this backup run!");
+            }
         } else {
             ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled but no update is available.");
         }
