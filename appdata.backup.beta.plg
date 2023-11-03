@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.04.25b1">
-        <!ENTITY sha256    "b570f3ee005415e3de9ce546242f8c925930d70381953c7dc842e47633042e76">
+        <!ENTITY version   "2023.11.03b1">
+        <!ENTITY sha256    "bb7300bd55561cbf11dc251cd8473f92e542462c4040271a7ba93468ebd2e847">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -15,74 +15,15 @@
 
     <CHANGES>
         <![CDATA[
-        🔨New  🩹Fix 🔧Change
+        ➕New  🩹Fix 🔧Change
 
-###2023.04.25b1
-- 🩹 Another small fix for rare nested volume detection issue
+###2023.11.03b1
+- ➕ Global exclusion list
+- ➕ You can enable a notification for updated containers (disable by default)
+- 🩹 `postBackup` script will now be executed after backup, before starting the container
+- 🔧 Raise a warning (instead of info) if container has NO volumes to backup
+- 🔧 Container updates are now handled directly after backing them up
 
-###2023.04.24b5
-- 🩹 Fix cronjob again: Scheduling got lost after reboot - now using the right way for cron update
-- 🩹 Fix nested volume check
-- 🩹 Apply nested volume check only with paths within appdata (allowed sources)
-
-###2023.04.21b1
-- 🩹 Fix applying default settings to per-container settings for new config options [Bug report](https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1252597)
-- 🩹 Remove container volume mapping, if it is listed in allowed sources
-- 🩹 Scheduling no longer sends mails like "cron for user root ....."
-- 🔧 Ignore volumes which match against exact exclusion path within container settings
-- 🔧 Ignore nested volume (`/mnt/user/appdata/test`, `/mnt/user/appdata/text/config` => The latter would be ignored now)
-
-###2023.04.15a
-- 🩹 Fix CSS bottom border for dark themes
-- 🩹 Optimize volume detection for useless mappings (from our point of view)
-
-###2023.04.15
-- 🩹 Fix colors on dark themes inside per-container-settings section
-- 🔧 Add a warning to the log, if "external volume backup" is enabled for a container
-
-###2023.04.11
-- 🩹 Saving the settings with no docker containers yet, results in a blank page
-
-###2023.04.10
-- 🚀 First stable version!
-
-###2023.04.03b1
-- 🩹 Fixed file selector for dark themes _(Unraids global config variable handling needs a revamp...)_
-
-### 2023.03.31b2
-- 🩹 ca.backup2 migration: Migrate old source path as well
-
-### 2023.03.31b1
-- 🔨 The restore default source path defaults now to the current set destination path
-- 🔧 You can choose a custom restore path now. This could be useful for advanced restoring. **This only applies to extracted archives, not for the config/xmls!**
-- 🔧 Changed the internal/external volume mapping detection again: You can choose ALL of your valid appdata sources now. **Open help for `Appdata source(s)` for further explanation**
-
-### 2023.03.30b1
-- 🔨 If a `ca.backup2` config file is detected, the plugin now offers a config migration
-- 🔧 Changed the way "internal" volumes are detected: `/mnt/{user,cache}/appdata` and optionally the docker set folder are treated as such. Any other volume mapping (`/mnt/user/downloads/myDownloads` as example) is "external". You can optionally backup those too (disabled by default)
-
-### 2023.03.29b2
-- 🩹 "External" volumes (volumes not within your appdata) path are now being ignored. A future update will bring options to save them as well
-- 🩹 Container exclude list was not working as expected
-- 🩹 Fixed settings page issues for Safari users
-- 🩹 Fixed an issue during applying default settings to containers
-- 🔧 Faild backups are now kept (with -failed suffix)
-- 🔧 `Abort` now instantly stops any running command instead of waiting for its completion
-
-### 2023.03.28b3
-- 🩹 Some file selectors are opening some others - fixed
-- 🔧 Display container volumes one per line
-
-### 2023.03.28b2
-- 🩹 Fixed per container (only new ones) settings being hard-set to the global defaults instead of keeping 'Use default'
-- 🔨 Added back update notice banner
-
-### 2023.03.28b1
-- 🔨 Added back VM meta backup
-- 🔨 Added back update notice banner
-
-### 2023.03.27b1
-- 🔨 1st beta
 ]]>
     </CHANGES>
 

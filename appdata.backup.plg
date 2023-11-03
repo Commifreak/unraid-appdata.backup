@@ -15,14 +15,14 @@
 
     <CHANGES>
         <![CDATA[
-        🔨New  🩹Fix 🔧Change
+        ➕New  🩹Fix 🔧Change
 
 ###2023.10.16
 - 🔧 The new success notification is now a setting and can be disabled (default).
 
 ###2023.09.27
-- 🔨 The plugin now creates a notice within Unraids notification system after a successful run.
-- 🔨 Show every error during cron checking
+- ➕ The plugin now creates a notice within Unraids notification system after a successful run.
+- ➕ Show every error during cron checking
 - 🔧 The plugin now calls every post/pre script with at least two arguments (type and current destination path) and a third one (backup result) for the postRun one.
 
 ###2023.09.12
@@ -43,7 +43,7 @@
 
 ###2023.08.14
 - 🩹 Notifications were not sent, if notification level was set to `Errors only`
-- 🔨 `Download (debug) log` were replaced with a `Share log` dialog, which uploads the log to the developer (me)
+- ➕ `Download (debug) log` were replaced with a `Share log` dialog, which uploads the log to the developer (me)
 
 ###2023.06.23
 - 🩹 PostBackup script was not executed (only if method was `Stop/Backup/Start`)
@@ -56,7 +56,7 @@
 - 🩹 Discard empty lines coming from the `allowed sources` option text-fields. Led to unexpected behavior
 
 ###2023.05.09
-- 🔨 A click on a container volume path, adds it to the container exclusion list
+- ➕ A click on a container volume path, adds it to the container exclusion list
 
 ###2023.04.27
 - 🔧 Skip non-existent host volume path mapping
@@ -94,12 +94,12 @@
 - 🩹 ca.backup2 migration: Migrate old source path as well
 
 ### 2023.03.31b1
-- 🔨 The restore default source path defaults now to the current set destination path
+- ➕ The restore default source path defaults now to the current set destination path
 - 🔧 You can choose a custom restore path now. This could be useful for advanced restoring. **This only applies to extracted archives, not for the config/xmls!**
 - 🔧 Changed the internal/external volume mapping detection again: You can choose ALL of your valid appdata sources now. **Open help for `Appdata source(s)` for further explanation**
 
 ### 2023.03.30b1
-- 🔨 If a `ca.backup2` config file is detected, the plugin now offers a config migration
+- ➕ If a `ca.backup2` config file is detected, the plugin now offers a config migration
 - 🔧 Changed the way "internal" volumes are detected: `/mnt/{user,cache}/appdata` and optionally the docker set folder are treated as such. Any other volume mapping (`/mnt/user/downloads/myDownloads` as example) is "external". You can optionally backup those too (disabled by default)
 
 ### 2023.03.29b2
@@ -116,14 +116,14 @@
 
 ### 2023.03.28b2
 - 🩹 Fixed per container (only new ones) settings being hard-set to the global defaults instead of keeping 'Use default'
-- 🔨 Added back update notice banner
+- ➕ Added back update notice banner
 
 ### 2023.03.28b1
-- 🔨 Added back VM meta backup
-- 🔨 Added back update notice banner
+- ➕ Added back VM meta backup
+- ➕ Added back update notice banner
 
 ### 2023.03.27b1
-- 🔨 1st beta
+- ➕ 1st beta
 ]]>
     </CHANGES>
 
