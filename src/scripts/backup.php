@@ -180,7 +180,7 @@ if ($abSettings->backupMethod == 'stopAll') {
         }
     }
     ABHelper::$currentContainerName = null;
-
+    ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
     goto continuationForAll;
 }
 
@@ -202,6 +202,12 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
+
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 ABHelper::backupLog("Set containers to previous state");
 foreach ($sortedStartContainers as $container) {
     ABHelper::$currentContainerName = $container['Name'];
@@ -215,8 +221,6 @@ ABHelper::$currentContainerName = null;
 
 
 continuationForAll:
-
-ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
 
 /**
  * FlashBackup
