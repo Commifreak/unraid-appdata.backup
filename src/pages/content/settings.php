@@ -531,7 +531,7 @@ if ($code != 0) {
     </select>
 </dd>
 	
-<dt>Excluded folders/files<br />One folder/file per line. <a href="https://www.gnu.org/software/tar/manual/html_node/wildcards.html" target="_blank">tar's glob syntax</a> is used.</dt>
+<dt>Excluded folders/files<br />One path/pattern per line. See belows "Global exclusions" for more examples.</dt>
 <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
 <dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
@@ -627,7 +627,7 @@ HTML;
         <dd>
             <div style="display: table; width: 300px;"><textarea id="includeFiles" name="includeFiles"
                                                                  onfocus="$(this).next('.ft').slideDown('fast');"
-                                                                 style="resize: vertical; width: 400px;"><?= $abSettings->includeFiles ?></textarea>
+                                                                 style="resize: vertical; width: 400px;"><?= implode("\r\n", $abSettings->includeFiles) ?></textarea>
                 <div class="ft" style="display: none;">
                     <div class="fileTreeDiv"></div>
                     <button onclick="addSelectionToList(this);  return false;">Add to list</button>
@@ -637,6 +637,20 @@ HTML;
     </dl>
     <blockquote class='inline_help'>
         <p>Those files will be packed into "extra_files.tar.gz"</p>
+    </blockquote>
+
+    <dl>
+        <dt>Global exclusion list</dt>
+        <dd>
+            <div style="display: table; width: 300px;"><textarea id="globalExclusions" name="globalExclusions"
+                                                                 style="resize: vertical; width: 400px;"><?= implode("\r\n", $abSettings->globalExclusions) ?></textarea>
+            </div>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>With this you can define exclusions which will be used as global exclusion</p>
+        <p>You can use parts of paths and/or wildcards like <code>*.png</code>, <code>music/*.m4a</code>,
+            <code>logs</code>. Any folder/file paths matching this patterns will be excluded!<br/></p>
     </blockquote>
 
     <dl>

@@ -307,9 +307,8 @@ ABHelper::backupLog("Docker update check finished!");
 
 if (!empty($abSettings->includeFiles)) {
     ABHelper::backupLog("Include files is NOT empty:" . PHP_EOL . print_r($abSettings->includeFiles, true), ABHelper::LOGLEVEL_DEBUG);
-    $extras        = $excludes = explode("\r\n", $abSettings->includeFiles);
     $extrasChecked = [];
-    foreach ($extras as $extra) {
+    foreach ($abSettings->includeFiles as $extra) {
         $extra = trim($extra);
         if (!empty($extra) && file_exists($extra)) {
             if (is_link($extra)) {

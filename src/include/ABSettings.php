@@ -66,7 +66,8 @@ class ABSettings {
     public string $preBackupScript = '';
     public string $postBackupScript = '';
     public string $postRunScript = '';
-    public string $includeFiles = '';
+    public array $includeFiles = [];
+    public array $globalExclusions = [];
     public string $backupVMMeta = 'yes';
     public string $successLogWanted = 'no';
 
@@ -85,15 +86,17 @@ class ABSettings {
                                 $this->$key = array_merge($this->defaults, $value);
                                 break;
                             case 'allowedSources':
-                                $sources = explode("\r\n", $value);
-                                $newSources = [];
-                                foreach ($sources as $sourceKey => $source) {
-                                    if (empty(trim($source))) {
+                            case 'includeFiles':
+                            case 'globalExclusions':
+                                $paths    = explode("\r\n", $value);
+                                $newPaths = [];
+                                foreach ($paths as $pathKey => $path) {
+                                    if (empty(trim($path))) {
                                         continue; // Skip empty lines
                                     }
-                                    $newSources[] = rtrim($source, '/');
+                                    $newPaths[] = rtrim($path, '/');
                                 }
-                                $this->$key = $newSources;
+                                $this->$key = $newPaths;
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.

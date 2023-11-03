@@ -306,7 +306,7 @@ class ABHelper {
                 }
             }
         } else {
-            self::backupLog("Backing up EXTERNAL volumes, because its enabled!", self::LOGLEVEL_WARN);
+            self::backupLog("Backing up EXTERNAL volumes, because its enabled!");
         }
 
         $tarExcludes = [];
@@ -325,6 +325,13 @@ class ABHelper {
                         $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                     }
                 }
+            }
+        }
+
+        if (!empty($abSettings->globalExclusions)) {
+            self::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), self::LOGLEVEL_DEBUG);
+            foreach ($abSettings->globalExclusions as $globalExclusion) {
+                $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
         }
 
