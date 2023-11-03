@@ -462,7 +462,7 @@ class ABHelper {
                 continue;
             }
             if (!file_exists($hostPath)) {
-                self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_WARN);
+                self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_ERR);
                 continue;
             }
             if (in_array($hostPath, $abSettings->allowedSources)) {
@@ -516,5 +516,15 @@ class ABHelper {
         self::backupLog("got PHP error: $errno / $errstr $errfile:$errline", self::LOGLEVEL_ERR);
 
         return true;
+    }
+
+    public static function updateContainer($name) {
+        global $abSettings;
+        ABHelper::backupLog("Installing planned update for $name...");
+        exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($name));
+
+        if ($abSettings->updateLogWanted == 'yes') {
+            ABHelper::notify("Appdata Backup", "Container '$name' updated!", "Container '$name' was successfully updated during this backup run!");
+        }
     }
 }

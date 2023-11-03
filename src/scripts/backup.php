@@ -132,6 +132,37 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+/**
+ * Array of Container names, needing an update
+ */
+$dockerUpdateList = [''];
+
+ABHelper::backupLog("Starting Docker auto-update check...", ABHelper::LOGLEVEL_DEBUG);
+foreach ($sortedStopContainers as $container) {
+    $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+    if ($containerSettings['updateContainer'] == 'yes') {
+
+        if (!isset($allInfo)) {
+            ABHelper::backupLog("Requesting docker template meta...", ABHelper::LOGLEVEL_DEBUG);
+            $dockerTemplates = new \DockerTemplates();
+            $allInfo         = $dockerTemplates->getAllInfo(true, true);
+            ABHelper::backupLog(var_export($allInfo, true), ABHelper::LOGLEVEL_DEBUG);
+        }
+
+        if (isset($allInfo[$container['Name']]) && ($allInfo[$container['Name']]['updated'] ?? 'true') == 'false') { # string 'false' = Update available!
+            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available! Schedule update after backup...");
+            $dockerUpdateList[] = $container['Name'];
+        } else {
+            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled but no update is available.");
+        }
+    }
+    if (ABHelper::abortRequested()) {
+        goto abort;
+    }
+}
+ABHelper::backupLog("Docker update check finished!", ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog("Planned container updated: " . implode(", ", $dockerUpdateList), ABHelper::LOGLEVEL_DEBUG);
+
 ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre-backup', $abDestination);
 
 
@@ -173,6 +204,14 @@ if ($abSettings->backupMethod == 'stopAll') {
             goto abort;
         }
 
+        if (in_array($container['Name'], $dockerUpdateList)) {
+            ABHelper::updateContainer($container['Name']);
+        }
+
+        if (ABHelper::abortRequested()) {
+            goto abort;
+        }
+
         ABHelper::startContainer($container);
 
         if (ABHelper::abortRequested()) {
@@ -193,6 +232,10 @@ foreach ($sortedStartContainers as $container) {
 
     if (ABHelper::abortRequested()) {
         goto abort;
+    }
+
+    if (in_array($container['Name'], $dockerUpdateList)) {
+        ABHelper::updateContainer($container['Name']);
     }
 
 }
@@ -279,35 +322,6 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
-ABHelper::backupLog("Starting Docker auto-update check...");
-foreach ($sortedStopContainers as $container) {
-    $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
-    if ($containerSettings['updateContainer'] == 'yes') {
-
-        if (!isset($allInfo)) {
-            ABHelper::backupLog("Requesting docker template meta...", ABHelper::LOGLEVEL_DEBUG);
-            $dockerTemplates = new \DockerTemplates();
-            $allInfo         = $dockerTemplates->getAllInfo(true, true);
-            ABHelper::backupLog(var_export($allInfo, true), ABHelper::LOGLEVEL_DEBUG);
-        }
-
-        if (isset($allInfo[$container['Name']]) && ($allInfo[$container['Name']]['updated'] ?? 'true') == 'false') { # string 'false' = Update available!
-            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available!! Installing...");
-            exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($container['Name']));
-
-            if ($abSettings->updateLogWanted == 'yes') {
-                ABHelper::notify("Appdata Backup", "Container '{$container['Name']}' updated!", "Container '{$container['Name']}' was successfully updated during this backup run!");
-            }
-        } else {
-            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled but no update is available.");
-        }
-    }
-    if (ABHelper::abortRequested()) {
-        goto abort;
-    }
-}
-ABHelper::backupLog("Docker update check finished!");
-
 
 if (!empty($abSettings->includeFiles)) {
     ABHelper::backupLog("Include files is NOT empty:" . PHP_EOL . print_r($abSettings->includeFiles, true), ABHelper::LOGLEVEL_DEBUG);
@@ -321,7 +335,7 @@ if (!empty($abSettings->includeFiles)) {
             }
             $extrasChecked[] = $extra;
         } else {
-            ABHelper::backupLog("Specified extra file/folder '$extra' is empty or does not exist!", ABHelper::LOGLEVEL_WARN);
+            ABHelper::backupLog("Specified extra file/folder '$extra' is empty or does not exist!", ABHelper::LOGLEVEL_ERR);
         }
     }
 
