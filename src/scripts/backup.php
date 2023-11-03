@@ -238,6 +238,12 @@ if ($abSettings->flashBackup == 'yes') {
                 ABHelper::backupLog("Copying flash backup to destination failed!", ABHelper::LOGLEVEL_ERR);
             } else {
                 ABHelper::backupLog("Flash backup created!");
+                if (!empty($abSettings->flashBackupCopy)) {
+                    ABHelper::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' as well...");
+                    if (!copy($docroot . '/' . $output[0], $abSettings->flashBackupCopy . '/' . $output[0])) {
+                        ABHelper::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", ABHelper::LOGLEVEL_ERR);
+                    }
+                }
                 // Following is from Download.php
                 if ($backup = readlink($docroot . '/' . $output[0])) {
                     unlink($backup);

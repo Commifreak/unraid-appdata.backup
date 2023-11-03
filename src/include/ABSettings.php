@@ -53,6 +53,7 @@ class ABSettings {
         'backupExtVolumes'   => 'no'
     ];
     public string $flashBackup = 'yes';
+    public string $flashBackupCopy = '';
     public string $notification = ABHelper::LOGLEVEL_ERR;
     public string $backupFrequency = 'disabled';
     public string|int $backupFrequencyWeekday = '1';

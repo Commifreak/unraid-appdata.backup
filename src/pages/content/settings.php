@@ -325,7 +325,8 @@ if ($code != 0) {
 
     <dl>
         <dt><b>Backup the flash drive?</b></dt>
-        <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>">
+        <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>"
+                    onchange="checkFlashBackupCopy();">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
             </select></dd>
@@ -334,6 +335,18 @@ if ($code != 0) {
     <blockquote class='inline_help'>
         <p>This puts a compressed copy of your flash drive inside the backup as well.</p>
     </blockquote>
+
+    <dl id="flashBackupCopy_dl">
+        <dt>
+            <div style="display: table; line-height: 1em;"><b>Copy the flash backup to a custom destination</b><br/>This
+                is optional
+            </div>
+        </dt>
+        <dd><input style="width: 500px;" type='text' class='ftAttach' id="flashBackupCopy" name="flashBackupCopy"
+                   value="<?= $abSettings->flashBackupCopy ?>"
+                   data-pickroot="/mnt/"
+                   data-pickfolders/></dd>
+    </dl>
 
     <dl>
         <dt><b>Backup VM meta?</b></dt>
@@ -721,6 +734,7 @@ HTML;
 
 
         checkBackupFrequency();
+        checkFlashBackupCopy();
 
 
     });
@@ -790,6 +804,18 @@ HTML;
                 break;
             default:
                 $('#backupFrequencyCustom').prop('disabled', false);
+                break;
+        }
+    }
+
+    function checkFlashBackupCopy() {
+        switch ($('#flashBackup').val()) {
+            case 'no':
+                $('#flashBackupCopy').val('');
+                $('#flashBackupCopy_dl').fadeOut();
+                break;
+            case 'yes':
+                $('#flashBackupCopy_dl').fadeIn();
                 break;
         }
     }
