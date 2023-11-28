@@ -298,6 +298,12 @@ class ABHelper {
         $volumes = self::getContainerVolumes($container);
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+
+        if ($containerSettings['skipBackup'] == 'yes') {
+            self::backupLog("Should NOT backup this container at all. Only include it in stop/start. Skipping backup...");
+            return true;
+        }
+
         if ($containerSettings['backupExtVolumes'] == 'no') {
             self::backupLog("Should NOT backup external volumes, sanitizing them...");
             foreach ($volumes as $index => $volume) {

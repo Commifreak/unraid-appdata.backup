@@ -45,6 +45,7 @@ class ABSettings {
         'verifyBackup'       => 'yes',
         'ignoreBackupErrors' => 'no',
         'updateContainer'    => 'no',
+        'skipBackup' => 'no',
 
         // The following are hidden, container special default settings
         'skip'               => 'no',

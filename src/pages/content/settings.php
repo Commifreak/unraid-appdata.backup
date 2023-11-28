@@ -522,6 +522,12 @@ $plexHint
 <dd><div style="display: table">$volumes</div></dd>
 <br />
 
+<dt>Skip backup? <small>Only stop/start</small></dt>
+<dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
+		<option value='no'>No, do backup as well</option>
+		<option value='yes'>Yes, skip backup and do stop/start only</option>
+	</select></dd>
+
 <dt>Save external volumes?</dt>
 <dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
 		<option value='no'>No</option>
@@ -552,7 +558,7 @@ $plexHint
     </select>
 </dd>
 	
-<dt>Excluded folders/files<br />One path/pattern per line. See belows "Global exclusions" for more examples.</dt>
+<dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
 <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
 <dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
