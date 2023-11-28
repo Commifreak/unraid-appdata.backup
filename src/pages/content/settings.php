@@ -819,4 +819,13 @@ HTML;
                 break;
         }
     }
+
+    function copyConfigFromProd() {
+        $.ajax(url + '?action=copyConfigFromProd').done(function (data) {
+            alert(data);
+            window.location.href = window.location;
+        }).fail(function (data) {
+            alert('Something went wrong :/')
+        });
+    }
 </script>

@@ -8,7 +8,7 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 if (isset($_GET['action'])) {
 
-    if ($_GET['action'] != 'dlLog') {
+    if (!in_array($_GET['action'], ['dlLog', 'copyConfigFromProd'])) {
         header('Content-Type: application/json; charset=utf-8');
     }
 
@@ -140,6 +140,14 @@ if (isset($_GET['action'])) {
 
             break;
 
+        case 'copyConfigFromProd':
+            if (file_exists("/boot/config/plugins/appdata.backup/config.json")) {
+                copy("/boot/config/plugins/appdata.backup/config.json", "/boot/config/plugins/appdata.backup.beta/config.json");
+                echo "Config found and copied!";
+            } else {
+                echo "No productive config found :/";
+            }
+            break;
 
     }
 }

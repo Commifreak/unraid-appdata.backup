@@ -4,6 +4,9 @@ Tag="icon-archive"
 ---
 <div class="title"><span class="left"><i class="fa fa-exclamation title"></i>BETA VERSION!!!</span></div>
 <p style="color: red">This is a beta version! Please be aware of this!</p>
+<p>In beta you can always copy/reset from the prod config from the stable version. To do so <a href="javascript:;"
+                                                                                               onclick="copyConfigFromProd()">Click
+        here</a></p>
 <?php
 include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/settings.php');
 ?>
