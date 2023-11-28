@@ -475,6 +475,19 @@ if ($code != 0) {
             $allContainers = $dockerClient->getDockerContainers();
 
             foreach ($allContainers as $container) {
+                $isPlex = str_contains(strtolower($container['Name']), 'plex');
+
+                $plexHint                = '';
+                $plexContainerNameSuffix = '';
+                if ($isPlex) {
+                    $plexContainerNameSuffix = ' - Plex detected! Open for more...';
+                    $plexHint                = <<<HTML
+<dt><b>PLEX detected!</b></dt>
+<dd><div style="display: table; font-weight: bold;">This container seems to be a plex container.<br />Please consider setting some exclusions.<br /><a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for a suggestion.</div></dd>
+HTML;
+
+                }
+
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
                 $volumes = ABHelper::getContainerVolumes($container);
 
@@ -493,7 +506,7 @@ if ($code != 0) {
                 echo <<<HTML
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl>
-        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
+        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr></dt>
         <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
@@ -504,6 +517,7 @@ if ($code != 0) {
 
 <blockquote class='inline_help'>
 <dl>
+$plexHint
 <dt>Configured volumes <small>(Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
 <dd><div style="display: table">$volumes</div></dd>
 <br />
