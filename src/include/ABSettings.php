@@ -46,6 +46,7 @@ class ABSettings {
         'ignoreBackupErrors' => 'no',
         'updateContainer'    => 'no',
         'skipBackup' => 'no',
+        'group' => '',
 
         // The following are hidden, container special default settings
         'skip'               => 'no',
@@ -63,6 +64,7 @@ class ABSettings {
     public string $backupFrequencyCustom = '';
     public array $containerSettings = [];
     public array $containerOrder = [];
+    public array $containerGroupOrder = [];
     public string $preRunScript = '';
     public string $preBackupScript = '';
     public string $postBackupScript = '';
@@ -103,6 +105,9 @@ class ABSettings {
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
                                 $this->$key = is_array($value) ? $value : [];
+                                break;
+                            case 'settingsVersion':
+                                $this::$settingsVersion = $value;
                                 break;
                             default:
                                 $this->$key = $value;
@@ -212,7 +217,25 @@ class ABSettings {
                 }
             }
         }
+
+        $settings['group'] = preg_replace('/[\W]/', '', $settings['group']);
+
         return $settings;
+    }
+
+    public function getContainerGroups($filter = false) {
+        $groups = [];
+        foreach ($this->containerSettings as $container => $setting) {
+            $containersettings = $this->getContainerSpecificSettings($container);
+            $group             = $containersettings['group'];
+            if (!empty($group)) {
+                $groups[$group][] = $container;
+            }
+        }
+        if (!empty($filter) && isset($groups[$filter])) {
+            return $groups[$filter];
+        }
+        return $groups;
     }
 
     /**

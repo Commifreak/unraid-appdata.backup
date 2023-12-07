@@ -15,7 +15,6 @@ require_once dirname(__DIR__) . '/include/ABHelper.php';
 /**
  * Helper for later renaming of the backup folder to suffix -failed
  */
-$errorOccured = false;
 $backupStarted = new DateTime();
 
 
@@ -116,16 +115,8 @@ ABHelper::backupLog("Sorted Stop : " . implode(", ", array_column($sortedStopCon
 ABHelper::backupLog("Sorted Start: " . implode(", ", array_column($sortedStartContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
 ABHelper::backupLog("Saving container XML files...");
-foreach ($sortedStopContainers as $container) {
-    ABHelper::backupLog("Container Settings for " . $container['Name'] . ": " . print_r($abSettings->getContainerSpecificSettings($container['Name']), true), ABHelper::LOGLEVEL_DEBUG);
-
-    $xmlPath = "/boot/config/plugins/dockerMan/templates-user/my-{$container['Name']}.xml";
-    if (file_exists($xmlPath)) {
-        copy($xmlPath, $abDestination . '/' . basename($xmlPath));
-    } else {
-        ABHelper::backupLog("XML file for {$container['Name']} was not found!", ABHelper::LOGLEVEL_WARN);
-    }
-
+foreach (glob("/boot/config/plugins/dockerMan/templates-user/*") as $xmlFile) {
+    copy($xmlFile, $abDestination . '/' . basename($xmlFile));
 }
 
 if (ABHelper::abortRequested()) {
@@ -139,6 +130,9 @@ $dockerUpdateList = [''];
 
 ABHelper::backupLog("Starting Docker auto-update check...", ABHelper::LOGLEVEL_DEBUG);
 foreach ($sortedStopContainers as $container) {
+    if ($container['isGroup']) {
+        continue;
+    }
     $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
     if ($containerSettings['updateContainer'] == 'yes') {
 
@@ -165,102 +159,7 @@ ABHelper::backupLog("Planned container updated: " . implode(", ", $dockerUpdateL
 
 ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre-backup', $abDestination);
 
-
-if ($abSettings->backupMethod == 'stopAll') {
-    ABHelper::backupLog("Method: Stop all container before continuing.");
-    foreach ($sortedStopContainers as $container) {
-        ABHelper::$currentContainerName = $container['Name'];
-        ABHelper::stopContainer($container);
-
-        if (ABHelper::abortRequested()) {
-            goto abort;
-        }
-    }
-    ABHelper::$currentContainerName = null;
-
-    if (ABHelper::abortRequested()) {
-        goto abort;
-    }
-} else {
-    ABHelper::backupLog("Method: Stop/Backup/Start");
-
-    if (ABHelper::abortRequested()) {
-        goto abort;
-    }
-
-    foreach ($sortedStartContainers as $container) {
-        ABHelper::$currentContainerName = $container['Name'];
-        ABHelper::stopContainer($container);
-
-        if (ABHelper::abortRequested()) {
-            goto abort;
-        }
-
-        if (!ABHelper::backupContainer($container, $abDestination)) {
-            $errorOccured = true;
-        }
-
-        if (ABHelper::abortRequested()) {
-            goto abort;
-        }
-
-        if (in_array($container['Name'], $dockerUpdateList)) {
-            ABHelper::updateContainer($container['Name']);
-        }
-
-        if (ABHelper::abortRequested()) {
-            goto abort;
-        }
-
-        ABHelper::startContainer($container);
-
-        if (ABHelper::abortRequested()) {
-            goto abort;
-        }
-    }
-    ABHelper::$currentContainerName = null;
-    ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
-    goto continuationForAll;
-}
-
-ABHelper::backupLog("Starting backup for containers");
-foreach ($sortedStartContainers as $container) {
-    ABHelper::$currentContainerName = $container['Name'];
-    if (!ABHelper::backupContainer($container, $abDestination)) {
-        $errorOccured = true;
-    }
-
-    if (ABHelper::abortRequested()) {
-        goto abort;
-    }
-
-    if (in_array($container['Name'], $dockerUpdateList)) {
-        ABHelper::updateContainer($container['Name']);
-    }
-
-}
-ABHelper::$currentContainerName = null;
-
-if (ABHelper::abortRequested()) {
-    goto abort;
-}
-
-ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
-
-if (ABHelper::abortRequested()) {
-    goto abort;
-}
-
-ABHelper::backupLog("Set containers to previous state");
-foreach ($sortedStartContainers as $container) {
-    ABHelper::$currentContainerName = $container['Name'];
-    ABHelper::startContainer($container);
-
-    if (ABHelper::abortRequested()) {
-        goto abort;
-    }
-}
-ABHelper::$currentContainerName = null;
+ABHelper::doBackupMethod($abSettings->backupMethod);
 
 
 continuationForAll:
@@ -384,7 +283,7 @@ if (!empty($abSettings->includeFiles)) {
 
 end:
 
-if ($errorOccured) {
+if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
     ABHelper::backupLog("Checking retention...");
@@ -438,16 +337,18 @@ if (ABHelper::abortRequested()) {
 abort:
 ABHelper::$currentContainerName = null;
 if (ABHelper::abortRequested()) {
-    $errorOccured = true;
+    ABHelper::$errorOccured = true;
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
 }
 
-ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, ($errorOccured ? 'false' : 'true'));
+ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
 
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
 
-if (!$errorOccured && $abSettings->successLogWanted == 'yes') {
+sleep(1); # In some cases a backup could create two notifications in a row, Unraid discards the latter then, so sleep 1 second
+
+if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     $backupEnded    = new DateTime();
     $diff           = $backupStarted->diff($backupEnded);
     $backupDuration = $diff->h . "h, " . $diff->i . "m";
@@ -457,7 +358,7 @@ if (!$errorOccured && $abSettings->successLogWanted == 'yes') {
 if (!empty($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
-    if ($errorOccured) {
+    if (ABHelper::$errorOccured) {
         copy(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $abDestination . '/backup.debug.log');
         rename($abDestination, $abDestination . '-failed');
     }

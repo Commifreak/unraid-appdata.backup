@@ -116,6 +116,19 @@ window.setTimeout(function() {
     } else {
         $_POST = array_merge($_POST, $containerOrder);
     }
+
+    if (!empty($_POST['containerGroupOrder'])) {
+        foreach ($_POST['containerGroupOrder'] as $group => $order) {
+            $containerOrder = null;
+            parse_str($order, $containerOrder);
+            if (empty($containerOrder)) {
+                unset($_POST['containerGroupOrder'][$group]); # delete group from config
+            } else {
+                $_POST['containerGroupOrder'][$group] = $containerOrder['containerGroupOrder'][$group];
+            }
+        }
+    }
+
     ABSettings::store($_POST);
 }
 
@@ -210,7 +223,7 @@ HTML;
 
 }
 
-if ($code != 0) {
+if (($code ?? 0) != 0) {
     echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
 }
 ?>
@@ -470,6 +483,14 @@ if ($code != 0) {
             <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings. <b>Click on container name to open</b></span>
             </div>
 
+            <datalist id="containerGroups">
+                <?php
+                foreach ($abSettings->getContainerGroups() as $group => $members) {
+                    echo "<option value=\"$group\"></option>";
+                }
+                ?>
+            </datalist>
+
             <?php
             $dockerClient  = new DockerClient();
             $allContainers = $dockerClient->getDockerContainers();
@@ -518,9 +539,12 @@ HTML;
 <blockquote class='inline_help'>
 <dl>
 $plexHint
-<dt>Configured volumes <small>(Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
+<dt>Configured volumes <small>- (Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
 <dd><div style="display: table">$volumes</div></dd>
 <br />
+
+<dt>Member of group <small>- <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for more</small></dt>
+<dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$container['Name']}_group' name="containerSettings[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
 
 <dt>Skip backup? <small>Only stop/start</small></dt>
 <dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
@@ -578,21 +602,48 @@ HTML;
         </div>
         <div style="flex-grow: 1; flex-basis: 0; padding-left: 10px; max-width: 35%;">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
-            <p>This defines the start sequence. Stop would be this order in reverse. This list also defines the sequence
-                for the <code>Stop, backup, start for each container</code> type.</p>
+            <p>This defines the start sequence. Stop would be this order in reverse.</p>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
                 foreach ($sortedContainers as $container) {
-                    $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                    $isGroup      = isset($container['isGroup']);
+                    $name         = $container['Name'] ?? key($container);
+                    $internalName = $isGroup ? '__grp__' . $name : $name;
+                    $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);
+                    $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
                     echo <<<HTML
-<li id="containerOrder_{$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+<li id="containerOrder_{$internalName}"><i class="fa fa-sort"></i> $imageHtml $name</li>
 HTML;
 
                 }
                 ?>
             </ul>
+
+            <?php
+            foreach ($abSettings->getContainerGroups() as $group => $members) {
+                ?>
+                <div class="title"><span class="left"><i
+                                class="fa fa-sort title"></i>Start order for group <?= $group ?></span></div>
+                <p>This defines the start sequence. Stop would be this order in reverse.<br/><b>All containers inside a
+                        group will be stopped (by their order), backed up and then started again.</b></p>
+                <input type="hidden" id="containerGroupOrder_<?= $group ?>" name="containerGroupOrder[<?= $group ?>]"/>
+                <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
+                    <?php
+                    $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
+                    foreach ($sortedContainers as $container) {
+                        $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                        echo <<<HTML
+<li id="containerGroupOrder[{$group}]={$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+HTML;
+
+                    }
+                    ?>
+                </ul>
+                <?php
+            }
+            ?>
         </div>
     </div>
 
@@ -710,6 +761,9 @@ HTML;
     <dt>GitHub repository</dt>
     <dd><a href="https://github.com/Commifreak/unraid-appdata.backup" target="_blank"><i class="fa fa-github"></i> Open</a>
     </dd>
+
+    <dt>Used IDE</dt>
+    <dd>IntelliJ PHPStorm ❤️</dd>
 </dl>
 
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
@@ -767,9 +821,20 @@ HTML;
     });
 
     $('#abSettingsForm').on('submit', function () {
-        $('#containerOrder').val($('#containerOrderSortable').sortable('serialize', {
-            expression: /(.+?)[-=_](.+)/
-        }));
+        let mainValue = $('#containerOrderSortable').sortable('serialize', {
+            expression: /(.+?)_(.+)/
+        });
+        console.log('Main value: ', mainValue);
+        $('#containerOrder').val(mainValue);
+
+        $("input[id^='containerGroupOrder']").each(function (index) {
+            console.log("Processing groupOrder " + $(this).attr('id'));
+            let groupValue = $('#' + $(this).attr('id') + '_Sortable').sortable('serialize', {
+                expression: /(.+?)=(.+)/
+            });
+            console.log(groupValue);
+            $(this).val(groupValue);
+        });
     });
 
 
