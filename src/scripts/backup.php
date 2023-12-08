@@ -335,7 +335,7 @@ if (ABHelper::abortRequested()) {
 }
 
 abort:
-ABHelper::$currentContainerName = null;
+ABHelper::setCurrentContainerName(null);
 if (ABHelper::abortRequested()) {
     ABHelper::$errorOccured = true;
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);

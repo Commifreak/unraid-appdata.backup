@@ -621,7 +621,7 @@ HTML;
                 <?php
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
                 foreach ($sortedContainers as $container) {
-                    $isGroup      = isset($container['isGroup']);
+                    $isGroup = $container['isGroup'];
                     $name         = $container['Name'] ?? key($container);
                     $internalName = $isGroup ? '__grp__' . $name : $name;
                     $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);

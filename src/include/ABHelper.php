@@ -25,8 +25,7 @@ class ABHelper {
         self::LOGLEVEL_ERR  => '❌'
     ];
     public static $errorOccured = false;
-    public static $currentContainerName;
-    public static $currentContainerGroupName;
+    private static array $currentContainerName = [];
 
     public static $targetLogLevel = '';
 
@@ -112,10 +111,19 @@ class ABHelper {
             return;
         }
 
-        $group = empty(self::$currentContainerGroupName) ? '' : "[" . self::$currentContainerGroupName . "]";
-        $section = empty(self::$currentContainerName) ? 'Main' : self::$currentContainerName;
+        $sectionString = '';
+        foreach (self::$currentContainerName as $value) {
+            if (empty($value)) {
+                continue;
+            }
+            $sectionString .= "[$value]";
+        }
 
-        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][" . (self::$emojiLevels[$level] ?? $level) . "]{$group}[$section]") . " $msg" . ($newLine ? "\n" : '');
+        if (empty($sectionString)) {
+            $sectionString = '[Main]';
+        }
+
+        $logLine = ($skipDate ? '' : "[" . date("d.m.Y H:i:s") . "][" . (self::$emojiLevels[$level] ?? $level) . "]$sectionString") . " $msg" . ($newLine ? "\n" : '');
 
         if ($level != self::LOGLEVEL_DEBUG) {
             file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $logLine, FILE_APPEND);
@@ -267,6 +275,11 @@ class ABHelper {
      */
     public static function sortContainers($containers, $order, $reverse = false, $removeSkipped = true, array $group = []) {
         global $abSettings;
+
+        // Add isGroup default to false
+        foreach ($containers as $key => $container) {
+            $containers[$key]['isGroup'] = false;
+        }
 
         $_containers = array_column($containers, null, 'Name');
         if ($group) {
@@ -569,26 +582,26 @@ class ABHelper {
             case 'stopAll':
 
                 ABHelper::backupLog("Method: Stop all container before continuing.");
-                foreach ($containerListOverride ?: $sortedStopContainers as $container) {
-                    foreach ((self::resolveContainer($container) ?: [$container]) as $container) {
-                        ABHelper::$currentContainerName = $container['Name'];
+                foreach ($containerListOverride ?: $sortedStopContainers as $_container) {
+                    foreach ((self::resolveContainer($_container) ?: [$_container]) as $container) {
+                        ABHelper::setCurrentContainerName($container);
                         ABHelper::stopContainer($container);
 
                         if (ABHelper::abortRequested()) {
                             return false;
                         }
                     }
+                    ABHelper::setCurrentContainerName($_container, true);
                 }
-                ABHelper::$currentContainerName = null;
 
                 if (ABHelper::abortRequested()) {
                     return false;
                 }
 
                 ABHelper::backupLog("Starting backup for containers");
-                foreach ($containerListOverride ?: $sortedStopContainers as $container) {
-                    foreach (self::resolveContainer($container) ?: [$container] as $container) {
-                        ABHelper::$currentContainerName = $container['Name'];
+                foreach ($containerListOverride ?: $sortedStopContainers as $_container) {
+                    foreach (self::resolveContainer($_container) ?: [$_container] as $container) {
+                        ABHelper::setCurrentContainerName($container);
                         if (!ABHelper::backupContainer($container, $abDestination)) {
                             ABHelper::$errorOccured = true;
                         }
@@ -601,8 +614,8 @@ class ABHelper {
                             ABHelper::updateContainer($container['Name']);
                         }
                     }
+                    ABHelper::setCurrentContainerName($_container, true);
                 }
-                ABHelper::$currentContainerName = null;
 
                 if (ABHelper::abortRequested()) {
                     return false;
@@ -615,18 +628,17 @@ class ABHelper {
                 }
 
                 ABHelper::backupLog("Set containers to previous state");
-                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStartContainers as $container) {
-                    foreach (self::resolveContainer($container) ?: [$container] as $container) {
-                        ABHelper::$currentContainerName = $container['Name'];
+                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStartContainers as $_container) {
+                    foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
+                        ABHelper::setCurrentContainerName($container);
                         ABHelper::startContainer($container);
 
                         if (ABHelper::abortRequested()) {
                             return false;
                         }
                     }
+                    ABHelper::setCurrentContainerName($_container, true);
                 }
-
-                ABHelper::$currentContainerName = null;
 
                 break;
             case 'oneAfterTheOther':
@@ -638,13 +650,13 @@ class ABHelper {
 
                 foreach ($containerListOverride ?: $sortedStopContainers as $container) {
 
-                    if (isset($container['isGroup'])) {
+                    if ($container['isGroup']) {
                         self::doBackupMethod('stopAll', self::resolveContainer($container));
-                        ABHelper::$currentContainerGroupName = null;
+                        ABHelper::setCurrentContainerName($container, true);
                         continue;
                     }
 
-                    ABHelper::$currentContainerName = $container['Name'];
+                    ABHelper::setCurrentContainerName($container);
                     ABHelper::stopContainer($container);
 
                     if (ABHelper::abortRequested()) {
@@ -672,27 +684,64 @@ class ABHelper {
                     if (ABHelper::abortRequested()) {
                         return false;
                     }
-                    ABHelper::$currentContainerName = null;
+                    ABHelper::setCurrentContainerName($container, true);
                 }
                 ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
 
                 break;
         }
-        ABHelper::$currentContainerName = ABHelper::$currentContainerGroupName = null;
         return true;
     }
 
-    public static function resolveContainer($container) {
+    public static function resolveContainer($container, $reverse = false) {
         global $dockerContainers, $abSettings;
         if ($container['isGroup']) {
-            #ABHelper::$currentContainerGroupName = $container['Name'];
+            ABHelper::setCurrentContainerName($container);
             $groupMembers = $abSettings->getContainerGroups($container['Name']);
-            ABHelper::backupLog("Reached a group: " . $container['Name']);
-            $sortedGroupContainers = ABHelper::sortContainers($dockerContainers, $abSettings->containerGroupOrder[$container['Name']], false, false, $groupMembers);
-            ABHelper::backupLog("Containers in this group:", ABHelper::LOGLEVEL_DEBUG);
-            ABHelper::backupLog(print_r($sortedGroupContainers, true), ABHelper::LOGLEVEL_DEBUG);
+            ABHelper::backupLog("Reached a group: " . $container['Name'], self::LOGLEVEL_DEBUG);
+            $sortedGroupContainers = ABHelper::sortContainers($dockerContainers, $abSettings->containerGroupOrder[$container['Name']], $reverse, false, $groupMembers);
+            ABHelper::backupLog("Containers in this group:", self::LOGLEVEL_DEBUG);
+            ABHelper::backupLog(print_r($sortedGroupContainers, true), self::LOGLEVEL_DEBUG);
             return $sortedGroupContainers;
         }
         return false;
+    }
+
+    public static function setCurrentContainerName($container, $remove = false) {
+        if (empty($container)) {
+            self::$currentContainerName = [];
+            return;
+        }
+
+        if (empty(self::$currentContainerName) && !$remove) {
+            self::$currentContainerName = $container['isGroup'] ? [$container['Name'], ''] : [$container['Name']];
+            return;
+        }
+
+        if ($remove) {
+            if (count(self::$currentContainerName) > 1) {
+                $lastKey = array_key_last(self::$currentContainerName);
+                if ($container['isGroup']) {
+                    unset(self::$currentContainerName[$lastKey - 1]);
+                } else {
+                    self::$currentContainerName[$lastKey] = '';
+                }
+
+            } else {
+                self::$currentContainerName = [];
+            }
+
+        } else {
+            if ($container['isGroup']) {
+                $lastElem                     = array_pop(self::$currentContainerName);
+                self::$currentContainerName[] = $container['Name'];
+                self::$currentContainerName[] = $lastElem;
+            } else {
+                $lastKey                              = array_key_last(self::$currentContainerName);
+                self::$currentContainerName[$lastKey] = $container['Name'];
+            }
+        }
+
+        self::$currentContainerName = array_values(self::$currentContainerName);
     }
 }
