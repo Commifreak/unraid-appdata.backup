@@ -309,34 +309,6 @@ if (($code ?? 0) != 0) {
     </blockquote>
 
     <dl>
-        <dt>
-            <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects any
-                    errors during backup. This option just adds an extra layer of security</small>
-            </div>
-        </dt>
-        <dd><select id='verifyBackup' name="defaults[verifyBackup]"
-                    data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
-                <option value='yes'>Yes</option>
-                <option value='no'>No</option>
-            </select>
-        </dd>
-
-        <dt>
-            <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/>This can lead to
-                broken backups - Only enable if you know what you
-                do!
-            </div>
-        </dt>
-        <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
-                    data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
-                <option value='yes'>Yes</option>
-                <option value='no'>No</option>
-            </select>
-        </dd>
-
-    </dl>
-
-    <dl>
         <dt><b>Backup the flash drive?</b></dt>
         <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>">
                 <option value='yes'>Yes</option>
@@ -359,6 +331,40 @@ if (($code ?? 0) != 0) {
     <blockquote class='inline_help'>
         <p>This saves <code>/etc/libvirt/qemu</code></p>
     </blockquote>
+
+    <div class="title" onclick="$(this).next().show();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
+    </div>
+    <div style="display: none;">
+        <dl>
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
+                        any
+                        errors during backup. This option just adds an extra layer of security</small>
+                </div>
+            </dt>
+            <dd><select id='verifyBackup' name="defaults[verifyBackup]"
+                        data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
+                    <option value='yes'>Yes</option>
+                    <option value='no'>No</option>
+                </select>
+            </dd>
+
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
+                        lead to
+                        broken backups - Only enable if you know what you
+                        do!</small>
+                </div>
+            </dt>
+            <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
+                        data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
+                    <option value='yes'>Yes</option>
+                    <option value='no'>No</option>
+                </select>
+            </dd>
+
+        </dl>
+    </div>
 
     <div class="title"><span class="left"><i
                     class="fa fa-clock-o title"></i>Notifications and scheduling</span>
@@ -546,19 +552,36 @@ $plexHint
 <dt>Member of group <small>- <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for more</small></dt>
 <dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$container['Name']}_group' name="containerSettings[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
 
-<dt>Skip backup? <small>Only stop/start</small></dt>
-<dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
-		<option value='no'>No, do backup as well</option>
-		<option value='yes'>Yes, skip backup and do stop/start only</option>
-	</select></dd>
-
 <dt>Save external volumes?</dt>
 <dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
 		<option value='no'>No</option>
 		<option value='yes'>Yes</option>
 	</select></dd>
+	
+	<dt>Update container after backup?</dt>
+    <dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
+            <option value=''>Use standard</option>
+            <option value='yes'>Yes</option>
+            <option value='no'>No</option>
+        </select>
+    </dd>
+    
+    <dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
+    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+    
 
-<dt>Verify Backup?</dt>
+
+
+<div onclick="$(this).next().show();"><a style="cursor:pointer;">Show advanced options</a></div>
+	<div style="display: none;">
+	
+	<dt>Skip backup? <small>Only stop/start</small></dt>
+<dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
+		<option value='no'>No, do backup as well</option>
+		<option value='yes'>Yes, skip backup and do stop/start only</option>
+	</select></dd>
+	
+	<dt>Verify Backup?</dt>
 <dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
 		<option value=''>Use standard</option>
 		<option value='yes'>Yes</option>
@@ -573,23 +596,13 @@ $plexHint
 		<option value='no'>No</option>
 	</select>
 </dd>
-	
-<dt>Update container after backup?</dt>
-<dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
-        <option value=''>Use standard</option>
-        <option value='yes'>Yes</option>
-        <option value='no'>No</option>
-    </select>
-</dd>
-	
-<dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
-<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
-<dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
-<dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
-		<option value='no'>No</option>
-		<option value='yes'>Yes</option>
-	</select></dd>
+    <dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
+    <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
+            <option value='no'>No</option>
+            <option value='yes'>Yes</option>
+        </select></dd>
+	</div>
 
 </dl>
 </blockquote>
@@ -763,7 +776,7 @@ HTML;
     </dd>
 
     <dt>Used IDE</dt>
-    <dd>IntelliJ PHPStorm ❤️</dd>
+    <dd>JetBrains PHPStorm ❤️</dd>
 </dl>
 
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
