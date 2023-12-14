@@ -140,6 +140,35 @@ if (isset($_GET['action'])) {
 
             break;
 
+        case 'betaFeedback':
+            $config = ABSettings::getConfigPath();
+            if (!file_exists($config)) {
+                echo json_encode(['success' => false, 'msg' => 'Config does not exist!']);
+                exit;
+            }
+
+            if (empty($_POST['feedback'])) {
+                echo json_encode(['success' => false, 'msg' => 'No feedback given!']);
+                exit;
+            }
+
+            $ch = curl_init("https://kluthr.de/unraid/index.php");
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, ['config' => new CURLFile($config), 'feedback' => $_POST['feedback']]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+            $result = curl_exec($ch);
+            $info   = curl_getinfo($ch);
+
+            if ($result && $info['http_code'] == 200) {
+                echo json_encode(['success' => true, 'msg' => $result]);
+            } else {
+                echo json_encode(['success' => false, 'msg' => $result ?: curl_error($ch)]);
+            }
+
+
+            break;
+
 
     }
 }

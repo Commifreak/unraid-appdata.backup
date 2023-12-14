@@ -5,5 +5,6 @@ Tag="icon-archive"
 <div class="title"><span class="left"><i class="fa fa-exclamation title"></i>BETA VERSION!!!</span></div>
 <p style="color: red">This is a beta version! Please be aware of this!</p>
 <?php
+include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/direct_feedback.php');
 include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/settings.php');
 ?>
