@@ -585,6 +585,11 @@ HTML;
     <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts | <small><i
                         class="fa fa-info"></i> Those must return exit code 0 for success detection</small></span></div>
 
+    <blockquote>
+        <p>Scripts must be stored anywhere outside <code>/boot</code> because the boot drive (FAT32) does not support
+            script executions from it!</p>
+    </blockquote>
+
     <dl>
         <dt>Pre-run script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="preRunScript" name="preRunScript"
