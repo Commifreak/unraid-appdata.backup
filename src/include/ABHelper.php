@@ -210,7 +210,7 @@ class ABHelper {
         global $dockerClient;
 
         if (in_array($container['Name'], self::$skipStartContainers)) {
-            self::backupLog($container['Name'] . " is being ignored, because it was not started before (or should not be started).");
+            self::backupLog("Starting " . $container['Name'] . " is being ignored, because it was not started before (or should not be started).");
             return;
         }
 
@@ -581,12 +581,14 @@ class ABHelper {
     public static function doBackupMethod($method, $containerListOverride = null,) {
         global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination, $dockerUpdateList;
 
+        self::backupLog(__METHOD__ . ': $containerListOverride: ' . implode(', ', array_column(($containerListOverride ?? []), 'Name')), self::LOGLEVEL_DEBUG);
+
         switch ($method) {
             case 'stopAll':
 
                 ABHelper::backupLog("Method: Stop all container before continuing.");
-                foreach ($containerListOverride ?: $sortedStopContainers as $_container) {
-                    foreach ((self::resolveContainer($_container) ?: [$_container]) as $container) {
+                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
+                    foreach ((self::resolveContainer($_container, true) ?: [$_container]) as $container) {
                         ABHelper::setCurrentContainerName($container);
                         ABHelper::stopContainer($container);
 
@@ -597,13 +599,15 @@ class ABHelper {
                     ABHelper::setCurrentContainerName($_container, true);
                 }
 
+                ABHelper::setCurrentContainerName(null);
+
                 if (ABHelper::abortRequested()) {
                     return false;
                 }
 
                 ABHelper::backupLog("Starting backup for containers");
-                foreach ($containerListOverride ?: $sortedStopContainers as $_container) {
-                    foreach (self::resolveContainer($_container) ?: [$_container] as $container) {
+                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
+                    foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
                         ABHelper::setCurrentContainerName($container);
                         if (!ABHelper::backupContainer($container, $abDestination)) {
                             ABHelper::$errorOccured = true;
@@ -620,6 +624,8 @@ class ABHelper {
                     ABHelper::setCurrentContainerName($_container, true);
                 }
 
+                ABHelper::setCurrentContainerName(null);
+
                 if (ABHelper::abortRequested()) {
                     return false;
                 }
@@ -631,8 +637,8 @@ class ABHelper {
                 }
 
                 ABHelper::backupLog("Set containers to previous state");
-                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStartContainers as $_container) {
-                    foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
+                foreach ($containerListOverride ?: $sortedStartContainers as $_container) {
+                    foreach (self::resolveContainer($_container) ?: [$_container] as $container) {
                         ABHelper::setCurrentContainerName($container);
                         ABHelper::startContainer($container);
 
@@ -642,6 +648,8 @@ class ABHelper {
                     }
                     ABHelper::setCurrentContainerName($_container, true);
                 }
+
+                ABHelper::setCurrentContainerName(null);
 
                 break;
             case 'oneAfterTheOther':
@@ -696,6 +704,12 @@ class ABHelper {
         return true;
     }
 
+    /**
+     * resolves a container group. Special note goes to the param $reverse: We MUST reverse if the input order is NOT start-order oriented!
+     * @param $container
+     * @param $reverse
+     * @return array|false
+     */
     public static function resolveContainer($container, $reverse = false) {
         global $dockerContainers, $abSettings;
         if ($container['isGroup']) {

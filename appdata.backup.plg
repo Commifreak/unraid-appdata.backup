@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.02.06">
-        <!ENTITY sha256    "8c5370e08179c9caa55b8ed244fdc11bd7250bd2b13176366c2ddf10ed79f911">
+        <!ENTITY version   "2024.02.06a">
+        <!ENTITY sha256    "df94b268a60120144e0f613866dcab56bbb9b23bf7db794ba3434de97abcea43">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -17,12 +17,17 @@
         <![CDATA[
         ➕New  🩹Fix 🔧Change
 
+###2024.02.06a
+- 🩹 Fix grouped container order always being the reverse of what they should be
+- 🩹 Fixed logging appearance if grouped containers were involved
+
 ###2024.02.06 - 🚀 Happy new year!
 - ➕ Container grouping
 - ➕ Global exclusion list
 - ➕ You can enable a notification for updated containers (disabled by default)
 - ➕ If a plex container is detected, the plugin now offers some exclusions to start with
 - ➕ New setting to skip container backup but include it into stop/start processes
+- ➕ Click a volume mapping to add it to the exclusion list
 - 🩹 `postBackup` script will now be executed after backup, before starting the container
 - 🔧 Raise a warning (instead of info) if container has NO volumes to back up
 - 🔧 Container updates are now handled directly after backing them up
