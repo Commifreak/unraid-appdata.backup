@@ -19,6 +19,7 @@
 
 ###2024.02.06b
 _That will be the last update for today! I promise! 🍻_
+
 - 🩹 Add a permanent hidden `CSRF` form field to fix any `missing csrf_token` message
 
 ###2024.02.06a
