@@ -45,6 +45,8 @@ class ABSettings {
         'verifyBackup'       => 'yes',
         'ignoreBackupErrors' => 'no',
         'updateContainer'    => 'no',
+        'skipBackup' => 'no',
+        'group' => '',
 
         // The following are hidden, container special default settings
         'skip'               => 'no',
@@ -63,13 +65,16 @@ class ABSettings {
     public string $backupFrequencyCustom = '';
     public array $containerSettings = [];
     public array $containerOrder = [];
+    public array $containerGroupOrder = [];
     public string $preRunScript = '';
     public string $preBackupScript = '';
     public string $postBackupScript = '';
     public string $postRunScript = '';
-    public string $includeFiles = '';
+    public array $includeFiles = [];
+    public array $globalExclusions = [];
     public string $backupVMMeta = 'yes';
     public string $successLogWanted = 'no';
+    public string $updateLogWanted = 'no';
 
     public function __construct() {
 
@@ -86,19 +91,24 @@ class ABSettings {
                                 $this->$key = array_merge($this->defaults, $value);
                                 break;
                             case 'allowedSources':
-                                $sources = explode("\r\n", $value);
-                                $newSources = [];
-                                foreach ($sources as $sourceKey => $source) {
-                                    if (empty(trim($source))) {
+                            case 'includeFiles':
+                            case 'globalExclusions':
+                                $paths    = explode("\r\n", $value);
+                                $newPaths = [];
+                                foreach ($paths as $pathKey => $path) {
+                                    if (empty(trim($path))) {
                                         continue; // Skip empty lines
                                     }
-                                    $newSources[] = rtrim($source, '/');
+                                    $newPaths[] = rtrim($path, '/');
                                 }
-                                $this->$key = $newSources;
+                                $this->$key = $newPaths;
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
                                 $this->$key = is_array($value) ? $value : [];
+                                break;
+                            case 'settingsVersion':
+                                $this::$settingsVersion = $value;
                                 break;
                             default:
                                 $this->$key = $value;
@@ -208,7 +218,30 @@ class ABSettings {
                 }
             }
         }
+
+        $settings['group'] = preg_replace('/[\W]/', '', $settings['group']);
+
         return $settings;
+    }
+
+    /**
+     * Returns all container groups
+     * @param $filter false|string false: whole list, string: container name to return
+     * @return array|mixed
+     */
+    public function getContainerGroups($filter = false) {
+        $groups = [];
+        foreach ($this->containerSettings as $container => $setting) {
+            $containersettings = $this->getContainerSpecificSettings($container);
+            $group             = $containersettings['group'];
+            if (!empty($group)) {
+                $groups[$group][] = $container;
+            }
+        }
+        if (!empty($filter) && isset($groups[$filter])) {
+            return $groups[$filter];
+        }
+        return $groups;
     }
 
     /**

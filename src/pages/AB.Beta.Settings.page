@@ -8,5 +8,6 @@ Tag="icon-archive"
                                                                                                onclick="copyConfigFromProd()">Click
         here</a></p>
 <?php
+include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/direct_feedback.php');
 include('/usr/local/emhttp/plugins/appdata.backup.beta/pages/content/settings.php');
 ?>

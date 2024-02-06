@@ -116,6 +116,19 @@ window.setTimeout(function() {
     } else {
         $_POST = array_merge($_POST, $containerOrder);
     }
+
+    if (!empty($_POST['containerGroupOrder'])) {
+        foreach ($_POST['containerGroupOrder'] as $group => $order) {
+            $containerOrder = null;
+            parse_str($order, $containerOrder);
+            if (empty($containerOrder)) {
+                unset($_POST['containerGroupOrder'][$group]); # delete group from config
+            } else {
+                $_POST['containerGroupOrder'][$group] = $containerOrder['containerGroupOrder'][$group];
+            }
+        }
+    }
+
     ABSettings::store($_POST);
 }
 
@@ -210,7 +223,7 @@ HTML;
 
 }
 
-if ($code != 0) {
+if (($code ?? 0) != 0) {
     echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
 }
 ?>
@@ -296,34 +309,6 @@ if ($code != 0) {
     </blockquote>
 
     <dl>
-        <dt>
-            <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects any
-                    errors during backup. This option just adds an extra layer of security</small>
-            </div>
-        </dt>
-        <dd><select id='verifyBackup' name="defaults[verifyBackup]"
-                    data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
-                <option value='yes'>Yes</option>
-                <option value='no'>No</option>
-            </select>
-        </dd>
-
-        <dt>
-            <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/>This can lead to
-                broken backups - Only enable if you know what you
-                do!
-            </div>
-        </dt>
-        <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
-                    data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
-                <option value='yes'>Yes</option>
-                <option value='no'>No</option>
-            </select>
-        </dd>
-
-    </dl>
-
-    <dl>
         <dt><b>Backup the flash drive?</b></dt>
         <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>"
                     onchange="checkFlashBackupCopy();">
@@ -360,6 +345,40 @@ if ($code != 0) {
         <p>This saves <code>/etc/libvirt/qemu</code></p>
     </blockquote>
 
+    <div class="title" onclick="$(this).next().show();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
+    </div>
+    <div style="display: none;">
+        <dl>
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
+                        any
+                        errors during backup. This option just adds an extra layer of security</small>
+                </div>
+            </dt>
+            <dd><select id='verifyBackup' name="defaults[verifyBackup]"
+                        data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
+                    <option value='yes'>Yes</option>
+                    <option value='no'>No</option>
+                </select>
+            </dd>
+
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
+                        lead to
+                        broken backups - Only enable if you know what you
+                        do!</small>
+                </div>
+            </dt>
+            <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
+                        data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
+                    <option value='yes'>Yes</option>
+                    <option value='no'>No</option>
+                </select>
+            </dd>
+
+        </dl>
+    </div>
+
     <div class="title"><span class="left"><i
                     class="fa fa-clock-o title"></i>Notifications and scheduling</span>
     </div>
@@ -375,6 +394,13 @@ if ($code != 0) {
 
         <dt><b>Create success notification:</b></dt>
         <dd><select id='successLogWanted' name="successLogWanted" data-setting="<?= $abSettings->successLogWanted ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+
+        <dt><b>Send notification if containers were updated:</b></dt>
+        <dd><select id='updateLogWanted' name="updateLogWanted" data-setting="<?= $abSettings->updateLogWanted ?>">
                 <option value='no'>No</option>
                 <option value='yes'>Yes</option>
             </select>
@@ -476,11 +502,32 @@ if ($code != 0) {
             <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings. <b>Click on container name to open</b></span>
             </div>
 
+            <datalist id="containerGroups">
+                <?php
+                foreach ($abSettings->getContainerGroups() as $group => $members) {
+                    echo "<option value=\"$group\"></option>";
+                }
+                ?>
+            </datalist>
+
             <?php
             $dockerClient  = new DockerClient();
             $allContainers = $dockerClient->getDockerContainers();
 
             foreach ($allContainers as $container) {
+                $isPlex = str_contains(strtolower($container['Name']), 'plex');
+
+                $plexHint                = '';
+                $plexContainerNameSuffix = '';
+                if ($isPlex) {
+                    $plexContainerNameSuffix = ' - Plex detected! Open for more...';
+                    $plexHint                = <<<HTML
+<dt><b>PLEX detected!</b></dt>
+<dd><div style="display: table; font-weight: bold;">This container seems to be a plex container.<br />Please consider setting some exclusions.<br /><a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for a suggestion.</div></dd>
+HTML;
+
+                }
+
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
                 $volumes = ABHelper::getContainerVolumes($container);
 
@@ -499,7 +546,7 @@ if ($code != 0) {
                 echo <<<HTML
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl>
-        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}</abbr></dt>
+        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr></dt>
         <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
@@ -510,17 +557,44 @@ if ($code != 0) {
 
 <blockquote class='inline_help'>
 <dl>
-<dt>Configured volumes <small>(Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
+$plexHint
+<dt>Configured volumes <small>- (Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
 <dd><div style="display: table">$volumes</div></dd>
 <br />
+
+<dt>Member of group <small>- <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for more</small></dt>
+<dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$container['Name']}_group' name="containerSettings[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
 
 <dt>Save external volumes?</dt>
 <dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
 		<option value='no'>No</option>
 		<option value='yes'>Yes</option>
 	</select></dd>
+	
+	<dt>Update container after backup?</dt>
+    <dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
+            <option value=''>Use standard</option>
+            <option value='yes'>Yes</option>
+            <option value='no'>No</option>
+        </select>
+    </dd>
+    
+    <dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
+    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+    
 
-<dt>Verify Backup?</dt>
+
+
+<div onclick="$(this).next().show();"><a style="cursor:pointer;">Show advanced options</a></div>
+	<div style="display: none;">
+	
+	<dt>Skip backup? <small>Only stop/start</small></dt>
+<dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
+		<option value='no'>No, do backup as well</option>
+		<option value='yes'>Yes, skip backup and do stop/start only</option>
+	</select></dd>
+	
+	<dt>Verify Backup?</dt>
 <dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
 		<option value=''>Use standard</option>
 		<option value='yes'>Yes</option>
@@ -535,23 +609,13 @@ if ($code != 0) {
 		<option value='no'>No</option>
 	</select>
 </dd>
-	
-<dt>Update container after backup?</dt>
-<dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
-        <option value=''>Use standard</option>
-        <option value='yes'>Yes</option>
-        <option value='no'>No</option>
-    </select>
-</dd>
-	
-<dt>Excluded folders/files<br />One folder/file per line. <a href="https://www.gnu.org/software/tar/manual/html_node/wildcards.html" target="_blank">tar's glob syntax</a> is used.</dt>
-<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
 
-<dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
-<dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
-		<option value='no'>No</option>
-		<option value='yes'>Yes</option>
-	</select></dd>
+    <dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
+    <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
+            <option value='no'>No</option>
+            <option value='yes'>Yes</option>
+        </select></dd>
+	</div>
 
 </dl>
 </blockquote>
@@ -564,21 +628,48 @@ HTML;
         </div>
         <div style="flex-grow: 1; flex-basis: 0; padding-left: 10px; max-width: 35%;">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
-            <p>This defines the start sequence. Stop would be this order in reverse. This list also defines the sequence
-                for the <code>Stop, backup, start for each container</code> type.</p>
+            <p>This defines the start sequence. Stop would be this order in reverse.</p>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
                 foreach ($sortedContainers as $container) {
-                    $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                    $isGroup = $container['isGroup'];
+                    $name         = $container['Name'] ?? key($container);
+                    $internalName = $isGroup ? '__grp__' . $name : $name;
+                    $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);
+                    $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
                     echo <<<HTML
-<li id="containerOrder_{$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+<li id="containerOrder_{$internalName}"><i class="fa fa-sort"></i> $imageHtml $name</li>
 HTML;
 
                 }
                 ?>
             </ul>
+
+            <?php
+            foreach ($abSettings->getContainerGroups() as $group => $members) {
+                ?>
+                <div class="title"><span class="left"><i
+                                class="fa fa-sort title"></i>Start order for group <?= $group ?></span></div>
+                <p>This defines the start sequence. Stop would be this order in reverse.<br/><b>All containers inside a
+                        group will be stopped (by their order), backed up and then started again.</b></p>
+                <input type="hidden" id="containerGroupOrder_<?= $group ?>" name="containerGroupOrder[<?= $group ?>]"/>
+                <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
+                    <?php
+                    $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
+                    foreach ($sortedContainers as $container) {
+                        $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                        echo <<<HTML
+<li id="containerGroupOrder[{$group}]={$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+HTML;
+
+                    }
+                    ?>
+                </ul>
+                <?php
+            }
+            ?>
         </div>
     </div>
 
@@ -645,7 +736,7 @@ HTML;
         <dd>
             <div style="display: table; width: 300px;"><textarea id="includeFiles" name="includeFiles"
                                                                  onfocus="$(this).next('.ft').slideDown('fast');"
-                                                                 style="resize: vertical; width: 400px;"><?= $abSettings->includeFiles ?></textarea>
+                                                                 style="resize: vertical; width: 400px;"><?= implode("\r\n", $abSettings->includeFiles) ?></textarea>
                 <div class="ft" style="display: none;">
                     <div class="fileTreeDiv"></div>
                     <button onclick="addSelectionToList(this);  return false;">Add to list</button>
@@ -655,6 +746,20 @@ HTML;
     </dl>
     <blockquote class='inline_help'>
         <p>Those files will be packed into "extra_files.tar.gz"</p>
+    </blockquote>
+
+    <dl>
+        <dt>Global exclusion list</dt>
+        <dd>
+            <div style="display: table; width: 300px;"><textarea id="globalExclusions" name="globalExclusions"
+                                                                 style="resize: vertical; width: 400px;"><?= implode("\r\n", $abSettings->globalExclusions) ?></textarea>
+            </div>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>With this you can define exclusions which will be used as global exclusion</p>
+        <p>You can use parts of paths and/or wildcards like <code>*.png</code>, <code>music/*.m4a</code>,
+            <code>logs</code>. Any folder/file paths matching this patterns will be excluded!<br/></p>
     </blockquote>
 
     <dl>
@@ -687,6 +792,9 @@ HTML;
     <dt>GitHub repository</dt>
     <dd><a href="https://github.com/Commifreak/unraid-appdata.backup" target="_blank"><i class="fa fa-github"></i> Open</a>
     </dd>
+
+    <dt>Used IDE</dt>
+    <dd>JetBrains PHPStorm ❤️</dd>
 </dl>
 
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
@@ -745,9 +853,20 @@ HTML;
     });
 
     $('#abSettingsForm').on('submit', function () {
-        $('#containerOrder').val($('#containerOrderSortable').sortable('serialize', {
-            expression: /(.+?)[-=_](.+)/
-        }));
+        let mainValue = $('#containerOrderSortable').sortable('serialize', {
+            expression: /(.+?)_(.+)/
+        });
+        console.log('Main value: ', mainValue);
+        $('#containerOrder').val(mainValue);
+
+        $("input[id^='containerGroupOrder']").each(function (index) {
+            console.log("Processing groupOrder " + $(this).attr('id'));
+            let groupValue = $('#' + $(this).attr('id') + '_Sortable').sortable('serialize', {
+                expression: /(.+?)=(.+)/
+            });
+            console.log(groupValue);
+            $(this).val(groupValue);
+        });
     });
 
 
