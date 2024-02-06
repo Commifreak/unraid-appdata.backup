@@ -155,7 +155,7 @@ foreach ($sortedStopContainers as $container) {
     }
 }
 ABHelper::backupLog("Docker update check finished!", ABHelper::LOGLEVEL_DEBUG);
-ABHelper::backupLog("Planned container updated: " . implode(", ", $dockerUpdateList), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog("Planned container updates: " . implode(", ", $dockerUpdateList), ABHelper::LOGLEVEL_DEBUG);
 
 ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre-backup', $abDestination);
 

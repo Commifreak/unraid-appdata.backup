@@ -1,5 +1,5 @@
 <div class="title"><span class="left"><i class="fa fa-commenting title"></i>BETA feedback</span></div>
-<p>With this you are able to diectly share some thoughts! Togehther with your comments, this will also transfer your
+<p>With this you are able to directly share some thoughts! Together with your comments, this will also transfer your
     current BETA configuration file!</p>
 <div><textarea id="ab_beta_feedback" placeholder="Type something in..."
                style="width: 50%; height: 100px; resize: both; margin-bottom: 20px;"></textarea></div>
