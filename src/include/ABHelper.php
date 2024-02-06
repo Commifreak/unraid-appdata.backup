@@ -165,14 +165,17 @@ class ABHelper {
         global $dockerClient, $abSettings;
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
-        if ($containerSettings['dontStop'] == 'yes') {
-            self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!", self::LOGLEVEL_WARN);
-            self::$skipStartContainers[] = $container['Name'];
-            return true;
-        }
+
 
         if ($container['Running'] && !$container['Paused']) {
             self::backupLog("Stopping " . $container['Name'] . "... ", self::LOGLEVEL_INFO, false);
+
+            if ($containerSettings['dontStop'] == 'yes') {
+                self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!", self::LOGLEVEL_WARN);
+                self::$skipStartContainers[] = $container['Name'];
+                return true;
+            }
+
             $stopTimer      = time();
             $dockerStopCode = $dockerClient->stopContainer($container['Name']);
             if ($dockerStopCode != 1) {
@@ -513,7 +516,7 @@ class ABHelper {
                 continue;
             }
             if (in_array($hostPath, $abSettings->allowedSources)) {
-                self::backupLog("Removing container mapping \"$hostPath\" because it is a source path!");
+                self::backupLog("Removing container mapping \"$hostPath\" because it is a source path (exact match)!");
                 continue;
             }
             $volumes[] = $hostPath;

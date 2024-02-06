@@ -347,8 +347,6 @@ if (ABHelper::abortRequested()) {
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
 }
 
-ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, ($errorOccured ? 'false' : 'true'));
-
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
 
@@ -375,3 +373,5 @@ if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
 unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
 
 ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
+
+exit(ABHelper::$errorOccured ? 1 : 0);
