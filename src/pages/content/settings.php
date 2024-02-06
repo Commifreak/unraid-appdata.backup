@@ -204,6 +204,17 @@ if (strstr('white,azure', $display['theme'])) {
 <p>Welcome to the appdata backup plugin!</p>
 <p>This plugin allows you to back up and restore all your appdata content! It takes care of everything (stop/start
     docker containers) including some extras (update docker containers)</p>
+<p><b>For first time setup</b>, you need to know how this plugin is working! The main options are the <code>Appdata
+        sources</code> and the <code>Backup destination</code>. The latter should be self explaining.<br/>The plugin
+    does not simply copy the contents of <code>appdata</code> anymore (like the previous did). It reads all docker
+    containers' mapped volumes. And this file/folder list will be the list we work with.</p>
+<p>It also differs between internal and external volumes/mappings. And here the <code>Appdata sources</code> comes to
+    play. Every volume mapping within those paths are considered "internal". Like "for the container to work"-internal
+    (configs, logs etc.).<br/>Any mapping outside those paths are "external". Like storage or something (cloud, plex,
+    ...).</p>
+<p>In the default configuration, the plugin is just backing up any internal mapping and will skip external ones. You can
+    adjust that for every container.</p>
+<p>Please also read the help block for <b>Appdata sources</b> by clicking the title of the option!</p>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Main settings</span></div>
 
