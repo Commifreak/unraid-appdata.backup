@@ -223,6 +223,11 @@ class ABSettings {
         return $settings;
     }
 
+    /**
+     * Returns all container groups
+     * @param $filter false|string false: whole list, string: container name to return
+     * @return array|mixed
+     */
     public function getContainerGroups($filter = false) {
         $groups = [];
         foreach ($this->containerSettings as $container => $setting) {
