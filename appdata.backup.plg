@@ -23,6 +23,7 @@
 - ➕ You can enable a notification for updated containers (disabled by default)
 - ➕ If a plex container is detected, the plugin now offers some exclusions to start with
 - ➕ New setting to skip container backup but include it into stop/start processes
+- ➕ Click a volume mapping to add it to the exclusion list
 - 🩹 `postBackup` script will now be executed after backup, before starting the container
 - 🔧 Raise a warning (instead of info) if container has NO volumes to back up
 - 🔧 Container updates are now handled directly after backing them up
