@@ -124,7 +124,7 @@
         <INLINE>
             echo Adapting some things, because this is beta
             rm &plugdir;/*.page
-            cp &plugdir;/pages/*.page &plugdir;/pages/README.Beta.md &plugdir;
+            cp &plugdir;/pages/*.page &plugdir;/pages/README.md &plugdir;
         </INLINE>
     </FILE>
 
