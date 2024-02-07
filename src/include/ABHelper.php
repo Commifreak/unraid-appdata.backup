@@ -403,7 +403,8 @@ class ABHelper {
                 $destination  .= '.gz';
                 break;
             case 'yesMulticore':
-                $tarOptions[] = '-I zstdmt'; // zst multicore
+                $cpuCount     = $abSettings->compressionCpuLimit;
+                $tarOptions[] = '-I "zstd -T' . $cpuCount . '"'; // zst multicore
                 $destination  .= '.zst';
                 break;
         }

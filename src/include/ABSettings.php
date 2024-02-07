@@ -41,6 +41,7 @@ class ABSettings {
     public array $allowedSources = ['/mnt/user/appdata', '/mnt/cache/appdata'];
     public string $destination = '';
     public string $compression = 'yes';
+    public string|int $compressionCpuLimit = '0';
     public array $defaults = [
         'verifyBackup'       => 'yes',
         'ignoreBackupErrors' => 'no',

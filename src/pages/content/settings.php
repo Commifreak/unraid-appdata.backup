@@ -305,10 +305,27 @@ if (($code ?? 0) != 0) {
                    data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"></dd>
 
         <dt><b>Use Compression?</b></dt>
-        <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>">
+        <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>"
+                    onchange="checkMultiCoreCpuCount();">
                 <option value='no'>No</option>
                 <option value='yes'>Yes, normal</option>
                 <option value='yesMulticore'>Yes, multicore</option>
+            </select>
+        </dd>
+    </dl>
+
+    <dl id="compressionCpuLimit_dl">
+        <dt><b>How many cores should be used?</b></dt>
+        <dd><select id='compressionCpuLimit' name="compressionCpuLimit"
+                    data-setting="<?= $abSettings->compressionCpuLimit ?>">
+                <option value='0'>All cores</option>
+                <?php
+                $cores = 0;
+                exec("nproc", $cores);
+                for ($i = 1; $i < $cores[0]; $i++) {
+                    echo "<option value='$i'>$i</option>";
+                }
+                ?>
             </select>
         </dd>
     </dl>
@@ -860,6 +877,7 @@ HTML;
 
         checkBackupFrequency();
         checkFlashBackupCopy();
+        checkMultiCoreCpuCount();
         checkVolumesForDuplicates();
 
 
@@ -954,6 +972,15 @@ HTML;
             case 'yes':
                 $('#flashBackupCopy_dl').fadeIn();
                 break;
+        }
+    }
+
+    function checkMultiCoreCpuCount() {
+        console.log($('#compression').val());
+        if ($('#compression').val() === 'yesMulticore') {
+            $('#compressionCpuLimit_dl').fadeIn();
+        } else {
+            $('#compressionCpuLimit_dl').fadeOut();
         }
     }
 
