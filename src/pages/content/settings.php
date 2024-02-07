@@ -546,7 +546,7 @@ HTML;
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code></span>';
+                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code><span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
                     }
                     $volumes = implode('<br />', $volumes);
                 }
@@ -557,7 +557,7 @@ HTML;
                 echo <<<HTML
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl>
-        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr></dt>
+        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
         <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
@@ -859,6 +859,7 @@ HTML;
 
         checkBackupFrequency();
         checkFlashBackupCopy();
+        checkVolumesForDuplicates();
 
 
     });
@@ -953,6 +954,32 @@ HTML;
                 $('#flashBackupCopy_dl').fadeIn();
                 break;
         }
+    }
+
+    function checkVolumesForDuplicates() {
+
+        let volumeMatrix = [];
+        let affectedMappings = [];
+
+        $("code[data-container]").each(function () {
+            let container = $(this).data('container');
+            let mapping = $(this).text();
+            if ($('#' + container + '_exclude').val().indexOf(mapping) !== -1) {
+                console.debug(container, mapping, 'is excluded so ignored');
+            } else if (volumeMatrix.includes(mapping)) {
+                affectedMappings.push(mapping);
+            } else {
+                volumeMatrix.push($(this).text());
+            }
+        });
+
+        affectedMappings.forEach(function (element) {
+            let codeElems = $('code:contains(' + element + ')');
+            codeElems.each(function () {
+                $('#containerMultiMappingIssue_' + $(this).data('container')).show();
+                $(this).next('.multiVolumeWarn').show();
+            });
+        });
     }
 
     function copyConfigFromProd() {
