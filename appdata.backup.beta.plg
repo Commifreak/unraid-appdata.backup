@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2023.12.07b1">
-        <!ENTITY sha256    "a60241865d05eb173d2c08be9d5217a1a6ffb7d4217584abaaef8df1d59e2a03">
+        <!ENTITY version   "2024.02.07b1">
+        <!ENTITY sha256    "2469421d4ee3e0f1e46ca7be7b626d50124c34c5c2f2da24420872d464c4fabc">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2024.02.07b1
+- ➕ If the plugin detects same mapping within multiple containers, it shows a warning
+- ➕ If multicore compression is enabled, you can now fine tune the cpu cores to use
 
 ###2023.12.07b1
 - ➕ Container grouping
