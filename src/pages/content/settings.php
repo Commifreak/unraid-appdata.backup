@@ -240,6 +240,7 @@ if (($code ?? 0) != 0) {
 ?>
 
 <form id="abSettingsForm" method="post">
+    <input type="hidden" name="csrf_token" value="<?= _var($var, 'csrf_token') ?>"/>
     <input type="hidden" name="settingsVersion" value="<?= ABSettings::$settingsVersion ?>"/>
     <dl>
         <dt><b>Backup type</b></dt>
