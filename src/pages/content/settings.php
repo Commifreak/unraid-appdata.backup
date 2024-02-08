@@ -377,7 +377,23 @@ if (($code ?? 0) != 0) {
     <div class="title" onclick="$(this).next().show();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
     </div>
     <div style="display: none;">
+        <blockquote>These settings are the <b>global defaults</b> for all containers. You can adjust them per container
+            if you want.
+        </blockquote>
         <dl>
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Skip stopping of containers?</b><br/><small>This will
+                        skip stopping containers and leaves them running. Could lead to broken backup for
+                        containers!</small>
+                </div>
+            </dt>
+            <dd><select id='verifyBackup' name="defaults[dontStop]"
+                        data-setting="<?= $abSettings->defaults['dontStop'] ?>">
+                    <option value='no'>No</option>
+                    <option value='yes'>Yes</option>
+                </select>
+            </dd>
+
             <dt>
                 <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
                         any
@@ -640,6 +656,7 @@ $plexHint
 </dd>
     <dt>Skip stopping of container? <small><abbr title="This will skip stopping this container and leaves it running. Could lead to broken backup for this container!">NOT RECOMMENDED!</abbr></small></dt>
     <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
+            <option value=''>Use standard</option>
             <option value='no'>No</option>
             <option value='yes'>Yes</option>
         </select></dd>

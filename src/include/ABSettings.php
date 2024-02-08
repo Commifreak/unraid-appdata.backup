@@ -12,7 +12,7 @@ class ABSettings {
     public static $appName = 'appdata.backup';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
-    public static $settingsVersion = 2;
+    public static $settingsVersion = 3;
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
@@ -169,6 +169,17 @@ class ABSettings {
                              */
                             if ($config['notification'] == 'errors') {
                                 $config['notification'] = ABHelper::LOGLEVEL_ERR;
+                            }
+                            $migrationSuccess = true;
+                            break;
+                        case 2:
+                            /**
+                             * New adjustable default option: dontStop. Set any per-container "no" to "" (empty)
+                             */
+                            foreach ($config['containerSettings'] ?? [] as $name => $containerSettings) {
+                                if (isset($containerSettings['dontStop']) && $containerSettings['dontStop'] == 'no') {
+                                    $config['containerSettings'][$name]['dontStop'] = '';
+                                }
                             }
                             $migrationSuccess = true;
                             break;

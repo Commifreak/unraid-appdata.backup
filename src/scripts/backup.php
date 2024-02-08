@@ -131,6 +131,12 @@ $dockerUpdateList = [''];
 ABHelper::backupLog("Starting Docker auto-update check...", ABHelper::LOGLEVEL_DEBUG);
 foreach ($dockerContainers as $container) { // Use unraids docker container list for update checking!
     $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+
+    /**
+     * Log container specific settings one time
+     */
+    ABHelper::backupLog($container['Name'] . " specific settings: " . print_r($containerSettings, true), ABHelper::LOGLEVEL_DEBUG);
+
     if ($containerSettings['updateContainer'] == 'yes') {
 
         if (!isset($allInfo)) {
