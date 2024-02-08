@@ -13,9 +13,13 @@
         }).fail(function (data) {
             alert('Error during HTTP request!');
         }).done(function (data) {
-            alert(data.msg);
+            if (!data.success) {
+                alert(data.msg);
+            } else {
+                alert("Beta feedback sent! Thank you!");
+            }
         }).always(function () {
-            $('#ab_beta_feedback').html('');
+            $('#ab_beta_feedback').val('');
         });
     }
 </script>
