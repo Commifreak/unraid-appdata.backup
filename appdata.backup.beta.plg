@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.02.07b1">
-        <!ENTITY sha256    "2469421d4ee3e0f1e46ca7be7b626d50124c34c5c2f2da24420872d464c4fabc">
+        <!ENTITY version   "2024.02.08b1">
+        <!ENTITY sha256    "b1e21108f16ba4863154b6f53d44084958aaf516061744c74a7972d867ffe3ed">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2024.02.08b1
+- 🔧 Created backups are now owned by `nobody:users` with permissions `rwxrw-rw-`
+- 🔧 `Skip stopping container?` (formerly known as `Don't stop container?`) is now a global option which can be adjusted in every container
 
 ###2024.02.07b1
 - ➕ If the plugin detects same mapping within multiple containers, it shows a warning
