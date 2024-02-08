@@ -129,10 +129,7 @@ if (ABHelper::abortRequested()) {
 $dockerUpdateList = [''];
 
 ABHelper::backupLog("Starting Docker auto-update check...", ABHelper::LOGLEVEL_DEBUG);
-foreach ($sortedStopContainers as $container) {
-    if ($container['isGroup']) {
-        continue;
-    }
+foreach ($dockerContainers as $container) { // Use unraids docker container list for update checking!
     $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
     if ($containerSettings['updateContainer'] == 'yes') {
 

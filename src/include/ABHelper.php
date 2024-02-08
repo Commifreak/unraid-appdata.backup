@@ -171,7 +171,7 @@ class ABHelper {
             self::backupLog("Stopping " . $container['Name'] . "... ", self::LOGLEVEL_INFO, false);
 
             if ($containerSettings['dontStop'] == 'yes') {
-                self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!", self::LOGLEVEL_WARN);
+                self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!");
                 self::$skipStartContainers[] = $container['Name'];
                 return true;
             }
@@ -432,7 +432,7 @@ class ABHelper {
 
         self::backupLog("Backup created without issues");
 
-        if (ABHelper::abortRequested()) {
+        if (self::abortRequested()) {
             return true;
         }
 
@@ -571,11 +571,11 @@ class ABHelper {
 
     public static function updateContainer($name) {
         global $abSettings;
-        ABHelper::backupLog("Installing planned update for $name...");
+        self::backupLog("Installing planned update for $name...");
         exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($name));
 
         if ($abSettings->updateLogWanted == 'yes') {
-            ABHelper::notify("Appdata Backup", "Container '$name' updated!", "Container '$name' was successfully updated during this backup run!");
+            self::notify("Appdata Backup", "Container '$name' updated!", "Container '$name' was successfully updated during this backup run!");
         }
     }
 
@@ -587,76 +587,76 @@ class ABHelper {
         switch ($method) {
             case 'stopAll':
 
-                ABHelper::backupLog("Method: Stop all container before continuing.");
+                self::backupLog("Method: Stop all container before continuing.");
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     foreach ((self::resolveContainer($_container, true) ?: [$_container]) as $container) {
-                        ABHelper::setCurrentContainerName($container);
-                        ABHelper::stopContainer($container);
+                        self::setCurrentContainerName($container);
+                        self::stopContainer($container);
 
-                        if (ABHelper::abortRequested()) {
+                        if (self::abortRequested()) {
                             return false;
                         }
                     }
-                    ABHelper::setCurrentContainerName($_container, true);
+                    self::setCurrentContainerName($_container, true);
                 }
 
-                ABHelper::setCurrentContainerName(null);
+                self::setCurrentContainerName(null);
 
-                if (ABHelper::abortRequested()) {
+                if (self::abortRequested()) {
                     return false;
                 }
 
-                ABHelper::backupLog("Starting backup for containers");
+                self::backupLog("Starting backup for containers");
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
-                        ABHelper::setCurrentContainerName($container);
-                        if (!ABHelper::backupContainer($container, $abDestination)) {
-                            ABHelper::$errorOccured = true;
+                        self::setCurrentContainerName($container);
+                        if (!self::backupContainer($container, $abDestination)) {
+                            self::$errorOccured = true;
                         }
 
-                        if (ABHelper::abortRequested()) {
+                        if (self::abortRequested()) {
                             return false;
                         }
 
                         if (in_array($container['Name'], $dockerUpdateList)) {
-                            ABHelper::updateContainer($container['Name']);
+                            self::updateContainer($container['Name']);
                         }
                     }
-                    ABHelper::setCurrentContainerName($_container, true);
+                    self::setCurrentContainerName($_container, true);
                 }
 
-                ABHelper::setCurrentContainerName(null);
+                self::setCurrentContainerName(null);
 
-                if (ABHelper::abortRequested()) {
+                if (self::abortRequested()) {
                     return false;
                 }
 
-                ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
+                self::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
 
-                if (ABHelper::abortRequested()) {
+                if (self::abortRequested()) {
                     return false;
                 }
 
-                ABHelper::backupLog("Set containers to previous state");
+                self::backupLog("Set containers to previous state");
                 foreach ($containerListOverride ?: $sortedStartContainers as $_container) {
                     foreach (self::resolveContainer($_container) ?: [$_container] as $container) {
-                        ABHelper::setCurrentContainerName($container);
-                        ABHelper::startContainer($container);
+                        self::setCurrentContainerName($container);
+                        self::startContainer($container);
 
-                        if (ABHelper::abortRequested()) {
+                        if (self::abortRequested()) {
                             return false;
                         }
                     }
-                    ABHelper::setCurrentContainerName($_container, true);
+                    self::setCurrentContainerName($_container, true);
                 }
 
-                ABHelper::setCurrentContainerName(null);
+                self::setCurrentContainerName(null);
 
                 break;
             case 'oneAfterTheOther':
-                ABHelper::backupLog("Method: Stop/Backup/Start");
+                self::backupLog("Method: Stop/Backup/Start");
 
-                if (ABHelper::abortRequested()) {
+                if (self::abortRequested()) {
                     return false;
                 }
 
@@ -664,41 +664,41 @@ class ABHelper {
 
                     if ($container['isGroup']) {
                         self::doBackupMethod('stopAll', self::resolveContainer($container));
-                        ABHelper::setCurrentContainerName($container, true);
+                        self::setCurrentContainerName($container, true);
                         continue;
                     }
 
-                    ABHelper::setCurrentContainerName($container);
-                    ABHelper::stopContainer($container);
+                    self::setCurrentContainerName($container);
+                    self::stopContainer($container);
 
-                    if (ABHelper::abortRequested()) {
+                    if (self::abortRequested()) {
                         return false;
                     }
 
-                    if (!ABHelper::backupContainer($container, $abDestination)) {
-                        ABHelper::$errorOccured = true;
+                    if (!self::backupContainer($container, $abDestination)) {
+                        self::$errorOccured = true;
                     }
 
-                    if (ABHelper::abortRequested()) {
+                    if (self::abortRequested()) {
                         return false;
                     }
 
                     if (in_array($container['Name'], $dockerUpdateList)) {
-                        ABHelper::updateContainer($container['Name']);
+                        self::updateContainer($container['Name']);
                     }
 
-                    if (ABHelper::abortRequested()) {
+                    if (self::abortRequested()) {
                         return false;
                     }
 
-                    ABHelper::startContainer($container);
+                    self::startContainer($container);
 
-                    if (ABHelper::abortRequested()) {
+                    if (self::abortRequested()) {
                         return false;
                     }
-                    ABHelper::setCurrentContainerName($container, true);
+                    self::setCurrentContainerName($container, true);
                 }
-                ABHelper::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
+                self::handlePrePostScript($abSettings->postBackupScript, 'post-backup', $abDestination);
 
                 break;
         }
@@ -714,12 +714,11 @@ class ABHelper {
     public static function resolveContainer($container, $reverse = false) {
         global $dockerContainers, $abSettings;
         if ($container['isGroup']) {
-            ABHelper::setCurrentContainerName($container);
+            self::setCurrentContainerName($container);
             $groupMembers = $abSettings->getContainerGroups($container['Name']);
-            ABHelper::backupLog("Reached a group: " . $container['Name'], self::LOGLEVEL_DEBUG);
-            $sortedGroupContainers = ABHelper::sortContainers($dockerContainers, $abSettings->containerGroupOrder[$container['Name']], $reverse, false, $groupMembers);
-            ABHelper::backupLog("Containers in this group:", self::LOGLEVEL_DEBUG);
-            ABHelper::backupLog(print_r($sortedGroupContainers, true), self::LOGLEVEL_DEBUG);
+            self::backupLog("Reached a group: " . $container['Name'], self::LOGLEVEL_DEBUG);
+            $sortedGroupContainers = self::sortContainers($dockerContainers, $abSettings->containerGroupOrder[$container['Name']], $reverse, false, $groupMembers);
+            self::backupLog("Containers in this group: " . implode(', ', array_column($sortedGroupContainers, 'Name')), self::LOGLEVEL_DEBUG);
             return $sortedGroupContainers;
         }
         return false;
