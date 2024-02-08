@@ -171,7 +171,7 @@ class ABHelper {
             self::backupLog("Stopping " . $container['Name'] . "... ", self::LOGLEVEL_INFO, false);
 
             if ($containerSettings['dontStop'] == 'yes') {
-                self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!", self::LOGLEVEL_WARN);
+                self::backupLog("NOT stopping " . $container['Name'] . " because it should be backed up WITHOUT stopping!");
                 self::$skipStartContainers[] = $container['Name'];
                 return true;
             }
