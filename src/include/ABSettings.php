@@ -159,7 +159,7 @@ class ABSettings {
                     $config['settingsVersion'] = 1; // No version set, set the current one
                 }
                 for ($curMigrationStep = $config['settingsVersion']; $curMigrationStep < ABSettings::$settingsVersion; $curMigrationStep++) {
-                    exec('logger -t "' . self::$appName . '" Found migrations! Running Migration ' . $curMigrationStep . ' of ' . (ABSettings::$settingsVersion - $curMigrationStep));
+                    exec('logger -t "' . self::$appName . '" Found migrations! Running Migration for version ' . $curMigrationStep . ' to ' . (ABSettings::$settingsVersion));
 
                     $migrationSuccess = false;
                     switch ($curMigrationStep) {
