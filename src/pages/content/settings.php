@@ -610,12 +610,12 @@ $plexHint
 		<option value='no'>No</option>
 	</select>
 </dd>
-
-    <dt>Dont stop container? <small>NOT RECOMMENDED!</small></dt>
+    <dt>Skip stopping of container? <small><abbr title="This will skip stopping this container and leaves it running. Could lead to broken backup for this container!">NOT RECOMMENDED!</abbr></small></dt>
     <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
             <option value='no'>No</option>
             <option value='yes'>Yes</option>
         </select></dd>
+        
 	</div>
 
 </dl>
