@@ -369,6 +369,13 @@ if (!empty($abDestination)) {
         copy(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $abDestination . '/backup.debug.log');
         rename($abDestination, $abDestination . '-failed');
     }
+
+    /**
+     * Adjusting backup destination permissions (for this run)
+     */
+    exec("chown -R nobody:users " . escapeshellarg($abDestination));
+    exec("chmod -R u=rwx,g=rw,o=rw " . escapeshellarg($abDestination));
+
 }
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
     unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
