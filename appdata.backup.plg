@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.02.06b">
-        <!ENTITY sha256    "ce63a0e63abdc47a0bba62aad7041fb4933e72e87a9da99a40704d1319def216">
+        <!ENTITY version   "2024.02.24">
+        <!ENTITY sha256    "9d805a8f1a1ebbcd95a1d3d5ae260bf397d759c4aa03ba0a501470ede6eaad74">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,14 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2024.02.24
+- ➕ If the plugin detects same mapping within multiple containers, it shows a warning
+- ➕ If multicore compression is enabled, you can now fine tune the cpu cores to use
+- 🔧 Created backups are now owned by `nobody:users` with permissions `rwxrw-rw-`
+- 🔧 `Skip stopping container?` (formerly known as `Don't stop container?`) is now a global option which can be adjusted in every container
+- 🩹 Fix update detection for grouped containers
+- 🩹 Global exclusions are now also respected within extra files backup
 
 ###2024.02.06b
 _That will be the last update for today! I promise! 🍻_
