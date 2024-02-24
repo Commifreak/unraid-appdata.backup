@@ -251,7 +251,16 @@ if (!empty($abSettings->includeFiles)) {
         ABHelper::backupLog("The tested extra files list is empty! Skipping extra files", ABHelper::LOGLEVEL_WARN);
     } else {
         ABHelper::backupLog("Extra files to backup: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
-        $tarOptions = ['-c', '-P'];
+
+        $tarExcludes = [];
+        if (!empty($abSettings->globalExclusions)) {
+            ABHelper::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), self::LOGLEVEL_DEBUG);
+            foreach ($abSettings->globalExclusions as $globalExclusion) {
+                $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
+            }
+        }
+
+        $tarOptions = array_merge($tarExcludes, ['-c', '-P']);    // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
 
         $destination = $abDestination . '/extra_files.tar';
 
