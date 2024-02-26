@@ -172,8 +172,9 @@ if (strstr('white,azure', $display['theme'])) {
     }
 
     <?php if(isset($selectBorder)): ?>
-    blockquote select, blockquote textarea {
+    blockquote select, blockquote textarea, blockquote input[type="text"] {
         border-bottom: <?= $selectBorder ?>;
+        color: <?= $bgcolor ?>;
     }
 
     <?php endif; ?>
@@ -574,19 +575,21 @@ HTML;
                 }
 
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = ABHelper::getContainerVolumes($container);
+                $volumes = ABHelper::getContainerVolumes($container, true);
+                $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
+                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
                 if (empty($volumes)) {
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code><span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
+                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : '';
+                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
                     }
                     $volumes = implode('<br />', $volumes);
                 }
 
-                $containerSetting     = $abSettings->getContainerSpecificSettings($container['Name'], false);
-                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
+                $containerExcludes = implode("\r\n", $containerSetting['exclude']);
 
                 echo <<<HTML
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
@@ -625,12 +628,12 @@ $plexHint
     </dd>
     
     <dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
-    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
     
 
 
 
-<div onclick="$(this).next().show();"><a style="cursor:pointer;">Show advanced options</a></div>
+<div onclick="$(this).next().toggle();"><a style="cursor:pointer;">Show advanced options</a></div>
 	<div style="display: none;">
 	
 	<dt>Skip backup? <small>Only stop/start</small></dt>
@@ -948,7 +951,8 @@ HTML;
         $path = $(element).text();
         $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
 
-        if ($excludeTextarea.val().indexOf($path) !== -1) { // If existing inside textarea
+        if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
+            console.debug("Not adding this volume to exclusion: already listed!")
             return;
         }
 
@@ -1009,17 +1013,18 @@ HTML;
         $("code[data-container]").each(function () {
             let container = $(this).data('container');
             let mapping = $(this).text();
-            if ($('#' + container + '_exclude').val().indexOf(mapping) !== -1) {
-                console.debug(container, mapping, 'is excluded so ignored');
-            } else if (volumeMatrix.includes(mapping)) {
+
+            if (volumeMatrix.includes(mapping)) {
                 affectedMappings.push(mapping);
             } else {
                 volumeMatrix.push($(this).text());
             }
         });
 
+        console.debug("Volume dup check (affected/matrix): ", affectedMappings, volumeMatrix);
+
         affectedMappings.forEach(function (element) {
-            let codeElems = $('code:contains(' + element + ')');
+            let codeElems = $('code[data-container]:contains(' + element + ')');
             codeElems.each(function () {
                 $('#containerMultiMappingIssue_' + $(this).data('container')).show();
                 $(this).next('.multiVolumeWarn').show();
