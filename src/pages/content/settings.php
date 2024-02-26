@@ -575,19 +575,19 @@ HTML;
                 }
 
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = ABHelper::getContainerVolumes($container);
+                $volumes = ABHelper::getContainerVolumes($container, true);
+                $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
+                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
                 if (empty($volumes)) {
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code><span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
+                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : '';
+                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
                     }
                     $volumes = implode('<br />', $volumes);
                 }
-
-                $containerSetting     = $abSettings->getContainerSpecificSettings($container['Name'], false);
-                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
                 $containerExcludes = implode("\r\n", $containerSetting['exclude']);
 

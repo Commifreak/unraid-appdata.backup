@@ -499,7 +499,7 @@ class ABHelper {
      * @param $container
      * @return array
      */
-    public static function getContainerVolumes($container) {
+    public static function getContainerVolumes($container, $skipExclusionCheck = false) {
         global $abSettings;
 
         $volumes = [];
@@ -510,11 +510,13 @@ class ABHelper {
                 continue;
             }
 
-            $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+            if (!$skipExclusionCheck) {
+                $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
-            if (in_array($hostPath, $containerSettings['exclude'])) {
-                self::backupLog("Ignoring '$hostPath' because its listed in containers exclusions list!", self::LOGLEVEL_DEBUG);
-                continue;
+                if (in_array($hostPath, $containerSettings['exclude'])) {
+                    self::backupLog("Ignoring '$hostPath' because its listed in containers exclusions list!", self::LOGLEVEL_DEBUG);
+                    continue;
+                }
             }
 
             if (!file_exists($hostPath)) {
