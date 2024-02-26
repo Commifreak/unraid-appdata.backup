@@ -172,8 +172,9 @@ if (strstr('white,azure', $display['theme'])) {
     }
 
     <?php if(isset($selectBorder)): ?>
-    blockquote select, blockquote textarea {
+    blockquote select, blockquote textarea, blockquote input[type="text"] {
         border-bottom: <?= $selectBorder ?>;
+        color: <?= $bgcolor ?>;
     }
 
     <?php endif; ?>
