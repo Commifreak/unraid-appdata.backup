@@ -589,6 +589,8 @@ HTML;
                 $containerSetting     = $abSettings->getContainerSpecificSettings($container['Name'], false);
                 $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
+                $containerExcludes = implode("\r\n", $containerSetting['exclude']);
+
                 echo <<<HTML
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl>
@@ -626,7 +628,7 @@ $plexHint
     </dd>
     
     <dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
-    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">{$containerSetting['exclude']}</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
     
 
 
@@ -1022,7 +1024,7 @@ HTML;
         console.debug("Volume dup check (affected/matrix): ", affectedMappings, volumeMatrix);
 
         affectedMappings.forEach(function (element) {
-            let codeElems = $('code:contains(' + element + ')');
+            let codeElems = $('code[data-container]:contains(' + element + ')');
             codeElems.each(function () {
                 $('#containerMultiMappingIssue_' + $(this).data('container')).show();
                 $(this).next('.multiVolumeWarn').show();

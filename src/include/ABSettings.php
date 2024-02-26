@@ -51,7 +51,7 @@ class ABSettings {
 
         // The following are hidden, container special default settings
         'skip'               => 'no',
-        'exclude'            => '',
+        'exclude' => [],
         'dontStop'           => 'no',
         'backupExtVolumes'   => 'no'
     ];
@@ -110,6 +110,23 @@ class ABSettings {
                                 break;
                             case 'settingsVersion':
                                 $this::$settingsVersion = $value;
+                                break;
+                            case 'containerSettings':
+                                /**
+                                 * Container specific patches
+                                 */
+                                foreach ($value as $containerName => $containerSettings) {
+                                    $paths    = explode("\r\n", $containerSettings['exclude']);
+                                    $newPaths = [];
+                                    foreach ($paths as $pathKey => $path) {
+                                        if (empty(trim($path))) {
+                                            continue; // Skip empty lines
+                                        }
+                                        $newPaths[] = rtrim($path, '/');
+                                    }
+                                    $value[$containerName]['exclude'] = $newPaths;
+                                }
+                                $this->$key = $value;
                                 break;
                             default:
                                 $this->$key = $value;
@@ -217,7 +234,7 @@ class ABSettings {
              * Container is unknown, init its values with empty strings = 'use default'
              */
             foreach ($this->defaults as $setting => $value) {
-                $this->containerSettings[$name][$setting] = '';
+                $this->containerSettings[$name][$setting] = is_array($value) ? [] : '';
             }
         }
 

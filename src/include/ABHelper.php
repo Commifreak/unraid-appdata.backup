@@ -361,10 +361,8 @@ class ABHelper {
 
         $tarExcludes = [];
         if (!empty($containerSettings['exclude'])) {
-            self::backupLog("Container got excludes! " . PHP_EOL . print_r($containerSettings['exclude'], true), self::LOGLEVEL_DEBUG);
-            $excludes = explode("\r\n", $containerSettings['exclude']);
-            if (!empty($excludes)) {
-                foreach ($excludes as $exclude) {
+            self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
+            foreach ($containerSettings['exclude'] as $exclude) {
                     $exclude = rtrim($exclude, "/");
                     if (!empty($exclude)) {
                         if (($volumeKey = array_search($exclude, $volumes)) !== false) {
@@ -375,7 +373,6 @@ class ABHelper {
                         $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                     }
                 }
-            }
         }
 
         if (!empty($abSettings->globalExclusions)) {
@@ -512,6 +509,14 @@ class ABHelper {
                 self::backupLog("This volume is empty (rootfs mapped??)! Ignoring.", self::LOGLEVEL_DEBUG);
                 continue;
             }
+
+            $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
+
+            if (in_array($hostPath, $containerSettings['exclude'])) {
+                self::backupLog("Ignoring '$hostPath' because its listed in containers exclusions list!", self::LOGLEVEL_DEBUG);
+                continue;
+            }
+
             if (!file_exists($hostPath)) {
                 self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_ERR);
                 continue;
