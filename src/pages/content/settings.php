@@ -951,7 +951,8 @@ HTML;
         $path = $(element).text();
         $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
 
-        if ($excludeTextarea.val().indexOf($path) !== -1) { // If existing inside textarea
+        if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
+            console.debug("Not adding this volume to exclusion: already listed!")
             return;
         }
 
@@ -1012,9 +1013,8 @@ HTML;
         $("code[data-container]").each(function () {
             let container = $(this).data('container');
             let mapping = $(this).text();
-            if ($('#' + container + '_exclude').val().indexOf(mapping) !== -1) {
-                console.debug(container, mapping, 'is excluded so ignored');
-            } else if (volumeMatrix.includes(mapping)) {
+
+            if (volumeMatrix.includes(mapping)) {
                 affectedMappings.push(mapping);
             } else {
                 volumeMatrix.push($(this).text());
