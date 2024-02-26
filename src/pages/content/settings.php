@@ -1018,6 +1018,8 @@ HTML;
             }
         });
 
+        console.debug("Volume dup check (affected/matrix): ", affectedMappings, volumeMatrix);
+
         affectedMappings.forEach(function (element) {
             let codeElems = $('code:contains(' + element + ')');
             codeElems.each(function () {
