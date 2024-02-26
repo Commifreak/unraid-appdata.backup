@@ -630,7 +630,7 @@ $plexHint
 
 
 
-<div onclick="$(this).next().show();"><a style="cursor:pointer;">Show advanced options</a></div>
+<div onclick="$(this).next().toggle();"><a style="cursor:pointer;">Show advanced options</a></div>
 	<div style="display: none;">
 	
 	<dt>Skip backup? <small>Only stop/start</small></dt>
