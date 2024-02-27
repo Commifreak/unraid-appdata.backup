@@ -907,15 +907,15 @@ HTML;
         let mainValue = $('#containerOrderSortable').sortable('serialize', {
             expression: /(.+?)_(.+)/
         });
-        console.log('Main value: ', mainValue);
+        console.debug('Main value: ', mainValue);
         $('#containerOrder').val(mainValue);
 
         $("input[id^='containerGroupOrder']").each(function (index) {
-            console.log("Processing groupOrder " + $(this).attr('id'));
+            console.debug("Processing groupOrder " + $(this).attr('id'));
             let groupValue = $('#' + $(this).attr('id') + '_Sortable').sortable('serialize', {
                 expression: /(.+?)=(.+)/
             });
-            console.log(groupValue);
+            console.debug('Group value', groupValue);
             $(this).val(groupValue);
         });
     });
@@ -952,7 +952,7 @@ HTML;
         $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
 
         if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
-            console.debug("Not adding this volume to exclusion: already listed!")
+            console.log("Not adding this volume to exclusion: already listed!")
             return;
         }
 
@@ -997,7 +997,7 @@ HTML;
     }
 
     function checkMultiCoreCpuCount() {
-        console.log($('#compression').val());
+        console.debug('compression setting: ', $('#compression').val());
         if ($('#compression').val() === 'yesMulticore') {
             $('#compressionCpuLimit_dl').fadeIn();
         } else {
@@ -1017,7 +1017,7 @@ HTML;
             if (volumeMatrix.includes(mapping)) {
                 affectedMappings.push(mapping);
             } else {
-                volumeMatrix.push($(this).text());
+                volumeMatrix.push(mapping);
             }
         });
 
