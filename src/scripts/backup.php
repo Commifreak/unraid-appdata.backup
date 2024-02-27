@@ -54,6 +54,9 @@ if (!file_exists(ABSettings::getConfigPath())) {
 }
 
 $abSettings = new ABSettings();
+$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
+
+ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
 if (empty($abSettings->destination)) {
     ABHelper::backupLog("Destination is not set!", ABHelper::LOGLEVEL_ERR);
@@ -71,8 +74,6 @@ ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSour
  * At this point, we have something to work with.
  * Patch the destination for further usage
  */
-$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
-
 ABHelper::backupLog("Backing up to: " . $abDestination);
 
 if (!mkdir($abDestination)) {
@@ -80,7 +81,6 @@ if (!mkdir($abDestination)) {
     goto end;
 }
 
-ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 if (ABHelper::abortRequested()) {
     goto abort;
 }
