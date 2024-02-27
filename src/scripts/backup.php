@@ -384,6 +384,7 @@ if (!empty($abDestination)) {
      */
     exec("chown -R nobody:users " . escapeshellarg($abDestination));
     exec("chmod -R u=rwx,g=rw,o=rw " . escapeshellarg($abDestination));
+    exec("chmod u=rwx,g=rwx,o=rwx " . escapeshellarg($abDestination));
 
 }
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
