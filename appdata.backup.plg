@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.02.27">
-        <!ENTITY sha256    "15fa8f867830ce60877e46420c6f9881d529fffc5a38aea6fecc2ebddb727acf">
+        <!ENTITY version   "2024.02.26">
+        <!ENTITY sha256    "847422ad7d067e8f11e4cc11de08152b6e07dc8289a28edfbdeb5fe11d754fb1">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,11 +16,6 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
-
-####2024.02.27
-- ℹ️ I know that some people having issues with false "multi mapping detected" warnings. The fix needs some more time.
-- 🩹 Fix file permissions for created backup
-- 🔧 `preRun` script now runs before destination existence check
 
 ###2024.02.26
 - 🩹 Grouping input is now visible to dark theme users 😅

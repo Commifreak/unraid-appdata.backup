@@ -10,7 +10,7 @@ use unraid\plugins\AppdataBackup\ABSettings;
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
 require_once dirname(__DIR__) . '/include/ABHelper.php';
 
-set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
+//set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
 /**
  * Helper for later renaming of the backup folder to suffix -failed
@@ -60,10 +60,6 @@ if (empty($abSettings->destination)) {
     goto end;
 }
 
-$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
-
-ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
-
 if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
     ABHelper::backupLog("Destination is unavailable or not writeable!", ABHelper::LOGLEVEL_ERR);
     goto end;
@@ -75,6 +71,8 @@ ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSour
  * At this point, we have something to work with.
  * Patch the destination for further usage
  */
+$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
+
 ABHelper::backupLog("Backing up to: " . $abDestination);
 
 if (!mkdir($abDestination)) {
@@ -82,6 +80,7 @@ if (!mkdir($abDestination)) {
     goto end;
 }
 
+ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 if (ABHelper::abortRequested()) {
     goto abort;
 }
@@ -372,8 +371,6 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
 }
 
-ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
-
 if (!empty($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
@@ -386,13 +383,14 @@ if (!empty($abDestination)) {
      * Adjusting backup destination permissions (for this run)
      */
     exec("chown -R nobody:users " . escapeshellarg($abDestination));
-    exec("chmod -R u=rw,g=r,o=- " . escapeshellarg($abDestination));
-    exec("chmod u=rwx,g=rx,o=- " . escapeshellarg($abDestination));
+    exec("chmod -R u=rwx,g=rwx,o=rwx " . escapeshellarg($abDestination));
 
 }
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
     unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
 }
 unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
+
+ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
 
 exit(ABHelper::$errorOccured ? 1 : 0);
