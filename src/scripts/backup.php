@@ -54,14 +54,15 @@ if (!file_exists(ABSettings::getConfigPath())) {
 }
 
 $abSettings = new ABSettings();
-$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
-
-ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
 if (empty($abSettings->destination)) {
     ABHelper::backupLog("Destination is not set!", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
+
+$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
+
+ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
 if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
     ABHelper::backupLog("Destination is unavailable or not writeable!", ABHelper::LOGLEVEL_ERR);
@@ -371,6 +372,8 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
 }
 
+ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
+
 if (!empty($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
@@ -391,7 +394,5 @@ if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
     unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
 }
 unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
-
-ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
 
 exit(ABHelper::$errorOccured ? 1 : 0);
