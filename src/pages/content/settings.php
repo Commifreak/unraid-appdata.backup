@@ -1007,29 +1007,31 @@ HTML;
 
     function checkVolumesForDuplicates() {
 
-        let volumeMatrix = [];
-        let affectedMappings = [];
+        let volumeList = [];
+        let containerMapping = {};
 
-        $("code[data-container]").each(function () {
+        $("code[data-container]").each(function() {
             let container = $(this).data('container');
-            let mapping = $(this).text();
+            let volume = $(this).text();
 
-            if (volumeMatrix.includes(mapping)) {
-                affectedMappings.push(mapping);
+            if(jQuery.inArray(volume, volumeList) >= 0){
+                containerMapping[jQuery.inArray(volume, volumeList)].push($(this));
             } else {
-                volumeMatrix.push(mapping);
+                volumeList.push(volume);
+                containerMapping[jQuery.inArray(volume, volumeList)] = [$(this)];
             }
         });
 
-        console.debug("Volume dup check (affected/matrix): ", affectedMappings, volumeMatrix);
+        console.debug("Volume dup check (volumes/mappedContainers): ", affectedMappings, volumeMatrix);
 
-        affectedMappings.forEach(function (element) {
-            let codeElems = $('code[data-container]:contains(' + element + ')');
-            codeElems.each(function () {
-                $('#containerMultiMappingIssue_' + $(this).data('container')).show();
-                $(this).next('.multiVolumeWarn').show();
-            });
-        });
+        for (key in containerMapping) {
+            if (containerMapping[key].length > 1) {
+                containerMapping[key].forEach(function(element){
+                    $('#containerMultiMappingIssue_' + $(element).data('container')).show();
+                    $(element).next('.multiVolumeWarn').show();
+                });
+            }
+        }
     }
 
     function copyConfigFromProd() {
