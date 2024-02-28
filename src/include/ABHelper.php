@@ -472,7 +472,8 @@ class ABHelper {
      * @return array|false|string|string[]|null
      */
     public static function scriptRunning($externalCmd = false) {
-        $pid = @file_get_contents(ABSettings::$tempFolder . '/' . ($externalCmd ? ABSettings::$stateExtCmd : ABSettings::$stateFileScriptRunning));
+        $filePath = ABSettings::$tempFolder . '/' . ($externalCmd ? ABSettings::$stateExtCmd : ABSettings::$stateFileScriptRunning);
+        $pid      = file_exists($filePath) ? file_get_contents($filePath) : false;
         if (!$pid) {
             // lockfile not there: process not running anymore
             return false;
@@ -481,7 +482,7 @@ class ABHelper {
         if (file_exists('/proc/' . $pid)) {
             return $pid;
         } else {
-            @unlink(ABSettings::$tempFolder . '/' . ($externalCmd ? ABSettings::$stateExtCmd : ABSettings::$stateFileScriptRunning)); // Remove dead state file
+            unlink($filePath); // Remove dead state file
             return false;
         }
     }
@@ -569,9 +570,9 @@ class ABHelper {
         return false;
     }
 
-    public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline): bool {
-        self::notify("Appdata Backup PHP error", "Appdata Backup PHP error", "got PHP error: $errno / $errstr $errfile:$errline", 'alert');
-        self::backupLog("got PHP error: $errno / $errstr $errfile:$errline", self::LOGLEVEL_ERR);
+    public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
+        $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
+        file_put_contents("/tmp/appdata.backup_phperr", $errStr . PHP_EOL, FILE_APPEND);
 
         return true;
     }
