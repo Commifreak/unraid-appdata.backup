@@ -1006,27 +1006,65 @@ HTML;
     }
 
     function checkVolumesForDuplicates() {
-
         let volumeList = [];
         let containerMapping = {};
+        let containerVolumes = {};
 
+        // Make list of all container volumes.
         $("code[data-container]").each(function() {
-            let container = $(this).data('container');
-            let volume = $(this).text();
-
-            if(jQuery.inArray(volume, volumeList) >= 0){
-                containerMapping[jQuery.inArray(volume, volumeList)].push($(this));
-            } else {
-                volumeList.push(volume);
-                containerMapping[jQuery.inArray(volume, volumeList)] = [$(this)];
+            if (!($(this).data('container') in containerVolumes)) {
+                containerVolumes[$(this).data('container')] = {'volumes': []};
             }
+            containerVolumes[$(this).data('container')].volumes.push({"containerElement": $(this), "volume": $(this).text().trim()});
         });
+
+        var containerVolumesFinal = jQuery.extend(true, {}, containerVolumes);
+        // Fetch 'internal' path config
+        let internalPathsArray = $('#allowedSources').val().split('\n');
+
+        for (let key in containerVolumes) {
+            let containerExcludeArray = $('#' + key + '_exclude').val().split('\n');
+            containerVolumes[key].volumes.forEach(function(volObject, volIndex) {
+                let volElement = volObject.volume;
+                // For each docker container, check if save external volumes is 'no', if 'no' exclude volumes that don't match internal paths.
+                if($('#' + key + '_backupExtVolumes').val().localeCompare('no') === 0) {
+                    if(internalPathsArray.findIndex(intElement => volElement.startsWith(intElement)) < 0) {
+                        containerVolumesFinal[key].volumes.splice(containerVolumesFinal[key].volumes.findIndex(delElement => volElement.localeCompare(delElement.volume) === 0), 1);
+                        return;
+                    }
+                }
+
+                // For each Docker container, remove mappings that are in their exclude field.
+                if (containerExcludeArray[0].localeCompare('') !== 0) {
+                    // volElement.localeCompare(excludeElement) !== 0
+                    if (containerExcludeArray.findIndex(excludeElement => volElement.localeCompare(excludeElement) === 0) >= 0) {
+                        containerVolumesFinal[key].volumes.splice(containerVolumesFinal[key].volumes.findIndex(delElement => volElement.localeCompare(delElement.volume) === 0), 1);
+                        return;
+                    }
+                }
+            });
+        }
+
+        for (let key in containerVolumesFinal) {
+            containerVolumesFinal[key].volumes.forEach(function(volumeObject) {
+                let volume = volumeObject.volume;
+                let element = $(volumeObject.containerElement);
+                let volumeIndex = jQuery.inArray(volume, volumeList);
+                if(volumeIndex >= 0) {
+                    containerMapping[volumeIndex].containers.push($(element));
+                } else {
+                    volumeList.push(volume);
+                    let volumeIndex = jQuery.inArray(volume, volumeList);
+                    containerMapping[volumeIndex] = {'volume': volume, 'containers': [$(element)]};
+                }
+            });
+        }
 
         console.debug("Volume dup check (volumes/mappedContainers): ", volumeList, containerMapping);
 
         for (key in containerMapping) {
-            if (containerMapping[key].length > 1) {
-                containerMapping[key].forEach(function(element){
+            if (containerMapping[key].containers.length > 1) {
+                containerMapping[key].containers.forEach(function(element){
                     $('#containerMultiMappingIssue_' + $(element).data('container')).show();
                     $(element).next('.multiVolumeWarn').show();
                 });
