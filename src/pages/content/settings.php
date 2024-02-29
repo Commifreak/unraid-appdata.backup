@@ -1022,7 +1022,7 @@ HTML;
             }
         });
 
-        console.debug("Volume dup check (volumes/mappedContainers): ", affectedMappings, volumeMatrix);
+        console.debug("Volume dup check (volumes/mappedContainers): ", volumeList, containerMapping);
 
         for (key in containerMapping) {
             if (containerMapping[key].length > 1) {
