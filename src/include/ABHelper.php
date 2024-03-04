@@ -518,6 +518,11 @@ class ABHelper {
                     self::backupLog("Ignoring '$hostPath' because its listed in containers exclusions list!", self::LOGLEVEL_DEBUG);
                     continue;
                 }
+
+                if (in_array($hostPath, $abSettings->globalExclusions)) {
+                    self::backupLog("Ignoring '$hostPath' because its listed in global exclusions list!", self::LOGLEVEL_DEBUG);
+                    continue;
+                }
             }
 
             if (!file_exists($hostPath)) {
