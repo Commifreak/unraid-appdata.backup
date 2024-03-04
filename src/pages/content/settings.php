@@ -583,8 +583,9 @@ HTML;
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : '';
-                        $volumes[$index] = '<span class="fa ' . (!ABHelper::isVolumeWithinAppdata($volume) ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
+                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
+                        $internalVolume  = ABHelper::isVolumeWithinAppdata($volume);
+                        $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
                     }
                     $volumes = implode('<br />', $volumes);
                 }
@@ -1014,8 +1015,21 @@ HTML;
             let container = $(this).data('container');
             let mapping = $(this).text();
 
+            if ($(this).data('excluded')) {
+                console.debug('Ignore ' + mapping + ': Excluded!');
+                return; // Ignore mapping, its excluded
+            }
+
+            if (!$(this).data('internal') && $('#' + container + '_backupExtVolumes').val() == 'no') {
+                console.debug('Ignore ' + mapping + ': Is external and external should not be backed up!');
+                return;
+            }
+
+            console.debug("CV: processing", container, mapping);
+
             if (volumeMatrix.includes(mapping)) {
                 affectedMappings.push(mapping);
+                console.debug("CV: mapping affected!");
             } else {
                 volumeMatrix.push(mapping);
             }
@@ -1024,10 +1038,19 @@ HTML;
         console.debug("Volume dup check (affected/matrix): ", affectedMappings, volumeMatrix);
 
         affectedMappings.forEach(function (element) {
-            let codeElems = $('code[data-container]:contains(' + element + ')');
+            let codeElems = $('code[data-container]').filter(function () {
+                return $(this).text() === element;
+            });
+            console.debug("Affected (filtered) code elems", codeElems);
             codeElems.each(function () {
-                $('#containerMultiMappingIssue_' + $(this).data('container')).show();
-                $(this).next('.multiVolumeWarn').show();
+                console.debug("Affected Warn display: element/container:", element, $(this).data('container'));
+                let nextMultiWarnSpan = $(this).next('.multiVolumeWarn');
+                if (nextMultiWarnSpan.length) {
+                    $('#containerMultiMappingIssue_' + $(this).data('container')).show();
+                    nextMultiWarnSpan.show();
+                } else {
+                    console.error("MultiWarnSpan not found!");
+                }
             });
         });
     }
