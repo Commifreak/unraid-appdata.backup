@@ -730,7 +730,7 @@ class ABHelper {
             self::setCurrentContainerName($container);
             $groupMembers = $abSettings->getContainerGroups($container['Name']);
             self::backupLog("Reached a group: " . $container['Name'], self::LOGLEVEL_DEBUG);
-            $sortedGroupContainers = self::sortContainers($dockerContainers, $abSettings->containerGroupOrder[$container['Name']], $reverse, false, $groupMembers);
+            $sortedGroupContainers = self::sortContainers($dockerContainers, $abSettings->containerGroupOrder[$container['Name']], $reverse, true, $groupMembers);
             self::backupLog("Containers in this group: " . implode(', ', array_column($sortedGroupContainers, 'Name')), self::LOGLEVEL_DEBUG);
             return $sortedGroupContainers;
         }
