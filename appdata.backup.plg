@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.03.12">
-        <!ENTITY sha256    "e016d8b441cd9570b65f6fafcc67912a0f40b3f11504d0ef3d69d3ef75b0d411">
+        <!ENTITY version   "2024.03.17">
+        <!ENTITY sha256    "c7d2fceda63cb2ba479dba87805faba31e99bfcb76c42638f23fc1afa2aa2b53">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2024.03.17
+- 🩹 Run `post-run` after correcting destination permissions
 
 ###2024.03.12
 - 🩹 Also use global exclusions for container exclusion check
