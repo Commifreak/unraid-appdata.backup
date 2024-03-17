@@ -378,6 +378,7 @@ if (!empty($abDestination)) {
     if (ABHelper::$errorOccured) {
         copy(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $abDestination . '/backup.debug.log');
         rename($abDestination, $abDestination . '-failed');
+        $abDestination = $abDestination . '-failed';
     }
 
     /**
@@ -389,7 +390,7 @@ if (!empty($abDestination)) {
 
 }
 
-ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
+ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination ?? 'false', (ABHelper::$errorOccured ? 'false' : 'true'));
 
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
     unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
