@@ -372,8 +372,6 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
 }
 
-ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
-
 if (!empty($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
@@ -390,6 +388,9 @@ if (!empty($abDestination)) {
     exec("chmod u=rwx,g=rx,o=- " . escapeshellarg($abDestination));
 
 }
+
+ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination, (ABHelper::$errorOccured ? 'false' : 'true'));
+
 if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
     unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
 }
