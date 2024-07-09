@@ -317,3 +317,7 @@ if (str_contains(__DIR__, 'appdata.backup.beta')) {
     ABSettings::$supportUrl = 'https://forums.unraid.net/topic/136995-pluginbeta-appdatabackup/';
 }
 ABSettings::$externalCmdPidCapture = '& echo $! > ' . escapeshellarg(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd) . ' && wait $!';
+
+if (!file_exists(ABSettings::$tempFolder)) {
+    mkdir(ABSettings::$tempFolder);
+}

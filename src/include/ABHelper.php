@@ -100,10 +100,6 @@ class ABHelper {
      */
     public static function backupLog(string $msg, string $level = self::LOGLEVEL_INFO, bool $newLine = true, bool $skipDate = false) {
 
-        if (!file_exists(ABSettings::$tempFolder)) {
-            mkdir(ABSettings::$tempFolder);
-        }
-
         /**
          * Do not log, if the script is not running or the requesting pid is not the script pid
          */
