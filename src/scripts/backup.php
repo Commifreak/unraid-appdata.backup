@@ -65,7 +65,7 @@ $abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His")
 ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
 if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
-    ABHelper::backupLog("Destination is unavailable or not writeable!", ABHelper::LOGLEVEL_ERR);
+    ABHelper::backupLog("Destination is unavailable or not writeable! Did you created the destination folder?", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
 
