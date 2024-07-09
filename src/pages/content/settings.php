@@ -905,10 +905,11 @@ HTML;
     });
 
     $('#abSettingsForm').on('submit', function () {
+        console.debug("SUBMIT!");
         let mainValue = $('#containerOrderSortable').sortable('serialize', {
             expression: /(.+?)_(.+)/
         });
-        console.debug('Main value: ', mainValue);
+        console.debug('Main order value: ', mainValue);
         $('#containerOrder').val(mainValue);
 
         $("input[id^='containerGroupOrder']").each(function (index) {
@@ -916,9 +917,10 @@ HTML;
             let groupValue = $('#' + $(this).attr('id') + '_Sortable').sortable('serialize', {
                 expression: /(.+?)=(.+)/
             });
-            console.debug('Group value', groupValue);
+            console.debug('Group order value', groupValue);
             $(this).val(groupValue);
         });
+        console.debug('Final form:', $(this).serialize());
     });
 
 
