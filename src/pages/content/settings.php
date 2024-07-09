@@ -422,6 +422,18 @@ if (($code ?? 0) != 0) {
                 </select>
             </dd>
 
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Enable <code>--ignore-case</code> for
+                        tar?</b><br/><small>This ignores case sensitivity for exclusions.</small>
+                </div>
+            </dt>
+            <dd><select id='ignoreExclusionCase' name="ignoreExclusionCase"
+                        data-setting="<?= $abSettings->ignoreExclusionCase ?>">
+                    <option value='yes'>Yes</option>
+                    <option value='no'>No</option>
+                </select>
+            </dd>
+
         </dl>
     </div>
 

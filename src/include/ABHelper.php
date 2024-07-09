@@ -390,6 +390,11 @@ class ABHelper {
         $tarVerifyOptions = array_merge($tarExcludes, ['--diff']);      // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
         $tarOptions       = array_merge($tarExcludes, ['-c', '-P']);    // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
 
+        if ($abSettings->ignoreExclusionCase == 'yes') {
+            $tarOptions[]       = '--ignore-case';
+            $tarVerifyOptions[] = '--ignore-case';
+        }
+
         switch ($abSettings->compression) {
             case 'yes':
                 $tarOptions[] = '-z'; // GZip
