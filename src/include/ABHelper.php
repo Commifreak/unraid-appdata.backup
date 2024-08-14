@@ -619,10 +619,15 @@ class ABHelper {
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
                         self::setCurrentContainerName($container);
+
+                        ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
+                        
                         if (!self::backupContainer($container, $abDestination)) {
                             self::$errorOccured = true;
                         }
 
+                        ABHelper::handlePrePostScript($abSettings->postContainerBackupScript, 'post-container', $container['Name']);
+                        
                         if (self::abortRequested()) {
                             return false;
                         }
@@ -684,10 +689,14 @@ class ABHelper {
                         return false;
                     }
 
+                    ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
+                    
                     if (!self::backupContainer($container, $abDestination)) {
                         self::$errorOccured = true;
                     }
 
+                    ABHelper::handlePrePostScript($abSettings->postContainerBackupScript, 'post-container', $container['Name']);
+                    
                     if (self::abortRequested()) {
                         return false;
                     }
