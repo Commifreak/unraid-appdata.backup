@@ -425,6 +425,16 @@ class ABHelper {
 
         if ($resultcode > 0) {
             self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
+
+            /**
+             * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
+             */
+            foreach ($volumes as $volume) {
+                $output = null;
+                exec("lsof -nl +D " . escapeshellarg($volume), $output);
+                self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+            }
+
             return $containerSettings['ignoreBackupErrors'] == 'yes';
         }
 
