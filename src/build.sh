@@ -1,14 +1,15 @@
 #!/bin/bash
 SUFFIX=""
 VERSION=$(date +"%Y.%m.%d")
-if [ ! -z $1 ]
+
+if [ "$1" == "beta" ]
 then
-  VERSION=$VERSION$1
+  SUFFIX=".beta"
 fi
 
 if [ ! -z $2 ]
 then
-  SUFFIX=".beta"
+  VERSION=$VERSION$1
 fi
 
 
