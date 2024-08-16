@@ -768,6 +768,30 @@ HTML;
     </blockquote>
 
     <dl>
+        <dt>Pre-container-backup script</dt>
+        <dd><input style="width: 500px;" type='text' class='ftAttach' id="preContainerBackupScript" name="preContainerBackupScript"
+                   value="<?= $abSettings->preContainerBackupScript ?>"
+                   data-pickroot="/mnt/"/></dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p>Runs the selected script for each container immediately BEFORE creating the tarfile. Sent arguments: <code>pre-container</code>,
+            <code>container name</code></p>
+    </blockquote>
+
+    <dl>
+        <dt>Post-container-backup script</dt>
+        <dd><input style="width: 500px;" type='text' class='ftAttach' id="postContainerBackupScript" name="postContainerBackupScript"
+                   value="<?= $abSettings->postContainerBackupScript ?>"
+                   data-pickroot="/mnt/"/></dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p>Runs the selected script for each container immediately AFTER creating the tarfile. Sent arguments: <code>post-container</code>,
+            <code>container name</code></p>
+    </blockquote>
+
+    <dl>
         <dt>Post-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="postBackupScript" name="postBackupScript"
                    value="<?= $abSettings->postBackupScript ?>"
