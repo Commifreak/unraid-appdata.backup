@@ -756,30 +756,6 @@ HTML;
     </blockquote>
 
     <dl>
-        <dt>Post-backup script</dt>
-        <dd><input style="width: 500px;" type='text' class='ftAttach' id="postBackupScript" name="postBackupScript"
-                   value="<?= $abSettings->postBackupScript ?>"
-                   data-pickroot="/mnt/"/></dd>
-    </dl>
-
-    <blockquote class='inline_help'>
-        <p>Runs the selected script AFTER the backup is done (before containers would start). Sent arguments: <code>post-backup</code>,
-            <code>destination path</code></p>
-    </blockquote>
-
-    <dl>
-        <dt>Post-run script</dt>
-        <dd><input style="width: 500px;" type='text' class='ftAttach' id="postRunScript" name="postRunScript"
-                   value="<?= $abSettings->postRunScript ?>"
-                   data-pickroot="/mnt/"/></dd>
-    </dl>
-
-    <blockquote class='inline_help'>
-        <p>Runs the selected script AFTER everything is done. Sent arguments: <code>post-run</code>, <code>destination
-                path</code>, <code>true|false</code> (true on backup success, false otherwise)</p>
-    </blockquote>
-
-    <dl>
         <dt>Pre-container-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="preContainerBackupScript" name="preContainerBackupScript"
                    value="<?= $abSettings->preContainerBackupScript ?>"
@@ -801,6 +777,30 @@ HTML;
     <blockquote class='inline_help'>
         <p>Runs the selected script for each container immediately AFTER creating the tarfile. Sent arguments: <code>post-container</code>,
             <code>container name</code></p>
+    </blockquote>
+
+    <dl>
+        <dt>Post-backup script</dt>
+        <dd><input style="width: 500px;" type='text' class='ftAttach' id="postBackupScript" name="postBackupScript"
+                   value="<?= $abSettings->postBackupScript ?>"
+                   data-pickroot="/mnt/"/></dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p>Runs the selected script AFTER the backup is done (before containers would start). Sent arguments: <code>post-backup</code>,
+            <code>destination path</code></p>
+    </blockquote>
+
+    <dl>
+        <dt>Post-run script</dt>
+        <dd><input style="width: 500px;" type='text' class='ftAttach' id="postRunScript" name="postRunScript"
+                   value="<?= $abSettings->postRunScript ?>"
+                   data-pickroot="/mnt/"/></dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p>Runs the selected script AFTER everything is done. Sent arguments: <code>post-run</code>, <code>destination
+                path</code>, <code>true|false</code> (true on backup success, false otherwise)</p>
     </blockquote>
 
     <div class="title"><span class="left"><i class="fa fa-plus-square title"></i>Some extra options</span></div>
