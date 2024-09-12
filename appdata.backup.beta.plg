@@ -144,12 +144,18 @@
 
     <FILE Run="/bin/bash">
         <INLINE>
+            php &plugdir;/scripts/checkMigrations.php
+        </INLINE>
+    </FILE>
+
+    <FILE Run="/bin/bash">
+        <INLINE>
             echo ""
             echo "----------------------------------------------------"
             echo " &name; has been installed."
             echo " (previously known as ca.backup2)"
             echo ""
-            echo " 2022-2023, Robin Kluth"
+            echo " 2022-2024, Robin Kluth"
             echo " Version: &version;"
             echo "----------------------------------------------------"
             echo ""

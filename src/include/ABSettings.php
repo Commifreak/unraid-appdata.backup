@@ -210,6 +210,7 @@ class ABSettings {
                         self::store($config);
                     } else {
                         exec('logger -t "' . self::$appName . '" ERROR: Migration was NOT successful!');
+                        ABHelper::notify("[AppdataBackup] Error!", "Migration From $curMigrationStep to next higher failed!", "", 'alert');
                     }
                 }
             }
