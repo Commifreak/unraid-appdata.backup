@@ -597,7 +597,6 @@ class ABHelper {
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
         file_put_contents("/tmp/appdata.backup_phperr", $errStr . PHP_EOL, FILE_APPEND);
-        self:
         self::backupLog("PHP-ERROR occured! $errno / $errstr $errfile:$errline", self::LOGLEVEL_ERR);
 
         return true;
