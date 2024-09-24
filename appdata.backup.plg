@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.03.17">
-        <!ENTITY sha256    "c7d2fceda63cb2ba479dba87805faba31e99bfcb76c42638f23fc1afa2aa2b53">
+        <!ENTITY version   "2024.09.24">
+        <!ENTITY sha256    "9f6d006667f3098dce2a26ac40284c8171ad64033292e35750fc22b51c13efbd">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,13 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2024.09.24
+- ➕ Support `--ignore-case` for exclusions.
+- ➕ Added pre- and post-container scripts. Thanks to [Blasman](https://github.com/Commifreak/unraid-appdata.backup/pull/36)
+- 🔧 More diagnostics if tar verification fails
+- 🩹 Fix `extra files backup` crashing the backup
+- 🩹 Some cosmetic changes
 
 ###2024.03.17
 - 🩹 Run `post-run` after correcting destination permissions
