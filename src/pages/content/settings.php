@@ -422,6 +422,18 @@ if (($code ?? 0) != 0) {
                 </select>
             </dd>
 
+            <dt>
+                <div style="display: table; line-height: 1em;"><b>Enable <code>--ignore-case</code> for
+                        tar?</b><br/><small>This ignores case sensitivity for exclusions.</small>
+                </div>
+            </dt>
+            <dd><select id='ignoreExclusionCase' name="ignoreExclusionCase"
+                        data-setting="<?= $abSettings->ignoreExclusionCase ?>">
+                    <option value='yes'>Yes</option>
+                    <option value='no'>No</option>
+                </select>
+            </dd>
+
         </dl>
     </div>
 
@@ -593,10 +605,20 @@ HTML;
                 $containerExcludes = implode("\r\n", $containerSetting['exclude']);
 
                 echo <<<HTML
+<style>
+.containerSettingsDt {
+    overflow: hidden;
+    white-space: nowrap
+}
+.containerSettingsDt:after {
+    opacity: 0.1;
+    content: "  _____________________________________________________________________________________________________________________________________________________________________";
+}
+</style>
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl>
-        <dt><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">Skip?</label>
+        <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
+        <dd><label for="{$container['Name']}_skip">&nbsp;&nbsp;Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
             <option value="yes">Yes</option>

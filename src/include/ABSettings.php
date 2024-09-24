@@ -78,6 +78,7 @@ class ABSettings {
     public string $backupVMMeta = 'yes';
     public string $successLogWanted = 'no';
     public string $updateLogWanted = 'no';
+    public string $ignoreExclusionCase = 'no';
 
     public function __construct() {
 

@@ -390,6 +390,11 @@ class ABHelper {
         $tarVerifyOptions = array_merge($tarExcludes, ['--diff']);      // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
         $tarOptions       = array_merge($tarExcludes, ['-c', '-P']);    // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
 
+        if ($abSettings->ignoreExclusionCase == 'yes') {
+            $tarOptions[]       = '--ignore-case';
+            $tarVerifyOptions[] = '--ignore-case';
+        }
+
         switch ($abSettings->compression) {
             case 'yes':
                 $tarOptions[] = '-z'; // GZip
@@ -414,22 +419,35 @@ class ABHelper {
         self::backupLog("Generated tar command: " . $finalTarOptions, self::LOGLEVEL_DEBUG);
         self::backupLog("Backing up " . $container['Name'] . '...');
 
+        $tarBackupTimer = time();
+
         $output = $resultcode = null;
         exec("tar " . $finalTarOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {
             self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
+
+            /**
+             * Special debug: The creation was ok but verification failed: Something is accessing docker files! List docker info for this container
+             */
+            foreach ($volumes as $volume) {
+                $output = null;
+                exec("lsof -nl +D " . escapeshellarg($volume), $output);
+                self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+            }
+
             return $containerSettings['ignoreBackupErrors'] == 'yes';
         }
 
-        self::backupLog("Backup created without issues");
+        self::backupLog("Backup created without issues (took " . gmdate("H:i:s", time() - $tarBackupTimer) . " (hours:mins:secs))");
 
         if (self::abortRequested()) {
             return true;
         }
 
         if ($containerSettings['verifyBackup'] == 'yes') {
+            $tarVerifyTimer = time();
             self::backupLog("Verifying backup...");
             self::backupLog("Final verify command: " . $finalTarVerifyOptions, self::LOGLEVEL_DEBUG);
 
@@ -455,6 +473,8 @@ class ABHelper {
                     }
                 }
                 return $containerSettings['ignoreBackupErrors'] == 'yes';
+            } else {
+                self::backupLog("Verification ended without issues (took " . gmdate("H:i:s", time() - $tarVerifyTimer) . " (hours:mins:secs))");
             }
         } else {
             self::backupLog("Skipping verification for this container because its not wanted!", self::LOGLEVEL_WARN);

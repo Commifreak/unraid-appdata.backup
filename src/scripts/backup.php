@@ -263,6 +263,10 @@ if (!empty($abSettings->includeFiles)) {
 
         $tarOptions = array_merge($tarExcludes, ['-c', '-P']);    // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
 
+        if ($abSettings->ignoreExclusionCase == 'yes') {
+            $tarOptions[] = '--ignore-case';
+        }
+
         $destination = $abDestination . '/extra_files.tar';
 
         switch ($abSettings->compression) {
