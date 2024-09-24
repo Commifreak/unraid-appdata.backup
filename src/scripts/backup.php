@@ -255,7 +255,7 @@ if (!empty($abSettings->includeFiles)) {
 
         $tarExcludes = [];
         if (!empty($abSettings->globalExclusions)) {
-            ABHelper::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), self::LOGLEVEL_DEBUG);
+            ABHelper::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), ABHelper::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
                 $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
