@@ -248,7 +248,10 @@ class ABHelper {
                     $dockerStartTry++;
                     sleep(5);
                 } else {
-                    self::backupLog("Container did not started after multiple tries, skipping.", self::LOGLEVEL_ERR);
+                    self::backupLog("Container did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
+                    $output = null;
+                    exec("docker ps -a", $output);
+                    self::backupLog("docker ps -a:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
                     break; // Exit do-while
                 }
             } else {
