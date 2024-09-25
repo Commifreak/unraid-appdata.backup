@@ -12,6 +12,7 @@ class ABSettings {
     public static $appName = 'appdata.backup';
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
+    public static $unraidAutostartFile = "/var/lib/docker/unraid-autostart";
     public static $settingsVersion = 3;
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';

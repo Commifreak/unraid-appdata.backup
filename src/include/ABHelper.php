@@ -214,8 +214,8 @@ class ABHelper {
         $dockerStartTry         = 1;
         $delay                  = 0;
 
-        $autostart = file("/var/lib/docker/unraid-autostart");
-        if ($autostart) {
+        // @todo: Some kind of caching?
+        if (file_exists(ABSettings::$unraidAutostartFile) && $autostart = file(ABSettings::$unraidAutostartFile)) {
             foreach ($autostart as $autostartLine) {
                 $line = explode(" ", trim($autostartLine));
                 if ($line[0] == $container['Name'] && isset($line[1])) {
@@ -597,7 +597,7 @@ class ABHelper {
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
         file_put_contents("/tmp/appdata.backup_phperr", $errStr . PHP_EOL, FILE_APPEND);
-        self::backupLog("PHP-ERROR occured! $errno / $errstr $errfile:$errline", self::LOGLEVEL_ERR);
+        self::backupLog("PHP-ERROR occured! $errno / $errstr $errfile:$errline", self::LOGLEVEL_DEBUG);
 
         return true;
     }
