@@ -362,16 +362,16 @@ class ABHelper {
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
-                    $exclude = rtrim($exclude, "/");
-                    if (!empty($exclude)) {
-                        if (($volumeKey = array_search($exclude, $volumes)) !== false) {
-                            self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair");
-                            unset($volumes[$volumeKey]);
-                            continue;
-                        }
-                        $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
+                $exclude = rtrim($exclude, "/");
+                if (!empty($exclude)) {
+                    if (($volumeKey = array_search($exclude, $volumes)) !== false) {
+                        self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair");
+                        unset($volumes[$volumeKey]);
+                        continue;
                     }
+                    $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                 }
+            }
         }
 
         if (!empty($abSettings->globalExclusions)) {
@@ -612,7 +612,7 @@ class ABHelper {
         }
     }
 
-    public static function doBackupMethod($method, $containerListOverride = null,) {
+    public static function doBackupMethod($method, $containerListOverride = null) {
         global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination, $dockerUpdateList;
 
         self::backupLog(__METHOD__ . ': $containerListOverride: ' . implode(', ', array_column(($containerListOverride ?? []), 'Name')), self::LOGLEVEL_DEBUG);
@@ -645,13 +645,13 @@ class ABHelper {
                         self::setCurrentContainerName($container);
 
                         ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
-                        
+
                         if (!self::backupContainer($container, $abDestination)) {
                             self::$errorOccured = true;
                         }
 
                         ABHelper::handlePrePostScript($abSettings->postContainerBackupScript, 'post-container', $container['Name']);
-                        
+
                         if (self::abortRequested()) {
                             return false;
                         }
@@ -701,9 +701,12 @@ class ABHelper {
                 foreach ($containerListOverride ?: $sortedStopContainers as $container) {
 
                     if ($container['isGroup']) {
-                        self::doBackupMethod('stopAll', self::resolveContainer($container));
-                        self::setCurrentContainerName($container, true);
-                        continue;
+                        $groupContainers = self::resolveContainer($container);
+                        if (!empty($groupContainers)) {
+                            self::doBackupMethod('stopAll', $groupContainers);
+                            self::setCurrentContainerName($container, true);
+                            continue;
+                        }
                     }
 
                     self::setCurrentContainerName($container);
@@ -714,13 +717,13 @@ class ABHelper {
                     }
 
                     ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
-                    
+
                     if (!self::backupContainer($container, $abDestination)) {
                         self::$errorOccured = true;
                     }
 
                     ABHelper::handlePrePostScript($abSettings->postContainerBackupScript, 'post-container', $container['Name']);
-                    
+
                     if (self::abortRequested()) {
                         return false;
                     }
