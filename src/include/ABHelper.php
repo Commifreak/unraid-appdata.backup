@@ -705,8 +705,8 @@ class ABHelper {
                         if (!empty($groupContainers)) {
                             self::doBackupMethod('stopAll', $groupContainers);
                             self::setCurrentContainerName($container, true);
-                            continue;
                         }
+                        continue;
                     }
 
                     self::setCurrentContainerName($container);
