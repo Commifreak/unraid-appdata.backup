@@ -880,7 +880,8 @@ HTML;
 
     <dt>Want to say "Thank You"?</dt>
     <dd>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins
-        with ❤️ (and a lot of ☕). If you like the work, you can donate via <a href="https://paypal.me/robinkluth/"
+        with ❤️ (and a lot of ☕). If you like the work, you can donate via <a
+                href="https://www.paypal.com/donate/?hosted_button_id=KE7Z3KLEEY484"
                                                                               target="_blank"><i
                     class="fa fa-paypal"></i> PayPal</a>.
     </dd>
