@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.09.25">
-        <!ENTITY sha256    "7fb8429630068354100d2b2f8d9c72647eee9979c79a0ccc39778f6f64ea8a5b">
+        <!ENTITY version   "2024.11.21">
+        <!ENTITY sha256    "85035356cdccfeac299bcd3780c2620e0e1c3661baaef755c0aabb41e88420d7">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -17,7 +17,11 @@
         <![CDATA[
         ➕New  🩹Fix 🔧Change
 
-###2024.09.24
+###2024.11.21
+- ➕ Added a settings form debug mode by adding `?debugForm` to the URL
+- 🩹 Fixed empty group handling (wasn't skipped properly)
+
+###2024.09.25
 - 🩹 Fixed, that PHP errors came up as critical errors inside log/email
 
 ###2024.09.24
