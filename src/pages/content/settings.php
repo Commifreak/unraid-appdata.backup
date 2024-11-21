@@ -21,6 +21,10 @@ if (!ABHelper::isArrayOnline()) {
  * POST Handling
  */
 if ($_POST) {
+    if (isset($_POST['debugForm'])) {
+        echo "<pre>" . print_r($_POST, true) . "</pre>";
+        exit;
+    }
     if (!file_exists(ABSettings::$pluginDir)) {
         mkdir(ABSettings::$pluginDir);
     }
@@ -241,6 +245,11 @@ if (($code ?? 0) != 0) {
 ?>
 
 <form id="abSettingsForm" method="post">
+    <?php
+    if (isset($_GET['debugForm'])) {
+        echo "<input type='hidden' name='debugForm' value='1' />";
+    }
+    ?>
     <input type="hidden" name="csrf_token" value="<?= _var($var, 'csrf_token') ?>"/>
     <input type="hidden" name="settingsVersion" value="<?= ABSettings::$settingsVersion ?>"/>
     <dl>
@@ -967,6 +976,11 @@ HTML;
             console.debug('Group order value', groupValue);
             $(this).val(groupValue);
         });
+        <?php if(isset($_GET['debugForm'])): ?>
+        var w = window.open('', "", "width=600, height=400, scrollbars=yes");
+        var html = $('<pre>' + $(this).serialize().replace(/&/g, "\r\n") + '</pre>');
+        $(w.document.body).html(html);
+        <?php endif; ?>
         console.debug('Final form:', $(this).serialize());
     });
 
