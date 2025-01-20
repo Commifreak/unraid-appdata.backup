@@ -127,7 +127,7 @@ if (ABHelper::abortRequested()) {
 /**
  * Array of Container names, needing an update
  */
-$dockerUpdateList = [''];
+$dockerUpdateList = [];
 
 ABHelper::backupLog("Starting Docker auto-update check...", ABHelper::LOGLEVEL_DEBUG);
 foreach ($dockerContainers as $container) { // Use unraids docker container list for update checking!
@@ -138,7 +138,7 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
      */
     ABHelper::backupLog($container['Name'] . " specific settings: " . print_r($containerSettings, true), ABHelper::LOGLEVEL_DEBUG);
 
-    if ($containerSettings['updateContainer'] == 'yes') {
+    if ($containerSettings['skip'] == 'no' && $containerSettings['updateContainer'] == 'yes') {
 
         if (!isset($allInfo)) {
             ABHelper::backupLog("Requesting docker template meta...", ABHelper::LOGLEVEL_DEBUG);
