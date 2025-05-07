@@ -358,7 +358,7 @@ class ABHelper {
             self::backupLog("Backing up EXTERNAL volumes, because its enabled!");
         }
 
-        $tarExcludes = [];
+        $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
@@ -543,6 +543,8 @@ class ABHelper {
                     continue;
                 }
             }
+
+            // @todo: if no / inside path, we are dealing with a docker volume and not a bind-mount!
 
             if (!file_exists($hostPath)) {
                 self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_ERR);
