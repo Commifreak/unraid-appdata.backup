@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.08.16b1">
-        <!ENTITY sha256    "7d74a5b70bab719c07b8f6b84ea26960bd0ba0be69b8edd5e3ee13a67cfa106d">
+        <!ENTITY version   "2025.05.23b1">
+        <!ENTITY sha256    "d43bcf90d9a2a013a74ae023398c0b322743a4233b6520d05928c3b966f28510">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,11 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2025.05.23b1
+- 🩹 Fix backup of containers which have [Tailscale enabled](https://github.com/Commifreak/unraid-appdata.backup/pull/50)
+- ➕ The plugin now inserts a higher limit for PHP's `max_input_vars` to deal with the settings-form saving issue
+- ➕ The `pre-container` and `pre-backup` script can now return 2 to skip backup.
 
 ###2024.08.16b1
 - ➕ Added `pre-container` and `post-container` scripts which runs right before/after tar creation
@@ -133,6 +138,18 @@
 
     <FILE Run="/bin/bash">
         <INLINE>
+            INIPATH="/etc/php.d/ab_max_input_vars.ini"
+
+            if [ ! -f "$INIPATH" ]; then
+              echo "Applying max_input_vars fix..."
+              echo "max_input_vars = 2000" > $INIPATH
+              /etc/rc.d/rc.php-fpm reload
+            fi
+        </INLINE>
+    </FILE>
+
+    <FILE Run="/bin/bash">
+        <INLINE>
             echo Adapting some things, because this is beta
             rm &plugdir;/*.page
             cp &plugdir;/pages/*.page &plugdir;/pages/README.md &plugdir;
@@ -152,7 +169,7 @@
             echo " &name; has been installed."
             echo " (previously known as ca.backup2)"
             echo ""
-            echo " 2022-2023, Robin Kluth"
+            echo " 2022-2025, Robin Kluth"
             echo " Version: &version;"
             echo "----------------------------------------------------"
             echo ""
