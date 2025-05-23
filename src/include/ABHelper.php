@@ -53,7 +53,7 @@ class ABHelper {
     /**
      * Takes care of every hook script execution
      * @param $script string
-     * @return bool
+     * @return int|bool
      */
     public static function handlePrePostScript($script, ...$args) {
         if (empty($script)) {
@@ -80,14 +80,14 @@ class ABHelper {
             self::backupLog($script . " CODE: " . $resultcode . " - " . print_r($output, true), self::LOGLEVEL_DEBUG);
             self::backupLog("Script executed!");
 
-            if ($resultcode != 0) {
-                self::backupLog("Script did not returned 0 (it returned $resultcode)!", self::LOGLEVEL_WARN);
+            if ($resultcode != 0 && $resultcode != 2) {
+                self::backupLog("Script did not returned 0 (ok) or 2 (skip). It returned $resultcode!", self::LOGLEVEL_WARN);
             }
+            return $resultcode;
         } else {
             self::backupLog($script . ' is not existing! Skipping!', self::LOGLEVEL_ERR);
             return false;
         }
-        return true;
     }
 
     /**
@@ -626,6 +626,12 @@ class ABHelper {
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     foreach ((self::resolveContainer($_container, true) ?: [$_container]) as $container) {
                         self::setCurrentContainerName($container);
+                        $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
+                        if ($preContainerRet === 2) {
+                            self::backupLog("preContainer script decided to skip backup.");
+                            self::setCurrentContainerName($container, true);
+                            continue;
+                        }
                         self::stopContainer($container);
 
                         if (self::abortRequested()) {
@@ -645,8 +651,6 @@ class ABHelper {
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
                         self::setCurrentContainerName($container);
-
-                        ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
 
                         if (!self::backupContainer($container, $abDestination)) {
                             self::$errorOccured = true;
@@ -712,13 +716,18 @@ class ABHelper {
                     }
 
                     self::setCurrentContainerName($container);
+                    $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
+                    if ($preContainerRet === 2) {
+                        self::backupLog("preContainer script decided to skip backup.");
+                        self::setCurrentContainerName($container, true);
+                        continue;
+                    }
+
                     self::stopContainer($container);
 
                     if (self::abortRequested()) {
                         return false;
                     }
-
-                    ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
 
                     if (!self::backupContainer($container, $abDestination)) {
                         self::$errorOccured = true;

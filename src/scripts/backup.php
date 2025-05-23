@@ -161,9 +161,12 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
 ABHelper::backupLog("Docker update check finished!", ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("Planned container updates: " . implode(", ", $dockerUpdateList), ABHelper::LOGLEVEL_DEBUG);
 
-ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre-backup', $abDestination);
+$preBackupRet = ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre-backup', $abDestination);
 
-ABHelper::doBackupMethod($abSettings->backupMethod);
+if ($preBackupRet === 2) {
+    ABHelper::backupLog("preBackup script decided to skip backup.");
+    ABHelper::doBackupMethod($abSettings->backupMethod);
+}
 
 
 continuationForAll:
