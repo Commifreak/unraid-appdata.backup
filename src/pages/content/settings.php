@@ -864,7 +864,8 @@ HTML;
     <blockquote class='inline_help'>
         <p>With this you can define exclusions which will be used as global exclusion</p>
         <p>You can use parts of paths and/or wildcards like <code>*.png</code>, <code>music/*.m4a</code>,
-            <code>logs</code>. Any folder/file paths matching this patterns will be excluded!<br/></p>
+            <code>logs</code>. Any folder/file paths matching this patterns will be excluded!<br/><b>Put every
+                exclusions in a seperate line!</b></p>
     </blockquote>
 
     <dl>
