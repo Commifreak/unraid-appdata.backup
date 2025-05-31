@@ -165,6 +165,7 @@ $preBackupRet = ABHelper::handlePrePostScript($abSettings->preBackupScript, 'pre
 
 if ($preBackupRet === 2) {
     ABHelper::backupLog("preBackup script decided to skip backup.");
+} else {
     ABHelper::doBackupMethod($abSettings->backupMethod);
 }
 
