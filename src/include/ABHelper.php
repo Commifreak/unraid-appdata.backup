@@ -162,6 +162,8 @@ class ABHelper {
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
+        // Refresh the current container state
+        $container = $dockerClient->getContainerDetails($container['Name']);
 
         if ($container['Running'] && !$container['Paused']) {
             self::backupLog("Stopping " . $container['Name'] . "... ", self::LOGLEVEL_INFO, false);
