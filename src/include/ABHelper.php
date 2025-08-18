@@ -177,13 +177,13 @@ class ABHelper {
             $stopTimer      = time();
             $dockerStopCode = $dockerClient->stopContainer($container['Name']);
             if ($dockerStopCode != 1) {
-                self::backupLog("Error while stopping container! Code: " . $dockerStopCode . " - trying 'docker stop' method", self::LOGLEVEL_WARN, true, true);
+                self::backupLog("Error while stopping container '" . $container['Name'] . "'! Code: " . $dockerStopCode . " - trying 'docker stop' method", self::LOGLEVEL_WARN, true, true);
                 $out = $code = null;
                 exec("docker stop " . escapeshellarg($container['Name']) . " -t 30", $out, $code);
                 if ($code == 0) {
                     self::backupLog("That _seemed_ to work.");
                 } else {
-                    self::backupLog("docker stop variant was unsuccessful as well! Docker said: " . implode(', ', $out), self::LOGLEVEL_ERR);
+                    self::backupLog("docker stop variant was unsuccessful as well when stopping '" . $container['Name']. "'! Docker said: " . implode(', ', $out), self::LOGLEVEL_ERR);
                 }
             } else {
                 self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
@@ -245,12 +245,12 @@ class ABHelper {
                     continue;
                 }
 
-                self::backupLog("Container did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
+                self::backupLog("Container '" . $container['Name'] . "' did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
                 if ($dockerStartTry < 3) {
                     $dockerStartTry++;
                     sleep(5);
                 } else {
-                    self::backupLog("Container did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
+                    self::backupLog("Container '" . $container['Name'] . "' did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
                     $output = null;
                     exec("docker ps -a", $output);
                     self::backupLog("docker ps -a:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
