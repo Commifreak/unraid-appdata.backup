@@ -243,12 +243,12 @@ class ABHelper {
                     continue;
                 }
 
-                self::backupLog("Container did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
+                self::backupLog("Container '" . $container['Name'] . "' did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
                 if ($dockerStartTry < 3) {
                     $dockerStartTry++;
                     sleep(5);
                 } else {
-                    self::backupLog("Container did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
+                    self::backupLog("Container '" . $container['Name'] . "' did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
                     $output = null;
                     exec("docker ps -a", $output);
                     self::backupLog("docker ps -a:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
