@@ -870,8 +870,8 @@ HTML;
 
     <dl>
         <dt>Done?</dt>
-        <dd><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" style="margin-left: 15px;">Manual backup</button>
+        <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
+            <button id="manualBackup" style="margin-left: 15px;">Manual backup</button></span>
         </dd>
     </dl>
 </form>
