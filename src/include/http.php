@@ -115,30 +115,6 @@ if (isset($_GET['action'])) {
         case 'startRestore':
             exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_GET)) . ' > /dev/null &');
             break;
-        case 'shareLog':
-            $log    = ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile;
-            $config = ABSettings::getConfigPath();
-            if (!file_exists($log)) {
-                echo json_encode(['success' => false, 'msg' => 'Logfile does not exist!']);
-                exit;
-            }
-
-            $ch = curl_init("https://kluthr.de/unraid/index.php");
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, ['log' => new CURLFile($log), 'config' => new CURLFile($config)]);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-
-            $result = curl_exec($ch);
-            $info   = curl_getinfo($ch);
-
-            if ($result && $info['http_code'] == 200) {
-                echo json_encode(['success' => true, 'msg' => $result]);
-            } else {
-                echo json_encode(['success' => false, 'msg' => $result ? $result : curl_error($ch)]);
-            }
-
-
-            break;
 
         case 'copyConfigFromProd':
             if (file_exists("/boot/config/plugins/appdata.backup/config.json")) {
@@ -148,35 +124,5 @@ if (isset($_GET['action'])) {
                 echo "No productive config found :/";
             }
             break;
-        case 'betaFeedback':
-            $config = ABSettings::getConfigPath();
-            if (!file_exists($config)) {
-                echo json_encode(['success' => false, 'msg' => 'Config does not exist!']);
-                exit;
-            }
-
-            if (empty($_POST['feedback'])) {
-                echo json_encode(['success' => false, 'msg' => 'No feedback given!']);
-                exit;
-            }
-
-            $ch = curl_init("https://kluthr.de/unraid/index.php");
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, ['config' => new CURLFile($config), 'feedback' => $_POST['feedback']]);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-
-            $result = curl_exec($ch);
-            $info   = curl_getinfo($ch);
-
-            if ($result && $info['http_code'] == 200) {
-                echo json_encode(['success' => true, 'msg' => $result]);
-            } else {
-                echo json_encode(['success' => false, 'msg' => $result ?: curl_error($ch)]);
-            }
-
-
-            break;
-
-
     }
 }

@@ -29,11 +29,12 @@ if (!ABHelper::isArrayOnline()) {
 </style>
 
 <h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
+<span>You can find the normal log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$logfile; ?></code></span>
+<br/>
+<span>You can find the debug &nbsp;log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile; ?></code></span>
+<br/>
 <div style='border: 1px solid red; height:500px; overflow:auto;' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
-<input type='button' id="shareDbgLogBtn" value='Share debug log' disabled/>
-<p id="didContainer" style="display: none; width: 200px;">Your debug log ID: <input type="text" id="did"
-                                                                                    onmouseover="$(this).select()"/></p>
 
 
 <script>
@@ -57,20 +58,6 @@ if (!ABHelper::isArrayOnline()) {
                 $.ajax(url, {
                     data: {action: 'abort'}
                 });
-            });
-        });
-
-        $('#shareDbgLogBtn').on('click', function () {
-            swal({
-                title: "Share debug log?",
-                text: "With this function, you can share the detailed backup log with the developer (and only the developer) for diagnostic purposes!<br />This will send the log via a secure connection to the developers server.<br />You will receive a unique debug log ID and share it publicly without its sensitive contents.<br /><br />You can also find the log at <code><?= ABSettings::$tempFolder ?></code>",
-                type: 'warning',
-                html: true,
-                showCancelButton: true,
-                confirmButtonText: "Share",
-                cancelButtonText: "Abort"
-            }, function () {
-                shareLog();
             });
         });
     });
@@ -104,18 +91,6 @@ if (!ABHelper::isArrayOnline()) {
             }
         }).fail(function () {
             $("#abLog").html("Something went wrong while talking to the backend :(");
-        });
-    }
-
-    function shareLog() {
-        $.ajax(url, {
-            data: {action: 'shareLog'}
-        }).fail(function (data) {
-            $('#did').val('Error during HTTP request!');
-        }).done(function (data) {
-            $('#did').val(data.msg);
-        }).always(function () {
-            $('#didContainer').css('display', 'inline');
         });
     }
 </script>
