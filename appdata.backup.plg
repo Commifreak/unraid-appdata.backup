@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2024.11.21">
-        <!ENTITY sha256    "85035356cdccfeac299bcd3780c2620e0e1c3661baaef755c0aabb41e88420d7">
+        <!ENTITY version   "2025.09.17">
+        <!ENTITY sha256    "610ef6f01e96f2bc008f858766ebe4983bf7302323c9a9532b044b70f0cfa2ee">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,15 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2025.09.17
+- 🩹 Fix buttons on Unraid 7.2+ (thanks to Squidly271)
+- 🩹 Re-read container state before executing the stop-command [Issue 56](https://github.com/Commifreak/unraid-appdata.backup/issues/56)
+- 🩹 Fix backup of containers which have [Tailscale enabled](https://github.com/Commifreak/unraid-appdata.backup/pull/50)
+- 🩹 Fix docker update-planning when container is set to `skip`
+- ➕ You can now switch between normal and debug log within logging page
+- ➕ The plugin now inserts a higher limit for PHP's `max_input_vars` to deal with the settings-form saving issue
+- ➕ The `pre-container` and `pre-backup` script can now return 2 to skip backup
 
 ###2024.11.21
 - ➕ Added a settings form debug mode by adding `?debugForm` to the URL
@@ -234,6 +243,18 @@ _That will be the last update for today! I promise! 🍻_
 
     <FILE Run="/bin/bash">
         <INLINE>
+            INIPATH="/etc/php.d/ab_max_input_vars.ini"
+
+            if [ ! -f "$INIPATH" ]; then
+              echo "Applying max_input_vars fix..."
+              echo "max_input_vars = 2000" > $INIPATH
+              /etc/rc.d/rc.php-fpm reload
+            fi
+        </INLINE>
+    </FILE>
+
+    <FILE Run="/bin/bash">
+        <INLINE>
             echo -n "&version;" > &plugdir;/version
         </INLINE>
     </FILE>
@@ -245,7 +266,7 @@ _That will be the last update for today! I promise! 🍻_
             echo " &name; has been installed."
             echo " (previously known as ca.backup2)"
             echo ""
-            echo " 2022-2023, Robin Kluth"
+            echo " 2022-2025, Robin Kluth"
             echo " Version: &version;"
             echo "----------------------------------------------------"
             echo ""
