@@ -248,7 +248,13 @@ _That will be the last update for today! I promise! 🍻_
             if [ ! -f "$INIPATH" ]; then
               echo "Applying max_input_vars fix..."
               echo "max_input_vars = 2000" > $INIPATH
-              /etc/rc.d/rc.php-fpm reload
+              CUR_NGINX_STATUS=$(/etc/rc.d/rc.php-fpm status)
+              if [[ $CUR_NGINX_STATUS =~ "not" ]]; then
+                echo "Skip nginx reload: not started!"
+              else
+                echo "Skip nginx reload: Reload..."
+                /etc/rc.d/rc.php-fpm reload
+              fi
             fi
         </INLINE>
     </FILE>
