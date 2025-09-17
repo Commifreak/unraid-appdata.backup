@@ -165,6 +165,11 @@ class ABHelper {
         // Refresh the current container state
         $container = $dockerClient->getContainerDetails($container['Name']);
 
+        // Since ->getDockerContainers return the JSON as is (and ->getDockerContainers does not allow to filter for a single one), we have to apply "Trick 17".
+        $container['Running'] = $container['State']['Running'];
+        $container['Paused']  = $container['State']['Paused'];
+        $container['Name']    = ltrim($container['Name'], '/');
+
         if ($container['Running'] && !$container['Paused']) {
             self::backupLog("Stopping " . $container['Name'] . "... ", self::LOGLEVEL_INFO, false);
 
