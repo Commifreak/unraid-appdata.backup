@@ -11,7 +11,7 @@ else
   echo "Applying fix..."
   echo "max_input_vars = 2000" > $INIPATH
 fi
-/etc/rc.d/rc.php-fpm restart
+/etc/rc.d/rc.php-fpm reload
 echo
 echo "done!"
 echo

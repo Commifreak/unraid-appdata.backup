@@ -755,7 +755,8 @@ HTML;
     </div>
 
     <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts | <small><i
-                        class="fa fa-info"></i> Those must return exit code 0 for success detection</small></span></div>
+                        class="fa fa-info"></i> Those must return exit code 0 for success detection // or 2 (for preContainer) to skip backup</small></span>
+    </div>
 
     <blockquote>
         <p>Scripts must be stored anywhere outside <code>/boot</code> because the boot drive (FAT32) does not support
@@ -794,7 +795,8 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script for each container immediately BEFORE creating the tarfile. Sent arguments: <code>pre-container</code>,
+        <p>Runs the selected script for each container immediately BEFORE creating the tarfile. If the script returns
+            <code>2</code>, the backup will be skipped! Sent arguments: <code>pre-container</code>,
             <code>container name</code></p>
     </blockquote>
 
