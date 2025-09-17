@@ -150,7 +150,13 @@
             if [ ! -f "$INIPATH" ]; then
               echo "Applying max_input_vars fix..."
               echo "max_input_vars = 2000" > $INIPATH
-              /etc/rc.d/rc.php-fpm reload
+              CUR_FPM_STATUS=$(/etc/rc.d/rc.php-fpm status)
+              if [[ $CUR_FPM_STATUS =~ "not" ]]; then
+                echo "Skip FPM reload: not started!"
+              else
+                echo "Skip FPM reload: Reload..."
+                /etc/rc.d/rc.php-fpm reload
+              fi
             fi
         </INLINE>
     </FILE>
