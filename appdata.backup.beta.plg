@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2025.08.18b1">
-        <!ENTITY sha256    "bf1e7b445e4837038cf6b9a6ac746e609c1caa4c92783183b687ef0c9807c930">
+        <!ENTITY version   "2025.09.17b1">
+        <!ENTITY sha256    "f4c40a6912e3e0a2827ad0d0afdd89ab42d314d3488cbdf57031ebabd1448c7e">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,11 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2025.09.17b1
+- 🩹 Fixed wrong behavior from previous fix for [Issue 56](https://github.com/Commifreak/unraid-appdata.backup/issues/56)
+- 🩹 Fix buttons on Unraid 7.2+ (thanks to Squidly271)
+- ➕ You can now switch between normal and debug log within logging page
+
 ###2025.08.18b1
 - 🩹 Re-read container state before executing the stop-command [Issue 56](https://github.com/Commifreak/unraid-appdata.backup/issues/56)
 
