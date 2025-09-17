@@ -33,8 +33,12 @@ if (!ABHelper::isArrayOnline()) {
 <br/>
 <span>You can find the debug &nbsp;log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile; ?></code></span>
 <br/>
+<br/>
+You are currently viewing the <b id="currentLogType">normal</b> log!
+<br/>
 <div style='border: 1px solid red; height:500px; overflow:auto;' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
+<input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
 
 
 <script>
@@ -60,12 +64,20 @@ if (!ABHelper::isArrayOnline()) {
                 });
             });
         });
+
+        $('#switchLog').on('click', function () {
+            let currentLogType = $('#switchLog').data('log-type');
+            let newLogType = currentLogType === 'normal' ? 'debug' : 'normal'
+            $('#switchLog').data('log-type', newLogType);
+            $('#currentLogType').html(newLogType);
+        });
+
     });
 
     function checkBackup() {
         $.ajax(url,
             {
-                data: {action: 'getBackupState'}
+                data: {action: 'getBackupState', logType: $('#switchLog').data('log-type')}
             }).done(function (data) {
 
             if (data.log == "") {

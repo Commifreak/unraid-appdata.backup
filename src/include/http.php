@@ -16,7 +16,7 @@ if (isset($_GET['action'])) {
         case 'getBackupState':
 
             $log     = "";
-            $logFile = ABSettings::$tempFolder . '/' . ABSettings::$logfile;
+            $logFile = $_GET['logType'] == 'normal' ? ABSettings::$tempFolder . '/' . ABSettings::$logfile : ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile;
 
             if (file_exists($logFile)) {
                 $log = nl2br(file_get_contents($logFile));
