@@ -631,7 +631,8 @@ class ABHelper {
 
                 self::backupLog("Method: Stop all container before continuing.");
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
-                    foreach ((self::resolveContainer($_container, true) ?: [$_container]) as $container) {
+                    $resolvedContainer = self::resolveContainer($_container, true);
+                    foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
                         $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
                         if ($preContainerRet === 2) {
@@ -656,7 +657,8 @@ class ABHelper {
 
                 self::backupLog("Starting backup for containers");
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
-                    foreach (self::resolveContainer($_container, true) ?: [$_container] as $container) {
+                    $resolvedContainer = self::resolveContainer($_container, true);
+                    foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
 
                         if (!self::backupContainer($container, $abDestination)) {
@@ -690,7 +692,8 @@ class ABHelper {
 
                 self::backupLog("Set containers to previous state");
                 foreach ($containerListOverride ?: $sortedStartContainers as $_container) {
-                    foreach (self::resolveContainer($_container) ?: [$_container] as $container) {
+                    $resolvedContainer = self::resolveContainer($_container);
+                    foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
                         self::startContainer($container);
 
