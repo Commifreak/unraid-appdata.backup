@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2025.09.17">
-        <!ENTITY sha256    "610ef6f01e96f2bc008f858766ebe4983bf7302323c9a9532b044b70f0cfa2ee">
+        <!ENTITY version   "2025.09.23">
+        <!ENTITY sha256    "194144fef0859b9c7410208b3850ca6192c57fa605119ddf1164e3b0dd8e8e1c">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2025.09.23
+- 🩹 Fix errors when a group resolves to no group members
 
 ###2025.09.17
 - 🩹 Fix buttons on Unraid 7.2+ (thanks to Squidly271)
