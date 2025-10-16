@@ -252,6 +252,7 @@ _That will be the last update for today! I promise! 🍻_
               echo "Applying max_input_vars fix..."
               echo "max_input_vars = 2000" > $INIPATH
               CUR_FPM_STATUS=$(/etc/rc.d/rc.php-fpm status)
+              echo "$CUR_FPM_STATUS"
               if [[ $CUR_FPM_STATUS =~ "not" ]]; then
                 echo "Skip FPM reload: not started!"
               else
