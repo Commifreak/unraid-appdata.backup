@@ -1,5 +1,8 @@
 # Appdata Backup
 
+# ⚠️ FEATURE FREEZE!
+Please read: https://forums.unraid.net/topic/137710-plugin-appdatabackup/page/77/#findComment-1564584
+
 ### for Unraid 6.12+
 Support: https://forums.unraid.net/topic/137710-plugin-appdatabackup/
 
