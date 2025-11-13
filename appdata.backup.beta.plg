@@ -152,7 +152,7 @@
               echo "max_input_vars = 2000" > $INIPATH
               CUR_FPM_STATUS=$(/etc/rc.d/rc.php-fpm status)
               echo "===== CURRENT FPM STATUS: $CUR_FPM_STATUS ====="
-              if [[ $CUR_FPM_STATUS =~ (not|stopped) ]]; then
+              if [[ "$CUR_FPM_STATUS" =~ (not|stopped) ]]; then
                 echo "Skip FPM reload: not started!"
               else
                 echo "Skip FPM reload: Reload..."
