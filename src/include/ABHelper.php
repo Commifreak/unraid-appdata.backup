@@ -630,7 +630,7 @@ class ABHelper {
             case 'stopAll':
 
                 self::backupLog("Method: Stop all container before continuing.");
-                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
+                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $key => $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
@@ -638,6 +638,7 @@ class ABHelper {
                         if ($preContainerRet === 2) {
                             self::backupLog("preContainer script decided to skip backup.");
                             self::setCurrentContainerName($container, true);
+                            unset($containerListOverride[$key]);
                             continue;
                         }
                         self::stopContainer($container);
