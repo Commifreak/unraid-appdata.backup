@@ -226,7 +226,11 @@ class ABHelper {
             foreach ($autostart as $autostartLine) {
                 $line = explode(" ", trim($autostartLine));
                 if ($line[0] == $container['Name'] && isset($line[1])) {
-                    $delay = $line[1];
+                    if (is_numeric($line[1])) {
+                        $delay = (int)$line[1];
+                    } else {
+                        self::backupLog("Ignoring non-numeric autostart delay '{$line[1]}' for {$container['Name']}", self::LOGLEVEL_WARN);
+                    }
                     break;
                 }
             }
