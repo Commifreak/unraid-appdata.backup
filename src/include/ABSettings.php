@@ -80,6 +80,7 @@ class ABSettings {
     public string $successLogWanted = 'no';
     public string $updateLogWanted = 'no';
     public string $ignoreExclusionCase = 'no';
+    public array $volumePathMappings = [];
 
     public function __construct() {
 
@@ -107,6 +108,23 @@ class ABSettings {
                                     $newPaths[] = rtrim($path, '/');
                                 }
                                 $this->$key = $newPaths;
+                                break;
+                            case 'volumePathMappings':
+                                $mappings = [];
+                                $lines = explode("\r\n", $value);
+                                foreach ($lines as $line) {
+                                    $line = trim($line);
+                                    if (empty($line) || str_starts_with($line, '#')) {
+                                        continue; // Skip empty lines and comments
+                                    }
+                                    // Parse mapping in format: /original/path => /mapped/path
+                                    if (preg_match('/^(.+?)\s*=>\s*(.+)$/', $line, $matches)) {
+                                        $from = rtrim($matches[1], '/');
+                                        $to = rtrim($matches[2], '/');
+                                        $mappings[] = ['from' => $from, 'to' => $to];
+                                    }
+                                }
+                                $this->$key = $mappings;
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.

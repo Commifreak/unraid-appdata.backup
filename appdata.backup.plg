@@ -1,12 +1,12 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
-        <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.03.13">
-        <!ENTITY sha256    "6482aacddc1f006759695afcc123c7537e9003d3a2cfa3e198b88c4dedb05fb3">
+        <!ENTITY author    "Robin Kluth; Shaheen Gandhi">
+        <!ENTITY version   "2026.03.30">
+        <!ENTITY sha256    "2ed071ee17d7584d0e39fcc47f0c8d6ce05c63a779fac90e0b1c200d2dae6b51">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
-        <!ENTITY github    "Commifreak/unraid-appdata.backup">
+        <!ENTITY github    "visigoth/unraid-appdata.backup">
         <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/&name;.plg">
         ]>
 
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2026.03.30
+- ➕ Allow for mapping container volume paths.
 
 ###2026.03.13
 - 🩹 Fix UI alignment for container backup settings. [Issue 68](https://github.com/Commifreak/unraid-appdata.backup/issues/68)
@@ -279,7 +282,7 @@ _That will be the last update for today! I promise! 🍻_
             echo " &name; has been installed."
             echo " (previously known as ca.backup2)"
             echo ""
-            echo " 2022-2025, Robin Kluth"
+            echo " 2022-2025, Robin Kluth; Shaheen Gandhi"
             echo " Version: &version;"
             echo "----------------------------------------------------"
             echo ""
