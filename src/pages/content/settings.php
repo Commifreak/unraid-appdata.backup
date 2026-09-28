@@ -228,7 +228,7 @@ if (strstr('white,azure', $display['theme'])) {
         vertical-align: top;
     }
 
-    .containerSettingsRow label {
+    .containerSettingsRow .containerBackupLabel {
         margin-right: 8px;
     }
 
@@ -657,16 +657,15 @@ HTML;
                 }
 
                 $containerExcludes = implode("\r\n", $containerSetting['exclude']);
+                $backupChecked     = $containerSetting['skip'] == 'yes' ? '' : 'checked';
 
                 echo <<<HTML
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl class="containerSettingsRow">
         <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">Skip?</label>
-        <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
-    </select>
+        <dd><span class="containerBackupLabel">Back up</span>
+        <input type="hidden" name="containerSettings[{$container['Name']}][skip]" value="yes" />
+        <input type="checkbox" class="containerBackupToggle" name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" value="no" $backupChecked />
     </dd>
         </dl>
 
@@ -940,7 +939,9 @@ HTML;
     <dd>JetBrains PHPStorm ❤️</dd>
 </dl>
 
+<link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.switchbutton.css') ?>">
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
+<script src="<?php autov('/webGui/javascript/jquery.switchbutton.js') ?>" charset="utf-8"></script>
 <script>
     $(function () {
         $('.fileTreeDiv').fileTree({
@@ -961,6 +962,12 @@ HTML;
         $('select[data-setting]').each(function (index) {
             console.debug($(this).attr('name'), $(this).data('setting'));
             $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
+        });
+
+        $('.containerBackupToggle').switchButton({
+            labels_placement: 'right',
+            on_label: 'On',
+            off_label: 'Off'
         });
 
 
