@@ -81,11 +81,11 @@ class ABHelper {
             self::backupLog("Script executed!");
 
             if ($resultcode != 0 && $resultcode != 2) {
-                self::backupLog("Script did not returned 0 (ok) or 2 (skip). It returned $resultcode!", self::LOGLEVEL_WARN);
+                self::backupLog("Script did not return 0 (ok) or 2 (skip). It returned $resultcode!", self::LOGLEVEL_WARN);
             }
             return $resultcode;
         } else {
-            self::backupLog($script . ' is not existing! Skipping!', self::LOGLEVEL_ERR);
+            self::backupLog($script . ' does not exist! Skipping!', self::LOGLEVEL_ERR);
             return false;
         }
     }
@@ -254,12 +254,12 @@ class ABHelper {
                     continue;
                 }
 
-                self::backupLog("Container '" . $container['Name'] . "' did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
+                self::backupLog("Container '" . $container['Name'] . "' did not start! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
                 if ($dockerStartTry < 3) {
                     $dockerStartTry++;
                     sleep(5);
                 } else {
-                    self::backupLog("Container '" . $container['Name'] . "' did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
+                    self::backupLog("Container '" . $container['Name'] . "' did not start after multiple tries, skipping. More info in debug log", self::LOGLEVEL_ERR);
                     $output = null;
                     exec("docker ps -a", $output);
                     self::backupLog("docker ps -a:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
@@ -366,7 +366,7 @@ class ABHelper {
                 }
             }
         } else {
-            self::backupLog("Backing up EXTERNAL volumes, because its enabled!");
+            self::backupLog("Backing up EXTERNAL volumes, because it's enabled!");
         }
 
         $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
@@ -491,7 +491,7 @@ class ABHelper {
                 self::backupLog("Verification ended without issues (took " . gmdate("H:i:s", time() - $tarVerifyTimer) . " (hours:mins:secs))");
             }
         } else {
-            self::backupLog("Skipping verification for this container because its not wanted!", self::LOGLEVEL_WARN);
+            self::backupLog("Skipping verification for this container because it's not wanted!", self::LOGLEVEL_WARN);
         }
         return true;
     }
@@ -545,12 +545,12 @@ class ABHelper {
                 $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
                 if (in_array($hostPath, $containerSettings['exclude'])) {
-                    self::backupLog("Ignoring '$hostPath' because its listed in containers exclusions list!", self::LOGLEVEL_DEBUG);
+                    self::backupLog("Ignoring '$hostPath' because it's listed in the container's exclusions list!", self::LOGLEVEL_DEBUG);
                     continue;
                 }
 
                 if (in_array($hostPath, $abSettings->globalExclusions)) {
-                    self::backupLog("Ignoring '$hostPath' because its listed in global exclusions list!", self::LOGLEVEL_DEBUG);
+                    self::backupLog("Ignoring '$hostPath' because it's listed in the global exclusions list!", self::LOGLEVEL_DEBUG);
                     continue;
                 }
             }
@@ -573,7 +573,7 @@ class ABHelper {
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
         });
-        self::backupLog("usorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
+        self::backupLog("unsorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
 
         /**
          * Check volumes against nesting
@@ -610,7 +610,7 @@ class ABHelper {
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
         file_put_contents("/tmp/appdata.backup_phperr", $errStr . PHP_EOL, FILE_APPEND);
-        self::backupLog("PHP-ERROR occured! $errno / $errstr $errfile:$errline", self::LOGLEVEL_DEBUG);
+        self::backupLog("PHP-ERROR occurred! $errno / $errstr $errfile:$errline", self::LOGLEVEL_DEBUG);
 
         return true;
     }
@@ -633,7 +633,7 @@ class ABHelper {
         switch ($method) {
             case 'stopAll':
 
-                self::backupLog("Method: Stop all container before continuing.");
+                self::backupLog("Method: Stop all containers before continuing.");
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {

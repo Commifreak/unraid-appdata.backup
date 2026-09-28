@@ -65,7 +65,7 @@ $abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His")
 ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
 if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
-    ABHelper::backupLog("Destination is unavailable or not writeable! Did you created the destination folder?", ABHelper::LOGLEVEL_ERR);
+    ABHelper::backupLog("Destination is unavailable or not writeable! Did you create the destination folder?", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
 
@@ -148,7 +148,7 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
         }
 
         if (isset($allInfo[$container['Name']]) && ($allInfo[$container['Name']]['updated'] ?? 'true') == 'false') { # string 'false' = Update available!
-            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available! Schedule update after backup...");
+            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available! Scheduling update after backup...");
             $dockerUpdateList[] = $container['Name'];
         } else {
             ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled but no update is available.");
@@ -255,7 +255,7 @@ if (!empty($abSettings->includeFiles)) {
     if (empty($extrasChecked)) {
         ABHelper::backupLog("The tested extra files list is empty! Skipping extra files", ABHelper::LOGLEVEL_WARN);
     } else {
-        ABHelper::backupLog("Extra files to backup: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog("Extra files to back up: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
 
         $tarExcludes = [];
         if (!empty($abSettings->globalExclusions)) {
@@ -340,7 +340,7 @@ if (ABHelper::$errorOccured) {
                     ABHelper::backupLog("Keeping " . $backupItem, ABHelper::LOGLEVEL_DEBUG);
                     $toKeep[] = $backupItem;
                 } else {
-                    ABHelper::backupLog("Discarding $backupItem, because its newer or already in toKeep", ABHelper::LOGLEVEL_DEBUG);
+                    ABHelper::backupLog("Discarding $backupItem, because it's newer or already in toKeep", ABHelper::LOGLEVEL_DEBUG);
                 }
             }
         }
