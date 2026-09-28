@@ -254,6 +254,11 @@ class ABHelper {
                     continue;
                 }
 
+                if (str_contains($dockerStartCode, "No such container")) {
+                    self::backupLog("Container '" . $container['Name'] . "' has been removed - not starting it.", self::LOGLEVEL_INFO, true, true);
+                    return;
+                }
+
                 self::backupLog("Container '" . $container['Name'] . "' did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
                 if ($dockerStartTry < 3) {
                     $dockerStartTry++;
