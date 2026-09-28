@@ -187,6 +187,51 @@ if (strstr('white,azure', $display['theme'])) {
         width: 54%;
     }
 
+    .containerSettingsRow {
+        display: flex;
+        align-items: center;
+    }
+
+    .containerSettingsDt {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        margin-right: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-align: left;
+    }
+
+    .containerSettingsDt:after {
+        content: "";
+        flex: 1 1 auto;
+        min-width: 20px;
+        margin-left: 6px;
+        border-bottom: 1px dotted;
+        opacity: 0.25;
+    }
+
+    .containerSettingsRow dd {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        margin-left: 12px;
+    }
+
+    .containerSettingsRow + blockquote.inline_help {
+        margin-left: 0;
+    }
+
+    .containerSettingsRow + blockquote.inline_help textarea {
+        vertical-align: top;
+    }
+
+    .containerSettingsRow label {
+        margin-right: 8px;
+    }
+
     .sortable {
         list-style-type: none;
     }
@@ -614,20 +659,10 @@ HTML;
                 $containerExcludes = implode("\r\n", $containerSetting['exclude']);
 
                 echo <<<HTML
-<style>
-.containerSettingsDt {
-    overflow: hidden;
-    white-space: nowrap
-}
-.containerSettingsDt:after {
-    opacity: 0.1;
-    content: "  _____________________________________________________________________________________________________________________________________________________________________";
-}
-</style>
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
-        <dl>
+        <dl class="containerSettingsRow">
         <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">&nbsp;&nbsp;Skip?</label>
+        <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
             <option value="yes">Yes</option>
