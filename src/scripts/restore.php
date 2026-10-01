@@ -3,6 +3,12 @@
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
+// CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit;
+}
+
 require_once __DIR__ . '/../include/ABHelper.php';
 
 //set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
