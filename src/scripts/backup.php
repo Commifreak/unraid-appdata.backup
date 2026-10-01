@@ -183,7 +183,9 @@ continuationForAll:
  */
 if ($abSettings->flashBackup == 'yes') {
     ABHelper::backupLog("Backing up the flash drive.");
-    ABHelper::backupFlash($abDestination);
+    if (!ABHelper::backupFlash($abDestination)) {
+        ABHelper::$errorOccured = true;
+    }
 }
 
 if (ABHelper::abortRequested()) {
