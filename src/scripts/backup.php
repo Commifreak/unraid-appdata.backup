@@ -7,6 +7,12 @@
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
+// CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit;
+}
+
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
 require_once dirname(__DIR__) . '/include/ABHelper.php';
 
