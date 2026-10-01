@@ -695,9 +695,16 @@ class ABHelper {
     }
 
     public static function updateContainer($name) {
-        global $abSettings;
+        global $abSettings, $dockerClient;
         self::backupLog("Installing planned update for $name...");
         exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($name));
+
+        // update_container removes and recreates the container, so a missing one means the recreate failed.
+        $dockerClient->flushCaches();
+        if (!$dockerClient->doesContainerExist($name)) {
+            self::backupLog("Updating '$name' failed: the container no longer exists!", self::LOGLEVEL_ERR);
+            return;
+        }
 
         if ($abSettings->updateLogWanted == 'yes') {
             self::notify("Appdata Backup", "Container '$name' updated!", "Container '$name' was successfully updated during this backup run!");
