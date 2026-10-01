@@ -940,6 +940,7 @@ HTML;
                 cancelButtonText: "Nah"
             }, function () {
                 $.ajax(url, {
+                    type: 'POST',
                     data: {action: 'manualBackup'}
                 }).always(function (data) {
                     $('#tab3').click();
@@ -1121,7 +1122,7 @@ HTML;
     }
 
     function copyConfigFromProd() {
-        $.ajax(url + '?action=copyConfigFromProd').done(function (data) {
+        $.ajax(url, {type: 'POST', data: {action: 'copyConfigFromProd'}}).done(function (data) {
             alert(data);
             window.location.href = window.location;
         }).fail(function (data) {

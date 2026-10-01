@@ -194,6 +194,7 @@ if (!ABHelper::isArrayOnline()) {
 
     function startRestore() {
         $.ajax(url, {
+            type: 'POST',
             data: $('#restoreForm').serialize() + '&action=startRestore'
         }).always(function () {
             $('#tab3').click();
