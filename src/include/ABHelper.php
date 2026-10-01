@@ -210,7 +210,7 @@ class ABHelper {
      * @return void
      */
     public static function startContainer($container) {
-        global $dockerClient, $dockerUpdateList;
+        global $dockerClient;
 
         if (in_array($container['Name'], self::$skipStartContainers)) {
             self::backupLog("Starting " . $container['Name'] . " is being ignored, because it was not started before (or should not be started).");
@@ -255,12 +255,7 @@ class ABHelper {
                 }
 
                 if (str_contains($dockerStartCode, "No such container")) {
-                    // An update removes and recreates the container, so a missing one after an update means it failed.
-                    if (in_array($container['Name'], $dockerUpdateList ?? [])) {
-                        self::backupLog("Container '" . $container['Name'] . "' no longer exists after its update - the update probably failed!", self::LOGLEVEL_ERR, true, true);
-                    } else {
-                        self::backupLog("Container '" . $container['Name'] . "' has been removed - not starting it.", self::LOGLEVEL_INFO, true, true);
-                    }
+                    self::backupLog("Container '" . $container['Name'] . "' has been removed - not starting it.", self::LOGLEVEL_INFO, true, true);
                     return;
                 }
 
