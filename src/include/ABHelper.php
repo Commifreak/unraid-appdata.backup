@@ -148,7 +148,7 @@ class ABHelper {
      * @return void
      */
     public static function notify($subject, $description, $message = "", $type = "normal") {
-        $command = '/usr/local/emhttp/webGui/scripts/notify -e "Appdata Backup" -s "' . $subject . '" -d "' . $description . '" -m "' . $message . '" -i "' . $type . '" -l "/Settings/AB.Main"';
+        $command = '/usr/local/emhttp/webGui/scripts/notify -e ' . escapeshellarg('Appdata Backup') . ' -s ' . escapeshellarg($subject) . ' -d ' . escapeshellarg($description) . ' -m ' . escapeshellarg($message) . ' -i ' . escapeshellarg($type) . ' -l ' . escapeshellarg('/Settings/AB.Main');
         shell_exec($command);
     }
 
