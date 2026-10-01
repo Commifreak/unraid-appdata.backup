@@ -264,6 +264,17 @@ if (($code ?? 0) != 0) {
     </blockquote>
 
     <dl>
+        <dt><b>Use snapshots</b></dt>
+        <dd><select id="snapshotMode" name="snapshotMode" data-setting="<?= $abSettings->snapshotMode ?>">
+                <option value="no">No</option>
+                <option value="yes">Yes, on ZFS and btrfs</option>
+            </select></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Containers start again as soon as their data is snapshotted, and the backup is made from the snapshot. If a volume is not on ZFS or btrfs, its container stays stopped during the backup (when stopping all containers, the whole run does).</p>
+    </blockquote>
+
+    <dl>
 
         <dt><b>Delete backups if older than x days:</b></dt>
         <dd><input id='deleteBackupsOlderThan' name="deleteBackupsOlderThan" type='number'

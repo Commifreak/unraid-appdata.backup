@@ -33,6 +33,7 @@ class ABSettings {
 
 
     public string|null $backupMethod = 'oneAfterTheOther';
+    public string $snapshotMode = 'no';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
 
