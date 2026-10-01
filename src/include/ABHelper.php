@@ -542,14 +542,16 @@ class ABHelper {
                 return false;
             }
         } else {
-            $printed = trim(file_get_contents($target));
+            // The file name is the last line; read only the start in case the script printed something large.
+            $lines   = preg_split('/\R/', trim((string)file_get_contents($target, false, null, 0, 4096)));
+            $printed = trim(end($lines));
             unlink($target);
             self::backupLog("flash backup returned: " . $printed, self::LOGLEVEL_DEBUG);
             if ($printed === '') {
                 self::backupLog("Flash backup failed: no answer from script!", self::LOGLEVEL_ERR);
                 return false;
             }
-            if (basename($printed) !== $printed || !preg_match('/-(flash|boot)-backup-[0-9-]+\.zip$/', $printed)) {
+            if (!preg_match('/\A[A-Za-z0-9_.-]+-(flash|boot)-backup-[0-9-]+\.zip\z/', $printed)) {
                 self::backupLog("Flash backup failed: unexpected answer from script! See debug log.", self::LOGLEVEL_ERR);
                 return false;
             }
