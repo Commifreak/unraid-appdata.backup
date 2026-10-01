@@ -6,13 +6,23 @@ require_once __DIR__ . '/ABHelper.php';
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
-if (isset($_GET['action'])) {
+$writeActions = ['manualBackup', 'abort', 'startRestore', 'copyConfigFromProd'];
+$isPost       = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
+$action       = $isPost ? ($_POST['action'] ?? null) : ($_GET['action'] ?? null);
 
-    if (!in_array($_GET['action'], ['dlLog', 'copyConfigFromProd'])) {
+if (isset($action)) {
+
+    // State changes are POST-only so Unraid's local_prepend.php enforces csrf_token on them.
+    if (in_array($action, $writeActions) !== $isPost) {
+        http_response_code(405);
+        exit;
+    }
+
+    if (!in_array($action, ['dlLog', 'copyConfigFromProd'])) {
         header('Content-Type: application/json; charset=utf-8');
     }
 
-    switch ($_GET['action']) {
+    switch ($action) {
         case 'getBackupState':
 
             $log     = "";
@@ -113,7 +123,7 @@ if (isset($_GET['action'])) {
             echo json_encode(['result' => $config]);
             break;
         case 'startRestore':
-            exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_GET)) . ' > /dev/null &');
+            exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_POST)) . ' > /dev/null &');
             break;
 
         case 'copyConfigFromProd':
