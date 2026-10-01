@@ -502,6 +502,78 @@ class ABHelper {
     }
 
     /**
+     * Writes the flash drive backup zip into $destination
+     * @param $destination string
+     * @param $script string Unraid's flash_backup script
+     * @return bool
+     */
+    public static function backupFlash($destination, $script = '/usr/local/emhttp/webGui/scripts/flash_backup') {
+        global $abSettings;
+
+        if (!file_exists($script)) {
+            self::backupLog("The flash backup script is not available!", self::LOGLEVEL_ERR);
+            return false;
+        }
+
+        $docroot = '/usr/local/emhttp';
+        $vars    = parse_ini_file(ABSettings::$emhttpVars) ?: [];
+        $server  = str_replace(' ', '_', strtolower($vars['NAME'] ?? 'tower'));
+        $name    = "$server-v" . ($vars['version'] ?? 'unknown') . "-boot-backup-" . date('Ymd-Hi') . ".zip";
+        $target  = $destination . '/' . $name;
+
+        // Unraid 7.4+ streams the zip to stdout; older releases write it elsewhere and print its file name.
+        $output = $resultcode = null;
+        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+
+        if (!is_file($target)) {
+            self::backupLog("Flash backup failed: cannot write to the destination!", self::LOGLEVEL_ERR);
+            return false;
+        }
+
+        if (file_get_contents($target, false, null, 0, 4) === "PK\x03\x04") {
+            if ($resultcode != 0) {
+                @unlink($target);
+                self::backupLog("Flash backup failed: the flash backup script returned $resultcode!", self::LOGLEVEL_ERR);
+                return false;
+            }
+        } else {
+            $printed = trim(file_get_contents($target));
+            unlink($target);
+            self::backupLog("flash backup returned: " . $printed, self::LOGLEVEL_DEBUG);
+            if ($printed === '') {
+                self::backupLog("Flash backup failed: no answer from script!", self::LOGLEVEL_ERR);
+                return false;
+            }
+            if (basename($printed) !== $printed || !preg_match('/-(flash|boot)-backup-[0-9-]+\.zip$/', $printed)) {
+                self::backupLog("Flash backup failed: unexpected answer from script! See debug log.", self::LOGLEVEL_ERR);
+                return false;
+            }
+
+            $copied = copy($docroot . '/' . $printed, $destination . '/' . $printed);
+            // Following is from Download.php
+            if (($backup = readlink($docroot . '/' . $printed)) && basename($backup) === $printed) {
+                unlink($backup);
+            }
+            @unlink($docroot . '/' . $printed);
+            if (!$copied) {
+                self::backupLog("Copying flash backup to destination failed!", self::LOGLEVEL_ERR);
+                return false;
+            }
+            $name   = $printed;
+            $target = $destination . '/' . $printed;
+        }
+
+        self::backupLog("Flash backup created!");
+        if (!empty($abSettings->flashBackupCopy)) {
+            self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' as well...");
+            if (!copy($target, $abSettings->flashBackupCopy . '/' . $name)) {
+                self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", self::LOGLEVEL_ERR);
+            }
+        }
+        return true;
+    }
+
+    /**
      * Checks, if backup/restore is running
      * @param $externalCmd bool Check external commands (tar or something else) which was started by backup/restore?
      * @return array|false|string|string[]|null

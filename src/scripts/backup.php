@@ -177,36 +177,7 @@ continuationForAll:
  */
 if ($abSettings->flashBackup == 'yes') {
     ABHelper::backupLog("Backing up the flash drive.");
-    $docroot = '/usr/local/emhttp';
-    $script  = $docroot . '/webGui/scripts/flash_backup';
-    if (!file_exists($script)) {
-        ABHelper::backupLog("The flash backup script is not available!", ABHelper::LOGLEVEL_ERR);
-    } else {
-        $output = null;
-        exec($script . " " . ABSettings::$externalCmdPidCapture, $output);
-        ABHelper::backupLog("flash backup returned: " . implode(", ", $output), ABHelper::LOGLEVEL_DEBUG);
-        if (empty($output[0])) {
-            ABHelper::backupLog("Flash backup failed: no answer from script!", ABHelper::LOGLEVEL_ERR);
-        } else {
-            if (!copy($docroot . '/' . $output[0], $abDestination . '/' . $output[0])) {
-                ABHelper::backupLog("Copying flash backup to destination failed!", ABHelper::LOGLEVEL_ERR);
-            } else {
-                ABHelper::backupLog("Flash backup created!");
-                if (!empty($abSettings->flashBackupCopy)) {
-                    ABHelper::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' as well...");
-                    if (!copy($docroot . '/' . $output[0], $abSettings->flashBackupCopy . '/' . $output[0])) {
-                        ABHelper::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", ABHelper::LOGLEVEL_ERR);
-                    }
-                }
-                // Following is from Download.php
-                if ($backup = readlink($docroot . '/' . $output[0])) {
-                    unlink($backup);
-                }
-                @unlink($docroot . '/' . $output[0]);
-            }
-        }
-    }
-
+    ABHelper::backupFlash($abDestination);
 }
 
 if (ABHelper::abortRequested()) {
