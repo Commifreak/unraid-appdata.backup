@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.10.02.2">
-        <!ENTITY sha256    "e3ceaaff70789156201f20485cd14409a9282c519234e95482c8e687f0e4ac68">
+        <!ENTITY version   "2026.10.02.3">
+        <!ENTITY sha256    "0998da884589e78e5af2d8b5a4dbf389f2e7b0dafa7e916530f88a91aea6b957">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "chodeus/unraid-appdata.backup">
@@ -17,12 +17,14 @@
         <![CDATA[
         ➕New  🩹Fix 🔧Change
 
-###2026.10.02.2 (test build, chodeus/unraid-appdata.backup)
+###2026.10.02.3 (test build, chodeus/unraid-appdata.backup)
 - 🩹 Escape notification text before it reaches the shell
 - 🩹 Back up the flash drive on Unraid 7.4, whose flash backup script now streams the zip
 - 🩹 Read exclusion and path lists with any line endings [PR 74](https://github.com/Commifreak/unraid-appdata.backup/pull/74)
 - 🩹 Don't retry starting a container that no longer exists [PR 82](https://github.com/Commifreak/unraid-appdata.backup/pull/82)
 - 🔧 Backup, abort, restore and config-copy requests must be POST
+- 🔧 The backup, restore and cron scripts only run from the command line
+- 🩹 A container that disappears after its auto-update is reported as an error
 - 🔧 Wording fixes [PR 80](https://github.com/Commifreak/unraid-appdata.backup/pull/80)
 
 ###2026.03.13
