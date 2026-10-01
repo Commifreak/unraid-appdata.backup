@@ -573,7 +573,7 @@ class ABHelper {
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
         });
-        self::backupLog("unsorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
+        self::backupLog("sorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
 
         /**
          * Check volumes against nesting
