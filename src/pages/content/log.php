@@ -60,6 +60,7 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
                 cancelButtonText: "Nah"
             }, function () {
                 $.ajax(url, {
+                    type: 'POST',
                     data: {action: 'abort'}
                 });
             });
