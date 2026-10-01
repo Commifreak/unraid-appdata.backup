@@ -98,7 +98,7 @@ class ABSettings {
                             case 'allowedSources':
                             case 'includeFiles':
                             case 'globalExclusions':
-                                $paths    = explode("\r\n", $value);
+                                $paths    = preg_split('/\r?\n|\r/', $value);
                                 $newPaths = [];
                                 foreach ($paths as $pathKey => $path) {
                                     if (empty(trim($path))) {
@@ -120,7 +120,7 @@ class ABSettings {
                                  * Container specific patches
                                  */
                                 foreach ($value as $containerName => $containerSettings) {
-                                    $paths    = explode("\r\n", $containerSettings['exclude']);
+                                    $paths    = preg_split('/\r?\n|\r/', $containerSettings['exclude']);
                                     $newPaths = [];
                                     foreach ($paths as $pathKey => $path) {
                                         if (empty(trim($path))) {
