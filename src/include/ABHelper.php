@@ -381,18 +381,19 @@ class ABHelper {
             '--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook'),
             '--exclude ' . escapeshellarg('.' . ABSnapshot::PREFIX . '*'), // a leftover btrfs snapshot can sit inside a volume, see ABSnapshot::btrfsFolder()
         ];
+        // getContainerVolumes already dropped an excluded volume; tar needs its path only to cut it out of a volume around it
+        $mapped = array_map(fn($volume) => rtrim(explode(':', $volume)[0], '/'), $container['Volumes'] ?? []);
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
                 $exclude = rtrim($exclude, "/");
                 if (!empty($exclude)) {
-                    if (($volumeKey = array_search($exclude, $volumes)) !== false) {
+                    if (in_array($exclude, $mapped) && !self::isWithinVolumes($exclude, $volumes)) {
                         self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair");
-                        unset($volumes[$volumeKey]);
                         continue;
                     }
                     // tar compares the text, so /mnt/user/... never matches a volume mapped as /mnt/cache/... (and the reverse)
-                    if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !array_filter($volumes, fn($volume) => str_starts_with($exclude, rtrim($volume, '/') . '/'))) {
+                    if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !self::isWithinVolumes($exclude, $volumes)) {
                         self::backupLog("Exclusion \"$exclude\" is outside every volume of this container, so it excludes nothing. Its volumes: " . implode(', ', $volumes), self::LOGLEVEL_WARN);
                     }
                     $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
@@ -403,11 +404,19 @@ class ABHelper {
         if (!empty($abSettings->globalExclusions)) {
             self::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), self::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
+                if (in_array($globalExclusion, $mapped) && !self::isWithinVolumes($globalExclusion, $volumes)) {
+                    self::backupLog("Global exclusion \"$globalExclusion\" matches a container volume - ignoring volume/exclusion pair", self::LOGLEVEL_DEBUG);
+                    continue;
+                }
                 $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
         }
 
         return ['volumes' => array_values($volumes), 'tarExcludes' => $tarExcludes];
+    }
+
+    private static function isWithinVolumes($path, array $volumes) {
+        return (bool)array_filter($volumes, fn($volume) => str_starts_with($path, rtrim($volume, '/') . '/'));
     }
 
     /**
