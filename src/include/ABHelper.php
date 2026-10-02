@@ -607,7 +607,7 @@ class ABHelper {
         $output = $resultcode = null;
         exec('unzip -tq ' . escapeshellarg($target) . ' 2>&1', $output, $resultcode);
         if ($resultcode == 127) {
-            self::backupLog("unzip is not available, so the flash backup was not tested.", self::LOGLEVEL_DEBUG);
+            self::backupLog("unzip is not available, so the flash backup was not tested.", self::LOGLEVEL_WARN);
         } elseif ($resultcode > 1) {
             self::backupLog("Flash backup failed: the zip is damaged! unzip said: " . implode('; ', $output), self::LOGLEVEL_ERR);
             return false;
