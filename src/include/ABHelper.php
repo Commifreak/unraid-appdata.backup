@@ -782,6 +782,7 @@ class ABHelper {
                 $startOrder  = $containerListOverride ?: $sortedStartContainers;
                 $plans       = [];
                 $started     = false;
+                $skipped     = [];
 
                 self::backupLog("Method: Stop all containers before continuing.");
                 foreach ($backupOrder as $_container) {
@@ -791,6 +792,8 @@ class ABHelper {
                         $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
                         if ($preContainerRet === 2) {
                             self::backupLog("preContainer script decided to skip backup.");
+                            $skipped[]                   = $container['Name'];
+                            self::$skipStartContainers[] = $container['Name']; // never stopped, so not started either
                             self::setCurrentContainerName($container, true);
                             continue;
                         }
@@ -830,6 +833,10 @@ class ABHelper {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
+                        if (in_array($container['Name'], $skipped)) {
+                            self::setCurrentContainerName($container, true);
+                            continue;
+                        }
 
                         if (!self::backupContainer($container, $abDestination, array_key_exists($container['Name'], $plans) ? $plans[$container['Name']] : false)) {
                             self::$errorOccured = true;
