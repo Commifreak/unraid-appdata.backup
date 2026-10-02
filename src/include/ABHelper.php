@@ -195,9 +195,9 @@ class ABHelper {
                 self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
             }
 
-            // Either stop method can report wrongly, so a fresh state read decides
-            if ($dockerClient->getContainerDetails($container['Name'])['State']['Running'] ?? false) {
-                self::backupLog("'{$container['Name']}' is still running, so it is not backed up!", self::LOGLEVEL_ERR);
+            // Either stop method can report wrongly, so a fresh state read decides; an unreadable state counts as running
+            if (($dockerClient->getContainerDetails($container['Name'])['State']['Running'] ?? null) !== false) {
+                self::backupLog("'{$container['Name']}' did not stop (its state is running or unreadable), so it is not backed up!", self::LOGLEVEL_ERR);
                 self::$errorOccured = true;
                 return false;
             }
