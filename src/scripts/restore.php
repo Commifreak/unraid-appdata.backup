@@ -194,7 +194,7 @@ if (!isset($config['restoreItem']['vmMeta'])) {
         exec('tar -C ' . escapeshellarg($tarDestination) . ' -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog("tar return: $resultcode, output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
-            ABHelper::backupLog("restore failed, please see debug log.", ABHelper::LOGLEVEL_ERR);
+            ABHelper::backupLog("Restoring VM meta failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {
             ABHelper::backupLog("restoring vm meta succeeded!");
         }

@@ -205,7 +205,7 @@ if ($abSettings->backupVMMeta == 'yes') {
         exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " -C / " . escapeshellarg(ltrim(ABSettings::$qemuFolder, '/') . '/') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog("tar return: $resultcode and output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
-            ABHelper::backupLog("Error while backing up VM XMLs. Please see debug log!", ABHelper::LOGLEVEL_ERR);
+            ABHelper::backupLog("Error while backing up VM XMLs! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {
             ABHelper::backupLog("Done!");
         }
