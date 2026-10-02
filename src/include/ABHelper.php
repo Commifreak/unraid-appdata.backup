@@ -156,7 +156,7 @@ class ABHelper {
     /**
      * Stops a container
      * @param $container array
-     * @return true|void
+     * @return bool false if the container is still running after the stop attempts
      */
     public static function stopContainer($container) {
         global $dockerClient, $abSettings;
@@ -190,12 +190,17 @@ class ABHelper {
                     self::backupLog("That _seemed_ to work.");
                 } else {
                     self::backupLog("docker stop variant was unsuccessful as well when stopping '" . $container['Name']. "'! Docker said: " . implode(', ', $out), self::LOGLEVEL_ERR);
-                    self::$errorOccured = true; // it gets backed up while running, so the run must not count as clean
                 }
             } else {
                 self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
             }
 
+            // Either stop method can report wrongly, so a fresh state read decides
+            if ($dockerClient->getContainerDetails($container['Name'])['State']['Running'] ?? false) {
+                self::backupLog("'{$container['Name']}' is still running, so it is not backed up!", self::LOGLEVEL_ERR);
+                self::$errorOccured = true;
+                return false;
+            }
         } else {
             self::$skipStartContainers[] = $container['Name'];
             $state                       = "Not started!";
@@ -204,6 +209,7 @@ class ABHelper {
             }
             self::backupLog("No stopping needed for {$container['Name']}: $state");
         }
+        return true;
     }
 
     /**
@@ -806,10 +812,15 @@ class ABHelper {
                             self::setCurrentContainerName($container, true);
                             continue;
                         }
+                        if (!self::stopContainer($container)) {
+                            $skipped[]                   = $container['Name'];
+                            self::$skipStartContainers[] = $container['Name']; // still running
+                            self::setCurrentContainerName($container, true);
+                            continue;
+                        }
                         if ($abSettings->snapshotMode == 'yes') {
                             $plans[$container['Name']] = self::backupPlan($container);
                         }
-                        self::stopContainer($container);
 
                         if (self::abortRequested()) {
                             return false;
@@ -908,7 +919,10 @@ class ABHelper {
                         continue;
                     }
 
-                    self::stopContainer($container);
+                    if (!self::stopContainer($container)) {
+                        self::setCurrentContainerName($container, true);
+                        continue;
+                    }
 
                     if (self::abortRequested()) {
                         return false;
