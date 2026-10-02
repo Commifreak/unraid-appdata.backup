@@ -293,6 +293,9 @@ end:
 
 if (empty($abDestination) || !is_dir($abDestination)) {
     ABHelper::$errorOccured = true; // an early exit made no backup set, so nothing below may treat the run as clean
+} elseif (($setFiles = glob($abDestination . '/*')) === false) {
+    ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
+    ABHelper::$errorOccured = true;
 }
 
 if (ABHelper::$errorOccured) {
@@ -300,7 +303,7 @@ if (ABHelper::$errorOccured) {
 } else {
     // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
     ABHelper::backupLog("Flushing the backup to disk...");
-    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge(glob($abDestination . '/*'), [$abDestination]))));
+    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, [$abDestination]))));
     ABHelper::backupLog("Checking retention...");
     if (empty($abSettings->keepMinBackups) && empty($abSettings->deleteBackupsOlderThan)) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
