@@ -385,6 +385,10 @@ class ABHelper {
                         unset($volumes[$volumeKey]);
                         continue;
                     }
+                    // tar compares the text, so /mnt/user/... never matches a volume mapped as /mnt/cache/... (and the reverse)
+                    if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !array_filter($volumes, fn($volume) => str_starts_with($exclude, rtrim($volume, '/') . '/'))) {
+                        self::backupLog("Exclusion \"$exclude\" is outside every volume of this container, so it excludes nothing. Its volumes: " . implode(', ', $volumes), self::LOGLEVEL_WARN);
+                    }
                     $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                 }
             }
