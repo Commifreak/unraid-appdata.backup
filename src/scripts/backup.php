@@ -179,6 +179,10 @@ if ($preBackupRet === 2) {
 
 continuationForAll:
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 /**
  * FlashBackup
  */
