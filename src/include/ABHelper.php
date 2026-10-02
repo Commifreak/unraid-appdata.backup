@@ -551,8 +551,13 @@ class ABHelper {
         $target  = $destination . '/' . $name;
 
         // Unraid 7.4+ streams the zip to stdout; older releases write it elsewhere and print its file name.
-        $output = $resultcode = null;
-        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        // stdout is the zip, so the script's errors go to a file of their own
+        $errFile = ABSettings::$tempFolder . '/flash_backup.err';
+        $output  = $resultcode = null;
+        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ' 2> ' . escapeshellarg($errFile) . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        $scriptSaid = trim((string)@file_get_contents($errFile));
+        $scriptSaid = $scriptSaid === '' ? '' : " Script said: " . str_replace("\n", '; ', $scriptSaid);
+        @unlink($errFile);
 
         if (!is_file($target)) {
             self::backupLog("Flash backup failed: cannot write to the destination!", self::LOGLEVEL_ERR);
@@ -562,7 +567,7 @@ class ABHelper {
         if (file_get_contents($target, false, null, 0, 4) === "PK\x03\x04") {
             if ($resultcode != 0) {
                 @unlink($target);
-                self::backupLog("Flash backup failed: the flash backup script returned $resultcode!", self::LOGLEVEL_ERR);
+                self::backupLog("Flash backup failed: the flash backup script returned $resultcode!" . $scriptSaid, self::LOGLEVEL_ERR);
                 return false;
             }
         } else {
@@ -572,11 +577,11 @@ class ABHelper {
             unlink($target);
             self::backupLog("flash backup returned: " . $printed, self::LOGLEVEL_DEBUG);
             if ($printed === '') {
-                self::backupLog("Flash backup failed: no answer from script!", self::LOGLEVEL_ERR);
+                self::backupLog("Flash backup failed: no answer from script!" . $scriptSaid, self::LOGLEVEL_ERR);
                 return false;
             }
             if (!preg_match('/\A[A-Za-z0-9_.-]+-(flash|boot)-backup-[0-9-]+\.zip\z/', $printed)) {
-                self::backupLog("Flash backup failed: unexpected answer from script! See debug log.", self::LOGLEVEL_ERR);
+                self::backupLog("Flash backup failed: unexpected answer from script! See debug log." . $scriptSaid, self::LOGLEVEL_ERR);
                 return false;
             }
 
