@@ -296,14 +296,20 @@ if (empty($abDestination) || !is_dir($abDestination)) {
 } elseif (($setFiles = glob($abDestination . '/*')) === false) {
     ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
     ABHelper::$errorOccured = true;
+} elseif (!ABHelper::$errorOccured) {
+    // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
+    ABHelper::backupLog("Flushing the backup to disk...");
+    $output = $resultcode = null;
+    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, [$abDestination]))) . ' 2>&1', $output, $resultcode);
+    if ($resultcode != 0) {
+        ABHelper::backupLog("Flushing the backup to disk failed! sync said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+        ABHelper::$errorOccured = true;
+    }
 }
 
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
-    // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
-    ABHelper::backupLog("Flushing the backup to disk...");
-    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, [$abDestination]))));
     ABHelper::backupLog("Checking retention...");
     if (empty($abSettings->keepMinBackups) && empty($abSettings->deleteBackupsOlderThan)) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
