@@ -290,9 +290,12 @@ if (!empty($abSettings->includeFiles)) {
 
 end:
 
-if (ABHelper::$errorOccured) {
+if (ABHelper::$errorOccured || empty($abDestination) || !is_dir($abDestination)) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
+    // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
+    ABHelper::backupLog("Flushing the backup to disk...");
+    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge(glob($abDestination . '/*'), [$abDestination]))));
     ABHelper::backupLog("Checking retention...");
     if (empty($abSettings->keepMinBackups) && empty($abSettings->deleteBackupsOlderThan)) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
@@ -300,7 +303,10 @@ if (ABHelper::$errorOccured) {
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         $curBackupsState   = array_reverse(glob(rtrim($abSettings->destination, '/') . '/ab_*'));// glob return sorted by name. Without naming, thats the oldest first, newest at the end
 
-        $toKeep = array_slice($curBackupsState, 0, $keepMinBackupsNum);
+        // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
+        $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
+
+        $toKeep = array_slice($goodBackups, 0, $keepMinBackupsNum);
         ABHelper::backupLog("toKeep after slicing:" . PHP_EOL . print_r($toKeep, true), ABHelper::LOGLEVEL_DEBUG);
 
         if (!empty($abSettings->deleteBackupsOlderThan)) {
