@@ -613,7 +613,10 @@ class ABHelper {
 
         // unzip reads every entry, so a damaged zip fails the run now instead of at restore time
         $output = $resultcode = null;
-        exec('unzip -tq ' . escapeshellarg($target) . ' 2>&1', $output, $resultcode);
+        exec('unzip -tq ' . escapeshellarg($target) . ' 2>&1 ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        if (self::abortRequested()) {
+            return false;
+        }
         if ($resultcode == 127) {
             self::backupLog("unzip is not available, so the flash backup was not tested.", self::LOGLEVEL_WARN);
         } elseif ($resultcode > 1) {
