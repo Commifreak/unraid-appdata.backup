@@ -290,7 +290,11 @@ if (!empty($abSettings->includeFiles)) {
 
 end:
 
-if (ABHelper::$errorOccured || empty($abDestination) || !is_dir($abDestination)) {
+if (empty($abDestination) || !is_dir($abDestination)) {
+    ABHelper::$errorOccured = true; // an early exit made no backup set, so nothing below may treat the run as clean
+}
+
+if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
     // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
@@ -369,7 +373,7 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
 }
 
-if (!empty($abDestination)) {
+if (!empty($abDestination) && is_dir($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if (ABHelper::$errorOccured) {
