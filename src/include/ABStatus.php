@@ -9,6 +9,9 @@ class ABStatus {
 
     const SET_PATTERN = '/^ab_(\d{8}_\d{6})(-failed)?$/';
 
+    /** Written to the flash at the end of each run, so opening the page never reads the backup disks */
+    const CACHE = 'status.json';
+
     /** Days without a successful backup before the page warns, by schedule */
     const STALE_DAYS = ['daily' => 2, 'weekly' => 9, 'monthly' => 35];
 
@@ -75,19 +78,36 @@ class ABStatus {
         return null;
     }
 
-    /** Everything the Status / Log page shows; computed once per page load */
+    /** Records the sets for summary(); runs at the end of a backup, while the backup disks are awake anyway */
+    public static function saveSummary(ABSettings $settings) {
+        if (empty($settings->destination) || !is_dir($settings->destination)) {
+            return;
+        }
+        $sets = self::sets($settings->destination);
+        file_put_contents(ABSettings::$pluginDir . '/' . self::CACHE, json_encode([
+            'recorded' => time(),
+            'duration' => $sets && $sets[0]['state'] !== 'incomplete' ? self::duration($sets[0]) : null,
+            // Set names, not timestamps: a writer in another timezone (php -r skips local_prepend.php) cannot shift them
+            'sets'     => array_map(fn($set) => ['date' => $set['date']->format('Ymd_His'), 'state' => $set['state'], 'size' => $set['size']], $sets),
+        ]));
+    }
+
+    /** Everything the Status / Log page shows: the sets as recorded by the last run, free space and the next run live */
     public static function summary(ABSettings $settings) {
         $now     = new \DateTime();
-        $sets    = empty($settings->destination) ? [] : self::sets($settings->destination);
+        $cache   = json_decode((string)@file_get_contents(ABSettings::$pluginDir . '/' . self::CACHE), true);
+        $cache   = is_array($cache) && isset($cache['recorded'], $cache['sets']) ? $cache : null;
+        $sets    = array_map(fn($set) => ['date' => \DateTime::createFromFormat('Ymd_His', (string)$set['date'])] + $set, $cache['sets'] ?? []);
         $ok      = array_values(array_filter($sets, fn($set) => $set['state'] === 'ok'));
         $failed  = array_values(array_filter($sets, fn($set) => $set['state'] === 'failed'));
         $free    = empty($settings->destination) ? false : @disk_free_space($settings->destination);
-        $stale   = self::STALE_DAYS[$settings->backupFrequency] ?? null;
+        $stale   = $cache ? (self::STALE_DAYS[$settings->backupFrequency] ?? null) : null;
         $ageDays = $ok ? (int)floor(($now->getTimestamp() - $ok[0]['date']->getTimestamp()) / 86400) : null;
 
         return [
+            'recorded'   => $cache ? (new \DateTime())->setTimestamp((int)$cache['recorded']) : null,
             'latest'     => $sets[0] ?? null,
-            'running'    => (bool)ABHelper::scriptRunning(),
+            'duration'   => $cache['duration'] ?? null,
             'ok'         => $ok,
             'failed'     => $failed,
             'okSize'     => array_sum(array_column($ok, 'size')),

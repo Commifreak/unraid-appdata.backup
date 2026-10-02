@@ -17,15 +17,17 @@ $summary    = ABStatus::summary($abSettings);
 $date       = fn($set) => $set['date']->format('d.m.Y H:i');
 
 if ($summary['latest']) {
-    $state = ['ok' => 'OK', 'failed' => 'failed', 'incomplete' => $summary['running'] ? 'running now' : 'incomplete'][$summary['latest']['state']];
-    $took  = $summary['latest']['state'] === 'incomplete' ? null : ABStatus::duration($summary['latest']);
-    $rows['Last backup'] = $date($summary['latest']) . ' &middot; ' . $state . ($took !== null ? ' &middot; took ' . ABStatus::minutes($took) : '');
+    $state = ['ok' => 'OK', 'failed' => 'failed', 'incomplete' => 'incomplete'][$summary['latest']['state']];
+    $rows['Last backup'] = $date($summary['latest']) . ' &middot; ' . $state . ($summary['duration'] !== null ? ' &middot; took ' . ABStatus::minutes($summary['duration']) : '');
 } else {
-    $rows['Last backup'] = 'None yet';
+    $rows['Last backup'] = $summary['recorded'] ? 'None yet' : 'Shown after the next backup run';
 }
-$rows['Backup sets'] = count($summary['ok']) . ' good (' . ABStatus::bytes($summary['okSize']) . ')'
-    . ($summary['failed'] ? ', ' . count($summary['failed']) . ' failed (' . ABStatus::bytes($summary['failedSize']) . ')' : '')
-    . ($summary['ok'] ? ' &middot; newest ' . $date($summary['ok'][0]) . ', oldest ' . $date($summary['ok'][count($summary['ok']) - 1]) : '');
+if ($summary['recorded']) {
+    $rows['Backup sets'] = count($summary['ok']) . ' good (' . ABStatus::bytes($summary['okSize']) . ')'
+        . ($summary['failed'] ? ', ' . count($summary['failed']) . ' failed (' . ABStatus::bytes($summary['failedSize']) . ')' : '')
+        . ($summary['ok'] ? ' &middot; newest ' . $date($summary['ok'][0]) . ', oldest ' . $date($summary['ok'][count($summary['ok']) - 1]) : '')
+        . ' &middot; as of the last backup run';
+}
 $rows['Next scheduled run'] = $summary['next'] ? $summary['next']->format('D d.m.Y H:i') : ($abSettings->backupFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->backupFrequencyCustom) : 'Not scheduled');
 $rows['Free space'] = $summary['free'] === false ? 'Unknown' : ABStatus::bytes($summary['free']) . ' free' . ($summary['ok'] ? ' &middot; newest backup ' . ABStatus::bytes($summary['ok'][0]['size']) : '');
 
