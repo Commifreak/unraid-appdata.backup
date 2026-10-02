@@ -103,7 +103,7 @@ if ($_POST) {
         // This branch exits, so the checkCron() call after a normal save never runs for it
         [$code, $out] = (new ABSettings())->checkCron();
         if ($code != 0) {
-            echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
+            echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
         }
 
         echo "<h1 style='color: green'>Settings were migrated!</h1><p>Please wait...</p><hr />";
@@ -242,7 +242,7 @@ HTML;
 }
 
 if (($code ?? 0) != 0) {
-    echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
+    echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
 }
 ?>
 
