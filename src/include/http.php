@@ -6,7 +6,7 @@ require_once __DIR__ . '/ABHelper.php';
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
-$writeActions = ['manualBackup', 'abort', 'startRestore', 'copyConfigFromProd'];
+$writeActions = ['manualBackup', 'abort', 'startRestore', 'verifySet', 'copyConfigFromProd'];
 $isPost       = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
 $action       = $isPost ? ($_POST['action'] ?? null) : ($_GET['action'] ?? null);
 
@@ -124,6 +124,9 @@ if (isset($action)) {
             break;
         case 'startRestore':
             exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_POST)) . ' > /dev/null &');
+            break;
+        case 'verifySet':
+            exec('php ' . dirname(__DIR__) . '/scripts/verify.php ' . escapeshellarg((string)($_POST['set'] ?? '')) . ' > /dev/null &');
             break;
 
         case 'copyConfigFromProd':
