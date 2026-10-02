@@ -10,21 +10,27 @@ class ABSnapshot {
     const PREFIX = 'appdata.backup_';
 
     /**
-     * @var array Snapshots taken in this run: type, root (dataset mountpoint or subvolume), name, base (readable snapshot root)
+     * @var array Snapshots taken in this run: type, root (dataset mountpoint or subvolume) and name (ZFS snapshot or btrfs snapshot folder)
      */
     private static array $active = [];
 
     /**
-     * Snapshots the filesystems holding $volumes. Takes nothing and returns false if any volume is not on ZFS or btrfs.
+     * Snapshots the filesystems holding $volumes. Takes nothing and returns false if any volume cannot be snapshotted.
      * @param array $volumes
      * @return bool
      */
     public static function create(array $volumes) {
         $sources = [];
         foreach ($volumes as $volume) {
-            $source = self::sourceOf($volume);
+            $real   = realpath($volume);
+            $source = $real === false ? null : self::sourceOf($real);
             if (!$source) {
                 ABHelper::backupLog("'$volume' is not on ZFS or btrfs, so no snapshot is possible.");
+                return false;
+            }
+            $nested = self::nestedIn($real, $source);
+            if ($nested !== null) {
+                ABHelper::backupLog("'$volume' contains '$nested', which a snapshot would leave out, so no snapshot is possible.");
                 return false;
             }
             $sources[$source['root']] = $source;
@@ -41,6 +47,7 @@ class ABSnapshot {
             self::$active[] = $snapshot;
             ABHelper::backupLog("Snapshot created: " . $snapshot['name']);
         }
+        @mkdir(ABSettings::$tempFolder . '/snapshot'); // command() mounts the snapshots below it
         return true;
     }
 
@@ -58,74 +65,49 @@ class ABSnapshot {
     }
 
     /**
-     * Where $path is inside an active snapshot, or null if no snapshot covers it
-     * @param string $path
-     * @return string|null
-     */
-    public static function mapPath($path) {
-        $real     = realpath($path);
-        $snapshot = $real === false ? null : self::covering($real);
-        return $snapshot ? $snapshot['base'] . substr($real, strlen($snapshot['root'])) : null;
-    }
-
-    /**
-     * Rewrites an absolute exclude pattern onto the snapshot of one of $volumes, so it keeps matching what tar reads.
-     * Only the container's own volumes are used, so a share spread over several pools maps to the right one.
-     * @param string $pattern
+     * $cmd wrapped to run in a private mount namespace where the active snapshots are mounted over the volumes they cover
+     * @param string $cmd
      * @param array $volumes
      * @return string
      */
-    public static function mapPattern($pattern, array $volumes) {
-        if (!str_starts_with($pattern, '/')) {
-            return $pattern;
-        }
-        $best    = $pattern;
-        $bestLen = -1;
+    public static function command($cmd, array $volumes) {
+        $binds = [];
         foreach ($volumes as $volume) {
             $real     = realpath($volume);
             $snapshot = $real === false ? null : self::covering($real);
-            if (!$snapshot) {
-                continue;
-            }
-            // The snapshot root as this volume sees it, e.g. /mnt/user for /mnt/user/appdata/app on the pool /mnt/cache
-            $rel   = substr($real, strlen($snapshot['root']));
-            $heads = [$snapshot['root']];
-            if (str_ends_with($volume, $rel) && strlen($volume) > strlen($rel)) {
-                $heads[] = substr($volume, 0, strlen($volume) - strlen($rel));
-            }
-            foreach ($heads as $head) {
-                if (($pattern === $head || str_starts_with($pattern, $head . '/')) && strlen($head) > $bestLen) {
-                    $best    = $snapshot['base'] . substr($pattern, strlen($head));
-                    $bestLen = strlen($head);
-                }
+            if ($snapshot) {
+                $binds[$real] = $snapshot;
             }
         }
-        return $best;
+        if (!$binds) {
+            return $cmd;
+        }
+        ksort($binds, SORT_STRING); // outer volumes are mounted before the volumes inside them
+
+        // ZFS mounts a snapshot only on an empty folder, so each snapshot gets one and the volumes are bound from there
+        $dir   = ABSettings::$tempFolder . '/snapshot';
+        $steps = ['mount -t tmpfs tmpfs ' . escapeshellarg($dir)];
+        $views = [];
+        foreach ($binds as $snapshot) {
+            if (!isset($views[$snapshot['name']])) {
+                $view                     = "$dir/" . count($views);
+                $views[$snapshot['name']] = $view;
+                $steps[]                  = 'mkdir ' . escapeshellarg($view);
+                $steps[]                  = 'mount ' . ($snapshot['type'] == 'zfs' ? '-t zfs -o ro ' : '--bind ') . escapeshellarg($snapshot['name']) . ' ' . escapeshellarg($view);
+            }
+        }
+        foreach ($binds as $real => $snapshot) {
+            $steps[] = 'mount --bind ' . escapeshellarg($views[$snapshot['name']] . substr($real, strlen($snapshot['root']))) . ' ' . escapeshellarg($real);
+        }
+        return 'unshare -m -- sh -c ' . escapeshellarg(implode(' && ', $steps) . ' && exec ' . $cmd);
     }
 
     /**
-     * tar option that renames the leading $from of member names to $to
-     * @param string $from
-     * @param string $to
-     * @return string
-     */
-    public static function transform($from, $to) {
-        $pattern     = preg_replace('/[\\\\.\[\]*^$,]/', '\\\\$0', $from);
-        $replacement = preg_replace('/[\\\\&,]/', '\\\\$0', $to);
-        return '--transform ' . escapeshellarg('s,^' . $pattern . ',' . $replacement . ',');
-    }
-
-    /**
-     * ZFS dataset or btrfs subvolume holding $path, or null
-     * @param string $path
+     * ZFS dataset or btrfs subvolume holding the real path $real, or null
+     * @param string $real
      * @return array|null
      */
-    private static function sourceOf($path) {
-        $real = realpath($path);
-        if ($real === false) {
-            return null;
-        }
-
+    private static function sourceOf($real) {
         $type = trim((string)shell_exec('stat -f -c %T ' . escapeshellarg($real) . ' 2>/dev/null'));
         if ($type == 'zfs') {
             $best = null;
@@ -142,6 +124,37 @@ class ABSnapshot {
                 if (fileinode($dir) === 256) { // btrfs subvolume roots always have inode 256
                     return ['type' => 'btrfs', 'root' => $dir, 'into' => self::btrfsFolder($dir, $real)];
                 }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * First mountpoint or nested btrfs subvolume inside $real, or null: a snapshot shows them as empty folders
+     * @param string $real
+     * @param array $source
+     * @return string|null
+     */
+    private static function nestedIn($real, $source) {
+        $paths = [];
+        foreach (file('/proc/mounts', FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            $paths[] = stripcslashes(explode(' ', $line)[1] ?? '');
+        }
+        if ($source['type'] == 'btrfs') {
+            // Both print paths from the top of the filesystem, so the root's own path is cut off the listed ones
+            $show = $lines = [];
+            exec('btrfs subvolume show ' . escapeshellarg($source['root']) . ' 2>/dev/null', $show);
+            exec('btrfs subvolume list -o ' . escapeshellarg($source['root']) . ' 2>/dev/null', $lines);
+            $prefix = trim($show[0] ?? '/') === '/' ? '' : trim($show[0]) . '/';
+            foreach ($lines as $line) {
+                $path    = preg_replace('/^.*? path /', '', $line);
+                $paths[] = $source['root'] . '/' . (str_starts_with($path, $prefix) ? substr($path, strlen($prefix)) : $path);
+            }
+        }
+        foreach ($paths as $path) {
+            // .zfs mounts are ZFS's own snapshot views, which tar never reads; stale snapshots of this plugin get removed
+            if (str_starts_with($path, $real . '/') && !str_contains($path, '/.zfs/') && !str_starts_with(basename($path), '.' . self::PREFIX)) {
+                return $path;
             }
         }
         return null;
@@ -185,7 +198,7 @@ class ABSnapshot {
             ABHelper::backupLog("Creating snapshot $name failed: " . implode('; ', $out), ABHelper::LOGLEVEL_WARN);
             return null;
         }
-        return ['type' => 'zfs', 'root' => $source['root'], 'name' => $name, 'base' => $source['root'] . '/.zfs/snapshot/' . $tag];
+        return ['type' => 'zfs', 'root' => $source['root'], 'name' => $name];
     }
 
     private static function createBtrfs($source, $tag) {
@@ -196,7 +209,7 @@ class ABSnapshot {
             ABHelper::backupLog("Creating snapshot $path failed: " . implode('; ', $out), ABHelper::LOGLEVEL_WARN);
             return null;
         }
-        return ['type' => 'btrfs', 'root' => $source['root'], 'name' => $path, 'base' => $path];
+        return ['type' => 'btrfs', 'root' => $source['root'], 'name' => $path];
     }
 
     /**
@@ -233,7 +246,8 @@ class ABSnapshot {
             }
             $cmd = 'zfs destroy ' . escapeshellarg($snapshot['name']);
         } else {
-            if (!str_starts_with(basename($snapshot['name']), '.' . self::PREFIX)) {
+            // A symlink's realpath() differs, and btrfs would delete the subvolume it points to
+            if (!str_starts_with(basename($snapshot['name']), '.' . self::PREFIX) || realpath($snapshot['name']) !== $snapshot['name']) {
                 return false;
             }
             $cmd = 'btrfs subvolume delete ' . escapeshellarg($snapshot['name']);

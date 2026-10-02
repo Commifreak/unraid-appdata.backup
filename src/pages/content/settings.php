@@ -271,7 +271,7 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Containers start again as soon as their data is snapshotted, and the backup is made from the snapshot. If a volume is not on ZFS or btrfs, its container stays stopped during the backup (when stopping all containers, the whole run does).</p>
+        <p>Containers start again as soon as their data is snapshotted, and the backup is made from the snapshot. If a volume is not on ZFS or btrfs, or has another filesystem or subvolume inside it, its container stays stopped during the backup (when stopping all containers, the whole run does).</p>
     </blockquote>
 
     <dl>

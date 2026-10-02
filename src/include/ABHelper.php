@@ -344,7 +344,7 @@ class ABHelper {
     }
 
 
-    /** Volumes and exclusions to back up for a container, or null if its backup is skipped */
+    /** Volumes and tar exclude options for a container, or null if its backup is skipped */
     public static function backupPlan($container) {
         global $abSettings;
 
@@ -370,7 +370,7 @@ class ABHelper {
             self::backupLog("Backing up EXTERNAL volumes, because it's enabled!");
         }
 
-        $excludes = [];
+        $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
@@ -381,7 +381,7 @@ class ABHelper {
                         unset($volumes[$volumeKey]);
                         continue;
                     }
-                    $excludes[] = $exclude;
+                    $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                 }
             }
         }
@@ -389,11 +389,11 @@ class ABHelper {
         if (!empty($abSettings->globalExclusions)) {
             self::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), self::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
-                $excludes[] = $globalExclusion;
+                $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
         }
 
-        return ['volumes' => array_values($volumes), 'excludes' => $excludes];
+        return ['volumes' => array_values($volumes), 'tarExcludes' => $tarExcludes];
     }
 
     /**
@@ -413,6 +413,7 @@ class ABHelper {
             return true;
         }
         $volumes           = $plan['volumes'];
+        $tarExcludes       = $plan['tarExcludes'];
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
         if (empty($volumes)) {
@@ -422,26 +423,10 @@ class ABHelper {
 
         self::backupLog("Calculated volumes to back up: " . implode(", ", $volumes));
 
-        // From a snapshot, tar reads the snapshot but stores and verifies under the volume paths, so restores are unchanged
-        $sources = $transforms = $verifyTransforms = [];
-        foreach ($volumes as $volume) {
-            $snapshotPath = ABSnapshot::mapPath($volume);
-            $sources[]    = $snapshotPath ?? $volume;
-            if ($snapshotPath !== null) {
-                $transforms[]       = ABSnapshot::transform($snapshotPath, $volume);
-                $verifyTransforms[] = ABSnapshot::transform($volume, $snapshotPath);
-            }
-        }
-
-        $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
-        foreach ($plan['excludes'] as $exclude) {
-            $tarExcludes[] = '--exclude ' . escapeshellarg($transforms ? ABSnapshot::mapPattern($exclude, $volumes) : $exclude);
-        }
-
         $destination = $destination . "/" . $container['Name'] . '.tar';
 
-        $tarVerifyOptions = array_merge($tarExcludes, ['--diff'], $verifyTransforms); // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
-        $tarOptions       = array_merge($tarExcludes, ['-c', '-P'], $transforms);     // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
+        $tarVerifyOptions = array_merge($tarExcludes, ['--diff']);      // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
+        $tarOptions       = array_merge($tarExcludes, ['-c', '-P']);    // Add excludes to the beginning - https://unix.stackexchange.com/a/33334
 
         if ($abSettings->ignoreExclusionCase == 'yes') {
             $tarOptions[]       = '--ignore-case';
@@ -463,11 +448,8 @@ class ABHelper {
 
         $tarOptions[] = $tarVerifyOptions[] = '-f ' . escapeshellarg($destination); // Destination file
 
-        foreach ($sources as $source) {
-            $tarOptions[] = escapeshellarg($source);
-        }
         foreach ($volumes as $volume) {
-            $tarVerifyOptions[] = escapeshellarg($volume);
+            $tarOptions[] = $tarVerifyOptions[] = escapeshellarg($volume);
         }
         $finalTarOptions       = implode(" ", $tarOptions);
         $finalTarVerifyOptions = implode(" ", $tarVerifyOptions);
@@ -478,7 +460,7 @@ class ABHelper {
         $tarBackupTimer = time();
 
         $output = $resultcode = null;
-        exec("tar " . $finalTarOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        exec(ABSnapshot::command("tar " . $finalTarOptions, $volumes) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
         if ($resultcode > 0) {
@@ -508,7 +490,7 @@ class ABHelper {
             self::backupLog("Final verify command: " . $finalTarVerifyOptions, self::LOGLEVEL_DEBUG);
 
             $output = $resultcode = null;
-            exec("tar " . $finalTarVerifyOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+            exec(ABSnapshot::command("tar " . $finalTarVerifyOptions, $volumes) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
             if ($resultcode > 0) {
