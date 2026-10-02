@@ -191,7 +191,7 @@ if (!isset($config['restoreItem']['vmMeta'])) {
         ABHelper::backupLog("VM manager is NOT enabled! Cannot restore VM meta", ABHelper::LOGLEVEL_ERR);
     } else {
         $output = $resultcode = null;
-        exec('tar -C ' . escapeshellarg($tarDestination) . ' -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz') . " " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        exec('tar -C ' . escapeshellarg($tarDestination) . ' -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog("tar return: $resultcode, output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("restore failed, please see debug log.", ABHelper::LOGLEVEL_ERR);
