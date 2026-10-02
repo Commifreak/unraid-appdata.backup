@@ -2,13 +2,53 @@
 
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
+use unraid\plugins\AppdataBackup\ABStatus;
 
 if (!ABHelper::isArrayOnline()) {
     echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
     return;
 }
 
+require_once dirname(__DIR__, 2) . '/include/ABStatus.php';
+include_once __DIR__ . '/head.php';
+
+$abSettings = $abSettings ?? new ABSettings();
+$summary    = ABStatus::summary($abSettings);
+$date       = fn($set) => $set['date']->format('d.m.Y H:i');
+
+if ($summary['latest']) {
+    $state = ['ok' => 'OK', 'failed' => 'failed', 'incomplete' => $summary['running'] ? 'running now' : 'incomplete'][$summary['latest']['state']];
+    $took  = $summary['latest']['state'] === 'incomplete' ? null : ABStatus::duration($summary['latest']);
+    $rows['Last backup'] = $date($summary['latest']) . ' &middot; ' . $state . ($took !== null ? ' &middot; took ' . ABStatus::minutes($took) : '');
+} else {
+    $rows['Last backup'] = 'None yet';
+}
+$rows['Backup sets'] = count($summary['ok']) . ' good (' . ABStatus::bytes($summary['okSize']) . ')'
+    . ($summary['failed'] ? ', ' . count($summary['failed']) . ' failed (' . ABStatus::bytes($summary['failedSize']) . ')' : '')
+    . ($summary['ok'] ? ' &middot; newest ' . $date($summary['ok'][0]) . ', oldest ' . $date($summary['ok'][count($summary['ok']) - 1]) : '');
+$rows['Next scheduled run'] = $summary['next'] ? $summary['next']->format('D d.m.Y H:i') : ($abSettings->backupFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->backupFrequencyCustom) : 'Not scheduled');
+$rows['Free space'] = $summary['free'] === false ? 'Unknown' : ABStatus::bytes($summary['free']) . ' free' . ($summary['ok'] ? ' &middot; newest backup ' . ABStatus::bytes($summary['ok'][0]['size']) : '');
+
+$warnings = [];
+if ($summary['stale'] !== false) {
+    $warnings[] = $summary['stale'] === null ? 'No successful backup yet.' : 'No successful backup for ' . $summary['stale'] . ' days (schedule: ' . $abSettings->backupFrequency . ').';
+}
+if ($summary['lowSpace']) {
+    $warnings[] = 'Free space (' . ABStatus::bytes($summary['free']) . ') is less than the newest backup (' . ABStatus::bytes($summary['ok'][0]['size']) . ').';
+}
+
 ?>
+
+<div class="ab-status">
+    <dl class="ab-grid">
+<?php foreach ($rows as $label => $value): ?>
+        <dt><?= $label ?></dt><dd><?= $value ?></dd>
+<?php endforeach; ?>
+    </dl>
+<?php foreach ($warnings as $warning): ?>
+    <p class="ab-warn"><?= $warning ?></p>
+<?php endforeach; ?>
+</div>
 
 <style>
     .backupRunning {
@@ -36,7 +76,7 @@ if (!ABHelper::isArrayOnline()) {
 <br/>
 You are currently viewing the <b id="currentLogType">normal</b> log!
 <br/>
-<div style='border: 1px solid red; height:500px; overflow:auto;' id='abLog'>Loading...</div>
+<div class='ab-log' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' disabled/>
 <input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
 
