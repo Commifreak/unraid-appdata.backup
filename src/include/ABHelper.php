@@ -163,8 +163,14 @@ class ABHelper {
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
-        // Refresh the current container state
-        $container = $dockerClient->getContainerDetails($container['Name']);
+        // Refresh the current container state; an unreadable one gets the same treatment as a failed stop
+        $name      = $container['Name'];
+        $container = $dockerClient->getContainerDetails($name);
+        if (!is_bool($container['State']['Running'] ?? null)) {
+            self::backupLog("The state of '$name' cannot be read, so it is not backed up!", self::LOGLEVEL_ERR);
+            self::$errorOccured = true;
+            return false;
+        }
 
         // Since ->getContainerDetails return the JSON as is (and ->getDockerContainers does not allow to filter for a single one), we have to apply "Trick 17".
         $container['Running'] = $container['State']['Running'];
