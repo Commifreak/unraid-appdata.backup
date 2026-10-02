@@ -562,12 +562,14 @@ class ABHelper {
 
         // Unraid 7.4+ streams the zip to stdout; older releases write it elsewhere and print its file name.
         // stdout is the zip, so the script's errors go to a file of their own
-        $errFile = ABSettings::$tempFolder . '/flash_backup.err';
+        $errFile = tempnam(ABSettings::$tempFolder, 'flash_backup_err_');
         $output  = $resultcode = null;
-        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ' 2> ' . escapeshellarg($errFile) . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-        $scriptSaid = trim((string)@file_get_contents($errFile));
+        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ($errFile ? ' 2> ' . escapeshellarg($errFile) : '') . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        $scriptSaid = $errFile ? trim((string)@file_get_contents($errFile)) : '';
         $scriptSaid = $scriptSaid === '' ? '' : " Script said: " . str_replace("\n", '; ', $scriptSaid);
-        @unlink($errFile);
+        if ($errFile) {
+            @unlink($errFile);
+        }
 
         if (!is_file($target)) {
             self::backupLog("Flash backup failed: cannot write to the destination!", self::LOGLEVEL_ERR);
