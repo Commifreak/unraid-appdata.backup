@@ -12,6 +12,7 @@ if (!ABHelper::isArrayOnline()) {
 
 
 ?>
+<?php include_once __DIR__ . '/head.php'; ?>
 
 <div class="title"><span class="left"><i class="fa fa-rotate-left title"></i>Restore</span></div>
 <p>On this page, you are able to restore a previously made backup.</p>
@@ -71,8 +72,8 @@ if (!ABHelper::isArrayOnline()) {
         <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 2: Select backup</span></div>
         <dl>
             <dt><b>Select backup:</b></dt>
-            <dd><select required id="restoreBackupList" name="restoreBackupList"></select>
-                <button onclick="checkRestoreItem(); return false;">Next</button>
+            <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList"></select>
+                <button onclick="checkRestoreItem(); return false;">Next</button></div>
             </dd>
         </dl>
     </div>
@@ -83,24 +84,40 @@ if (!ABHelper::isArrayOnline()) {
 
         <dl>
             <dt><b>Restore backup config?:</b></dt>
-            <dd><input type="checkbox" id="restoreItemConfig" name="restoreItem[config]"> Yes</dd>
-
-            <dt><b>Restore extra files?:</b></dt>
-            <dd><input type="checkbox" id="restoreItemExtraFiles" name="restoreItem[extraFiles]"> Yes</dd>
-            <br/>
-            <dt><b>Restore VM meta?:</b></dt>
-            <dd><input type="checkbox" id="restoreItemVmMeta" name="restoreItem[vmMeta]"> Yes</dd>
-            <br/>
-            <dt><b>Restore templates?:</b></dt>
-            <dd>
-                <div style="display: table;" id="restoreTemplatesDD"></div>
-            </dd>
-
-            <dt><b>Restore containers?:</b></dt>
-            <dd>
-                <div style="display: table;" id="restoreContainersDD"></div>
-            </dd>
+            <dd><label class="ab-check"><input type="checkbox" id="restoreItemConfig" name="restoreItem[config]"> <span>Yes</span></label></dd>
         </dl>
+        <blockquote class='inline_help'>
+            <p>Replaces this plugin's current settings with the ones saved in the backup.</p>
+        </blockquote>
+
+        <dl>
+            <dt><b>Restore extra files?:</b></dt>
+            <dd><label class="ab-check"><input type="checkbox" id="restoreItemExtraFiles" name="restoreItem[extraFiles]"> <span>Yes</span></label></dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>Puts the files from "Include extra files/folders" back where they came from, or into the custom destination.</p>
+        </blockquote>
+
+        <dl>
+            <dt><b>Restore VM meta?:</b></dt>
+            <dd><label class="ab-check"><input type="checkbox" id="restoreItemVmMeta" name="restoreItem[vmMeta]"> <span>Yes</span></label></dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>Puts the VM definitions from <code>/etc/libvirt/qemu</code> back. The VM manager must be enabled.</p>
+        </blockquote>
+
+        <div class="ab-restore-lists">
+            <div class="ab-restore-list">
+                <div class="ab-restore-list-head"><b>Restore templates</b> <span class="ab-pick"><a href="#" data-target="restoreTemplatesDD" data-checked="1">All</a> / <a href="#" data-target="restoreTemplatesDD" data-checked="0">None</a></span></div>
+                <p class="ab-list-help">Copies the selected Docker templates back, so the containers can be added again with their saved settings.</p>
+                <div class="ab-checklist" id="restoreTemplatesDD"></div>
+            </div>
+            <div class="ab-restore-list">
+                <div class="ab-restore-list-head"><b>Restore containers</b> <span class="ab-pick"><a href="#" data-target="restoreContainersDD" data-checked="1">All</a> / <a href="#" data-target="restoreContainersDD" data-checked="0">None</a></span></div>
+                <p class="ab-list-help">Extracts each container's data back where it came from, or into the custom destination. Existing files are overwritten, so stop the containers first.</p>
+                <div class="ab-checklist" id="restoreContainersDD"></div>
+            </div>
+        </div>
 
         <button onclick="startRestore(); return false;">Do it!</button>
     </div>
@@ -142,41 +159,23 @@ if (!ABHelper::isArrayOnline()) {
                 $('#restoreTemplatesDD, #restoreContainersDD').html('None available :(');
 
                 $('#restoreItemsDiv').show();
-                if (!data.result.configFile) {
-                    $('#restoreItemConfig').prop('disabled', true);
-                    $('#restoreItemConfig').prop('checked', false);
-                } else {
-                    $('#restoreItemConfig').prop('disabled', false);
-                    $('#restoreItemConfig').prop('checked', false);
-                }
+                setRestoreItem('restoreItemConfig', data.result.configFile);
 
-                if (!data.result.extraFiles) {
-                    $('#restoreItemExtraFiles').prop('disabled', true);
-                    $('#restoreItemExtraFiles').prop('checked', false);
-                } else {
-                    $('#restoreItemExtraFiles').prop('disabled', false);
-                    $('#restoreItemExtraFiles').prop('checked', false);
-                }
+                setRestoreItem('restoreItemExtraFiles', data.result.extraFiles);
 
-                if (!data.result.vmMeta) {
-                    $('#restoreItemVmMeta').prop('disabled', true);
-                    $('#restoreItemVmMeta').prop('checked', false);
-                } else {
-                    $('#restoreItemVmMeta').prop('disabled', false);
-                    $('#restoreItemVmMeta').prop('checked', false);
-                }
+                setRestoreItem('restoreItemVmMeta', data.result.vmMeta);
 
                 if (data.result.templateFiles) {
                     $('#restoreTemplatesDD').html('');
-                    $.each(data.result.templateFiles, function (i) {
-                        $('#restoreTemplatesDD').append('<input type="checkbox" name="restoreItem[templates][' + data.result.templateFiles[i] + ']" /> ' + data.result.templateFiles[i] + '<br />');
+                    $.each(data.result.templateFiles.sort(byName), function (i, name) {
+                        $('#restoreTemplatesDD').append('<label class="ab-check" title="' + name + '"><input type="checkbox" name="restoreItem[templates][' + name + ']" /> ' + name + '</label>');
                     });
                 }
 
                 if (data.result.containers) {
                     $('#restoreContainersDD').html('');
-                    $.each(data.result.containers, function (i) {
-                        $('#restoreContainersDD').append('<input type="checkbox" name="restoreItem[containers][' + data.result.containers[i] + ']" /> ' + data.result.containers[i] + '<br />');
+                    $.each(data.result.containers.sort(byName), function (i, name) {
+                        $('#restoreContainersDD').append('<label class="ab-check" title="' + name + '"><input type="checkbox" name="restoreItem[containers][' + name + ']" /> ' + name + '</label>');
                     });
                 }
 
@@ -190,6 +189,18 @@ if (!ABHelper::isArrayOnline()) {
                 });
             }
         });
+    }
+
+    const byName = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
+
+    $(document).on('click', '.ab-pick a', function (e) {
+        e.preventDefault();
+        $('#' + $(this).data('target') + ' input:not(:disabled)').prop('checked', $(this).data('checked') == 1);
+    });
+
+    // An item the chosen set does not contain is disabled and says so
+    function setRestoreItem(id, available) {
+        $('#' + id).prop('disabled', !available).prop('checked', false).next('span').text(available ? 'Yes' : 'Not in this backup');
     }
 
     function startRestore() {
