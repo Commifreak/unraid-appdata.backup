@@ -336,11 +336,13 @@ if (ABHelper::$errorOccured) {
                     $toKeep[] = $backupItem; // Keep the errornous object - Better safe than sorry.
                     continue;
                 }
-                if ($backupDate >= $nowDate && !in_array($backupItem, $toKeep)) {
+                if (in_array($backupItem, $toKeep)) {
+                    ABHelper::backupLog("Keeping $backupItem, because it is within the minimum number of backups", ABHelper::LOGLEVEL_DEBUG);
+                } elseif ($backupDate >= $nowDate) {
                     ABHelper::backupLog("Keeping " . $backupItem, ABHelper::LOGLEVEL_DEBUG);
                     $toKeep[] = $backupItem;
                 } else {
-                    ABHelper::backupLog("Discarding $backupItem, because it's newer or already in toKeep", ABHelper::LOGLEVEL_DEBUG);
+                    ABHelper::backupLog("Discarding $backupItem, because it is older than the cutoff", ABHelper::LOGLEVEL_DEBUG);
                 }
             }
         }
