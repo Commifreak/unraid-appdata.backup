@@ -466,6 +466,9 @@ class ABHelper {
         exec(ABSnapshot::command("tar " . $finalTarOptions, $volumes) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
+        if (ABSnapshot::setupFailed($resultcode, $output)) {
+            return false;
+        }
         if ($resultcode > 0) {
             self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
 
@@ -496,6 +499,9 @@ class ABHelper {
             exec(ABSnapshot::command("tar " . $finalTarVerifyOptions, $volumes) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
+            if (ABSnapshot::setupFailed($resultcode, $output)) {
+                return false;
+            }
             if ($resultcode > 0) {
                 self::backupLog("tar verification failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
                 /**

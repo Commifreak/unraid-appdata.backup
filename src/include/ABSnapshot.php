@@ -8,6 +8,7 @@ namespace unraid\plugins\AppdataBackup;
 class ABSnapshot {
 
     const PREFIX = 'appdata.backup_';
+    const SETUP_FAILED = 96; // exit code of a command() whose snapshot mounts failed; tar itself exits 0-2
 
     /**
      * @var array Snapshots taken in this run: type, root (dataset mountpoint or subvolume) and name (ZFS snapshot or btrfs snapshot folder)
@@ -100,7 +101,21 @@ class ABSnapshot {
         foreach ($binds as $real => $snapshot) {
             $steps[] = 'mount --bind ' . escapeshellarg($views[$snapshot['name']] . substr($real, strlen($snapshot['root']))) . ' ' . escapeshellarg($real);
         }
-        return 'unshare -m -- sh -c ' . escapeshellarg(implode(' && ', $steps) . ' && exec ' . $cmd);
+        return 'unshare -m -- sh -c ' . escapeshellarg('{ ' . implode(' && ', $steps) . '; } || exit ' . self::SETUP_FAILED . '; exec ' . $cmd);
+    }
+
+    /**
+     * Logs and returns true if a command() failed while mounting the snapshots, so tar did not run
+     * @param int $resultcode
+     * @param array $output
+     * @return bool
+     */
+    public static function setupFailed($resultcode, array $output) {
+        if ($resultcode != self::SETUP_FAILED) {
+            return false;
+        }
+        ABHelper::backupLog("Mounting the snapshot failed, so tar did not run! Mount said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+        return true;
     }
 
     /**
