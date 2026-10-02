@@ -576,7 +576,7 @@ class ABHelper {
         $errFile = tempnam(ABSettings::$tempFolder, 'flash_backup_err_');
         $output  = $resultcode = null;
         exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ($errFile ? ' 2> ' . escapeshellarg($errFile) : '') . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-        $scriptSaid = $errFile ? trim((string)@file_get_contents($errFile)) : '';
+        $scriptSaid = $errFile ? trim((string)@file_get_contents($errFile, false, null, 0, 4096)) : '';
         $scriptSaid = $scriptSaid === '' ? '' : " Script said: " . str_replace("\n", '; ', $scriptSaid);
         if ($errFile) {
             @unlink($errFile);
