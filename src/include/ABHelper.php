@@ -353,10 +353,8 @@ class ABHelper {
                 unset($_containers[$name]);
             }
         }
-        if ($reverse) {
-            $sortedContainers = array_reverse($sortedContainers);
-        }
-        return array_merge($sortedContainers, $_containers);
+        $sortedContainers = array_merge($sortedContainers, $_containers);
+        return $reverse ? array_reverse($sortedContainers) : $sortedContainers;
     }
 
 
