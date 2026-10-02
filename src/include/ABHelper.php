@@ -190,6 +190,7 @@ class ABHelper {
                     self::backupLog("That _seemed_ to work.");
                 } else {
                     self::backupLog("docker stop variant was unsuccessful as well when stopping '" . $container['Name']. "'! Docker said: " . implode(', ', $out), self::LOGLEVEL_ERR);
+                    self::$errorOccured = true; // it gets backed up while running, so the run must not count as clean
                 }
             } else {
                 self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
