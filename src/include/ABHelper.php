@@ -491,6 +491,10 @@ class ABHelper {
         if (ABSnapshot::setupFailed($resultcode, $output)) {
             return false;
         }
+        if ($resultcode > 0 && self::abortRequested()) {
+            self::backupLog("The abort stopped tar.");
+            return false;
+        }
         if ($resultcode > 0) {
             self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
 
@@ -522,6 +526,10 @@ class ABHelper {
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
             if (ABSnapshot::setupFailed($resultcode, $output)) {
+                return false;
+            }
+            if ($resultcode > 0 && self::abortRequested()) {
+                self::backupLog("The abort stopped the verification.");
                 return false;
             }
             if ($resultcode > 0) {
