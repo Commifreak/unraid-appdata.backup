@@ -4,6 +4,7 @@ namespace unraid\plugins\AppdataBackup;
 
 require_once __DIR__ . '/ABSettings.php';
 require_once __DIR__ . '/ABSnapshot.php';
+require_once __DIR__ . '/ABIntegrity.php';
 
 /**
  * This is a helper class for some useful things
@@ -561,6 +562,7 @@ class ABHelper {
             }
         } else {
             self::backupLog("Skipping verification for this container because it's not wanted!", self::LOGLEVEL_WARN);
+            ABIntegrity::$unverified[] = basename($destination);
         }
         return true;
     }
