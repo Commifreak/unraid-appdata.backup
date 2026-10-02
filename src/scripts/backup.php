@@ -221,13 +221,14 @@ if (!empty($abSettings->includeFiles)) {
     ABHelper::backupLog("Include files is NOT empty:" . PHP_EOL . print_r($abSettings->includeFiles, true), ABHelper::LOGLEVEL_DEBUG);
     $extrasChecked = [];
     foreach ($abSettings->includeFiles as $extra) {
-        $extra = trim($extra);
-        if (!empty($extra) && file_exists($extra)) {
-            if (is_link($extra)) {
-                ABHelper::backupLog("Specified extra file/folder '$extra' is a symlink. Will convert it to its real path!", ABHelper::LOGLEVEL_WARN);
-                $extra = realpath($extra); // readlink() stops after one link and keeps relative targets relative
-            }
-            $extrasChecked[] = $extra;
+        $extra = $path = trim($extra);
+        if (is_link($path)) {
+            ABHelper::backupLog("Specified extra file/folder '$extra' is a symlink. Will convert it to its real path!", ABHelper::LOGLEVEL_WARN);
+            $path = realpath($path); // readlink() stops after one link and keeps relative targets relative
+        }
+        // Checked after resolving: realpath() returns false if the target vanished since is_link()
+        if (!empty($path) && file_exists($path)) {
+            $extrasChecked[] = $path;
         } else {
             ABHelper::backupLog("Specified extra file/folder '$extra' is empty or does not exist!", ABHelper::LOGLEVEL_ERR);
         }
