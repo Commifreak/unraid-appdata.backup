@@ -25,7 +25,8 @@ class ABSnapshot {
             $real   = realpath($volume);
             $source = $real === false ? null : self::sourceOf($real);
             if (!$source) {
-                ABHelper::backupLog("'$volume' is not on ZFS or btrfs, so no snapshot is possible.");
+                $reason = $real === false ? 'was not found' : 'is on ' . self::fsType($real) . ', not ZFS or btrfs';
+                ABHelper::backupLog("'$volume' $reason, so no snapshot is possible.");
                 return false;
             }
             $nested = self::nestedIn($real, $source);
@@ -108,7 +109,7 @@ class ABSnapshot {
      * @return array|null
      */
     private static function sourceOf($real) {
-        $type = trim((string)shell_exec('stat -f -c %T ' . escapeshellarg($real) . ' 2>/dev/null'));
+        $type = self::fsType($real);
         if ($type == 'zfs') {
             $best = null;
             foreach (self::zfsMounts() as $dataset => $mountpoint) {
@@ -127,6 +128,15 @@ class ABSnapshot {
             }
         }
         return null;
+    }
+
+    /**
+     * Filesystem type of $real, e.g. zfs, btrfs, or fuse for a share under /mnt/user that is not exclusive
+     * @param string $real
+     * @return string
+     */
+    private static function fsType($real) {
+        return trim((string)shell_exec('stat -f -c %T ' . escapeshellarg($real) . ' 2>/dev/null'));
     }
 
     /**
@@ -168,10 +178,10 @@ class ABSnapshot {
         static $mounts = null;
         if ($mounts === null) {
             $mounts = $lines = [];
-            exec('zfs list -H -o name,mountpoint -t filesystem 2>/dev/null', $lines);
+            exec('zfs list -H -o name,mountpoint,mounted -t filesystem 2>/dev/null', $lines);
             foreach ($lines as $line) {
-                [$name, $mountpoint] = array_pad(explode("\t", $line, 2), 2, '');
-                if (str_starts_with($mountpoint, '/')) {
+                [$name, $mountpoint, $mounted] = array_pad(explode("\t", $line, 3), 3, '');
+                if ($mounted === 'yes' && str_starts_with($mountpoint, '/')) {
                     $mounts[$name] = rtrim($mountpoint, '/') ?: '/';
                 }
             }

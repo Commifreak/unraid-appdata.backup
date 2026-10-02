@@ -271,7 +271,7 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Containers start again as soon as their data is snapshotted, and the backup is made from the snapshot. If a volume is not on ZFS or btrfs, or has another filesystem or subvolume inside it, its container stays stopped during the backup (when stopping all containers, the whole run does).</p>
+        <p>Containers start again as soon as their data is snapshotted, and the backup is made from the snapshot, so they are already running when the post-container and post-backup scripts run. A volume can be snapshotted on ZFS or btrfs (under /mnt/user, the share must be exclusive) when nothing else is mounted inside it. Otherwise its container stays stopped during the backup (when stopping all containers, the whole run does).</p>
     </blockquote>
 
     <dl>
@@ -830,7 +830,7 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script AFTER the backup is done (before containers would start). Sent arguments: <code>post-backup</code>,
+        <p>Runs the selected script AFTER the backup is done (before containers would start, unless snapshots let them start earlier). Sent arguments: <code>post-backup</code>,
             <code>destination path</code></p>
     </blockquote>
 

@@ -370,7 +370,10 @@ class ABHelper {
             self::backupLog("Backing up EXTERNAL volumes, because it's enabled!");
         }
 
-        $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
+        $tarExcludes = [
+            '--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook'),
+            '--exclude ' . escapeshellarg('.' . ABSnapshot::PREFIX . '*'), // a leftover btrfs snapshot can sit inside a volume, see ABSnapshot::btrfsFolder()
+        ];
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
