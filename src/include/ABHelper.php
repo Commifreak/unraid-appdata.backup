@@ -593,6 +593,16 @@ class ABHelper {
             $target = $destination . '/' . $printed;
         }
 
+        // unzip reads every entry, so a damaged zip fails the run now instead of at restore time
+        $output = $resultcode = null;
+        exec('unzip -tq ' . escapeshellarg($target) . ' 2>&1', $output, $resultcode);
+        if ($resultcode == 127) {
+            self::backupLog("unzip is not available, so the flash backup was not tested.", self::LOGLEVEL_DEBUG);
+        } elseif ($resultcode > 1) {
+            self::backupLog("Flash backup failed: the zip is damaged! unzip said: " . implode('; ', $output), self::LOGLEVEL_ERR);
+            return false;
+        }
+
         self::backupLog("Flash backup created!");
         if (!empty($abSettings->flashBackupCopy)) {
             self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' as well...");
