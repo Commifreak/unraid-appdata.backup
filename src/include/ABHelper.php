@@ -180,6 +180,8 @@ class ABHelper {
                 return true;
             }
 
+            // DockerClient's stop waits up to DOCKER_TIMEOUT on a socket that PHP drops after default_socket_timeout
+            ini_set('default_socket_timeout', (string)max((int)ini_get('default_socket_timeout'), (int)($GLOBALS['dockercfg']['DOCKER_TIMEOUT'] ?? 10) + 30));
             $stopTimer      = time();
             $dockerStopCode = $dockerClient->stopContainer($container['Name']);
             if ($dockerStopCode != 1) {
