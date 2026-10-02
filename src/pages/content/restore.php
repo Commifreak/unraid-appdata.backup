@@ -150,6 +150,12 @@ if (!ABHelper::isArrayOnline()) {
     }
 
 
+    // Names come from the backup folder: attr() and a text node keep them from being parsed as HTML
+    function restoreCheck(kind, name) {
+        return $('<label class="ab-check">').attr('title', name)
+            .append($('<input type="checkbox">').attr('name', 'restoreItem[' + kind + '][' + name + ']'), ' ', document.createTextNode(name));
+    }
+
     function checkRestoreItem() {
         $.ajax(url, {
             data: {action: 'checkRestoreItem', item: $('#restoreBackupList option:selected').val()}
@@ -168,14 +174,14 @@ if (!ABHelper::isArrayOnline()) {
                 if (data.result.templateFiles) {
                     $('#restoreTemplatesDD').html('');
                     $.each(data.result.templateFiles.sort(byName), function (i, name) {
-                        $('#restoreTemplatesDD').append('<label class="ab-check" title="' + name + '"><input type="checkbox" name="restoreItem[templates][' + name + ']" /> ' + name + '</label>');
+                        $('#restoreTemplatesDD').append(restoreCheck('templates', name));
                     });
                 }
 
                 if (data.result.containers) {
                     $('#restoreContainersDD').html('');
                     $.each(data.result.containers.sort(byName), function (i, name) {
-                        $('#restoreContainersDD').append('<label class="ab-check" title="' + name + '"><input type="checkbox" name="restoreItem[containers][' + name + ']" /> ' + name + '</label>');
+                        $('#restoreContainersDD').append(restoreCheck('containers', name));
                     });
                 }
 
