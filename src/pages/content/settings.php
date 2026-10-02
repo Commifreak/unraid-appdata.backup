@@ -46,12 +46,10 @@ if ($_POST) {
 
         $abSettings['allowedSources'] = ['/mnt/user/appdata', '/mnt/cache/appdata'];
 
-        if (!empty($oldConfig['source'])) {
-            if (!in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
-                $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
-            }
-            $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅
+        if (!empty($oldConfig['source']) && !in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
+            $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
         }
+        $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅 ABSettings parses this setting as text
 
         if (!empty($oldConfig['compression'])) {
             $abSettings['compression'] = $oldConfig['compression'] == 'yes' ? 'yes' : 'no';
