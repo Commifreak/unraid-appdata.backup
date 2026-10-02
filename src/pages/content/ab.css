@@ -127,6 +127,12 @@ blockquote.inline_help.ab-box {
     border-bottom-color: rgba(127, 127, 127, 0.6);
 }
 
+/* Unraid 7 leaves text inputs at their 20-character default, which cuts off the group field's hint */
+.ab-box input[list] {
+    width: 400px;
+    max-width: 100%;
+}
+
 .ab-advanced-toggle {
     margin: 0.25rem 0 0.5rem;
 }
