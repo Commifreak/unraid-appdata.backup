@@ -707,7 +707,10 @@ class ABHelper {
                 }
             }
 
-            // @todo: if no / inside path, we are dealing with a docker volume and not a bind-mount!
+            if (!str_starts_with($hostPath, '/')) {
+                self::backupLog("'$hostPath' is a Docker volume, not a folder on the host, so it is not backed up.", self::LOGLEVEL_WARN);
+                continue;
+            }
 
             if (!file_exists($hostPath)) {
                 self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_ERR);
