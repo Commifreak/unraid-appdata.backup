@@ -179,6 +179,10 @@ if ($preBackupRet === 2) {
 
 continuationForAll:
 
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 /**
  * FlashBackup
  */
@@ -201,10 +205,11 @@ if ($abSettings->backupVMMeta == 'yes') {
         ABHelper::backupLog("VM meta backup enabled! Backing up...");
 
         $output = $resultcode = null;
-        exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " " . ABSettings::$qemuFolder . '/ ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-        ABHelper::backupLog("tar return: $resultcode and output: " . print_r($output), ABHelper::LOGLEVEL_DEBUG);
+        // -C / stores the same relative names restore.php expects, without tar's leading-slash warning
+        exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " -C / " . escapeshellarg(ltrim(ABSettings::$qemuFolder, '/') . '/') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        ABHelper::backupLog("tar return: $resultcode and output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
-            ABHelper::backupLog("Error while backing up VM XMLs. Please see debug log!", ABHelper::LOGLEVEL_ERR);
+            ABHelper::backupLog("Error while backing up VM XMLs! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {
             ABHelper::backupLog("Done!");
         }
@@ -220,13 +225,14 @@ if (!empty($abSettings->includeFiles)) {
     ABHelper::backupLog("Include files is NOT empty:" . PHP_EOL . print_r($abSettings->includeFiles, true), ABHelper::LOGLEVEL_DEBUG);
     $extrasChecked = [];
     foreach ($abSettings->includeFiles as $extra) {
-        $extra = trim($extra);
-        if (!empty($extra) && file_exists($extra)) {
-            if (is_link($extra)) {
-                ABHelper::backupLog("Specified extra file/folder '$extra' is a symlink. Will convert it to its real path!", ABHelper::LOGLEVEL_WARN);
-                $extra = readlink($extra); // file_exists checks symlinks for target existence, so at this point, we know, the symlink exists!
-            }
-            $extrasChecked[] = $extra;
+        $extra = $path = trim($extra);
+        if (is_link($path)) {
+            ABHelper::backupLog("Specified extra file/folder '$extra' is a symlink. Will convert it to its real path!", ABHelper::LOGLEVEL_WARN);
+            $path = realpath($path); // readlink() stops after one link and keeps relative targets relative
+        }
+        // Checked after resolving: realpath() returns false if the target vanished since is_link()
+        if (!empty($path) && file_exists($path)) {
+            $extrasChecked[] = $path;
         } else {
             ABHelper::backupLog("Specified extra file/folder '$extra' is empty or does not exist!", ABHelper::LOGLEVEL_ERR);
         }
@@ -290,6 +296,22 @@ if (!empty($abSettings->includeFiles)) {
 
 end:
 
+if (empty($abDestination) || !is_dir($abDestination)) {
+    ABHelper::$errorOccured = true; // an early exit made no backup set, so nothing below may treat the run as clean
+} elseif (($setFiles = glob($abDestination . '/*')) === false) {
+    ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
+    ABHelper::$errorOccured = true;
+} elseif (!ABHelper::$errorOccured) {
+    // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
+    ABHelper::backupLog("Flushing the backup to disk...");
+    $output = $resultcode = null;
+    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, [$abDestination]))) . ' 2>&1', $output, $resultcode);
+    if ($resultcode != 0) {
+        ABHelper::backupLog("Flushing the backup to disk failed! sync said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+        ABHelper::$errorOccured = true;
+    }
+}
+
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
@@ -300,7 +322,10 @@ if (ABHelper::$errorOccured) {
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         $curBackupsState   = array_reverse(glob(rtrim($abSettings->destination, '/') . '/ab_*'));// glob return sorted by name. Without naming, thats the oldest first, newest at the end
 
-        $toKeep = array_slice($curBackupsState, 0, $keepMinBackupsNum);
+        // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
+        $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
+
+        $toKeep = array_slice($goodBackups, 0, $keepMinBackupsNum);
         ABHelper::backupLog("toKeep after slicing:" . PHP_EOL . print_r($toKeep, true), ABHelper::LOGLEVEL_DEBUG);
 
         if (!empty($abSettings->deleteBackupsOlderThan)) {
@@ -309,7 +334,7 @@ if (ABHelper::$errorOccured) {
             ABHelper::backupLog("Delete backups older than " . $nowDate->format("Ymd_His"), ABHelper::LOGLEVEL_DEBUG);
 
             foreach ($curBackupsState as $backupItem) {
-                $correctedItem = array_reverse(explode("/", $backupItem))[0];
+                $correctedItem = preg_replace('/-failed$/', '', array_reverse(explode("/", $backupItem))[0]); // failed sets age out like the others
                 $backupDate    = date_create_from_format("??_Ymd_His", $correctedItem);
                 if (!$backupDate) {
                     ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_DEBUG);
@@ -363,7 +388,7 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
 }
 
-if (!empty($abDestination)) {
+if (!empty($abDestination) && is_dir($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if (ABHelper::$errorOccured) {

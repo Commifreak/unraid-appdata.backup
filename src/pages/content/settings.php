@@ -46,12 +46,10 @@ if ($_POST) {
 
         $abSettings['allowedSources'] = ['/mnt/user/appdata', '/mnt/cache/appdata'];
 
-        if (!empty($oldConfig['source'])) {
-            if (!in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
-                $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
-            }
-            $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅
+        if (!empty($oldConfig['source']) && !in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
+            $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
         }
+        $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅 ABSettings parses this setting as text
 
         if (!empty($oldConfig['compression'])) {
             $abSettings['compression'] = $oldConfig['compression'] == 'yes' ? 'yes' : 'no';
@@ -102,7 +100,12 @@ if ($_POST) {
         }
 
         ABSettings::store($abSettings);
-
+        // This branch exits, so the checkCron() call after a normal save never runs for it
+        [$code, $out] = (new ABSettings())->checkCron();
+        if ($code != 0) {
+            echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
+            exit; // no success message or reload, so the error stays on screen
+        }
 
         echo "<h1 style='color: green'>Settings were migrated!</h1><p>Please wait...</p><hr />";
         echo "<script>
@@ -240,7 +243,7 @@ HTML;
 }
 
 if (($code ?? 0) != 0) {
-    echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
+    echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
 }
 ?>
 

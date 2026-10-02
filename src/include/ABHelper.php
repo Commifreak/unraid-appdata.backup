@@ -132,11 +132,11 @@ class ABHelper {
         }
 
         if ($level == self::LOGLEVEL_ERR) { // Log errors always
-            self::notify("[AppdataBackup] Error!", "Please check the backup log!", $msg, 'alert');
+            self::notify("[AppdataBackup] Error!", "Please check the backup log!", "$sectionString $msg", 'alert');
         }
 
         if ($level == self::LOGLEVEL_WARN && self::$targetLogLevel == self::LOGLEVEL_WARN) {
-            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", $msg, 'warning');
+            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", "$sectionString $msg", 'warning');
         }
     }
 
@@ -156,15 +156,21 @@ class ABHelper {
     /**
      * Stops a container
      * @param $container array
-     * @return true|void
+     * @return bool false if the container is still running after the stop attempts
      */
     public static function stopContainer($container) {
         global $dockerClient, $abSettings;
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
-        // Refresh the current container state
-        $container = $dockerClient->getContainerDetails($container['Name']);
+        // Refresh the current container state; an unreadable one gets the same treatment as a failed stop
+        $name      = $container['Name'];
+        $container = $dockerClient->getContainerDetails($name);
+        if (!is_bool($container['State']['Running'] ?? null)) {
+            self::backupLog("The state of '$name' cannot be read, so it is not backed up!", self::LOGLEVEL_ERR);
+            self::$errorOccured = true;
+            return false;
+        }
 
         // Since ->getContainerDetails return the JSON as is (and ->getDockerContainers does not allow to filter for a single one), we have to apply "Trick 17".
         $container['Running'] = $container['State']['Running'];
@@ -180,6 +186,8 @@ class ABHelper {
                 return true;
             }
 
+            // DockerClient's stop waits up to DOCKER_TIMEOUT on a socket that PHP drops after default_socket_timeout
+            ini_set('default_socket_timeout', (string)max((int)ini_get('default_socket_timeout'), (int)($GLOBALS['dockercfg']['DOCKER_TIMEOUT'] ?? 10) + 30));
             $stopTimer      = time();
             $dockerStopCode = $dockerClient->stopContainer($container['Name']);
             if ($dockerStopCode != 1) {
@@ -195,6 +203,12 @@ class ABHelper {
                 self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
             }
 
+            // Either stop method can report wrongly, so a fresh state read decides; an unreadable state counts as running
+            if (($dockerClient->getContainerDetails($container['Name'])['State']['Running'] ?? null) !== false) {
+                self::backupLog("'{$container['Name']}' did not stop (its state is running or unreadable), so it is not backed up!", self::LOGLEVEL_ERR);
+                self::$errorOccured = true;
+                return false;
+            }
         } else {
             self::$skipStartContainers[] = $container['Name'];
             $state                       = "Not started!";
@@ -203,6 +217,7 @@ class ABHelper {
             }
             self::backupLog("No stopping needed for {$container['Name']}: $state");
         }
+        return true;
     }
 
     /**
@@ -374,15 +389,20 @@ class ABHelper {
             '--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook'),
             '--exclude ' . escapeshellarg('.' . ABSnapshot::PREFIX . '*'), // a leftover btrfs snapshot can sit inside a volume, see ABSnapshot::btrfsFolder()
         ];
+        // getContainerVolumes already dropped an excluded volume; tar needs its path only to cut it out of a volume around it
+        $mapped = array_map(fn($volume) => rtrim(explode(':', $volume)[0], '/'), $container['Volumes'] ?? []);
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
                 $exclude = rtrim($exclude, "/");
                 if (!empty($exclude)) {
-                    if (($volumeKey = array_search($exclude, $volumes)) !== false) {
+                    if (in_array($exclude, $mapped) && !self::isWithinVolumes($exclude, $volumes)) {
                         self::backupLog("Exclusion \"$exclude\" matches a container volume - ignoring volume/exclusion pair");
-                        unset($volumes[$volumeKey]);
                         continue;
+                    }
+                    // tar compares the text, so /mnt/user/... never matches a volume mapped as /mnt/cache/... (and the reverse)
+                    if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !self::isWithinVolumes($exclude, $volumes)) {
+                        self::backupLog("Exclusion \"$exclude\" is outside every volume of this container, so it excludes nothing. Its volumes: " . implode(', ', $volumes), self::LOGLEVEL_WARN);
                     }
                     $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                 }
@@ -392,11 +412,19 @@ class ABHelper {
         if (!empty($abSettings->globalExclusions)) {
             self::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), self::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
+                if (in_array($globalExclusion, $mapped) && !self::isWithinVolumes($globalExclusion, $volumes)) {
+                    self::backupLog("Global exclusion \"$globalExclusion\" matches a container volume - ignoring volume/exclusion pair", self::LOGLEVEL_DEBUG);
+                    continue;
+                }
                 $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
         }
 
         return ['volumes' => array_values($volumes), 'tarExcludes' => $tarExcludes];
+    }
+
+    private static function isWithinVolumes($path, array $volumes) {
+        return (bool)array_filter($volumes, fn($volume) => str_starts_with($path, rtrim($volume, '/') . '/'));
     }
 
     /**
@@ -469,6 +497,10 @@ class ABHelper {
         if (ABSnapshot::setupFailed($resultcode, $output)) {
             return false;
         }
+        if ($resultcode > 0 && self::abortRequested()) {
+            self::backupLog("The abort stopped tar.");
+            return false;
+        }
         if ($resultcode > 0) {
             self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
 
@@ -500,6 +532,10 @@ class ABHelper {
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
             if (ABSnapshot::setupFailed($resultcode, $output)) {
+                return false;
+            }
+            if ($resultcode > 0 && self::abortRequested()) {
+                self::backupLog("The abort stopped the verification.");
                 return false;
             }
             if ($resultcode > 0) {
@@ -550,8 +586,15 @@ class ABHelper {
         $target  = $destination . '/' . $name;
 
         // Unraid 7.4+ streams the zip to stdout; older releases write it elsewhere and print its file name.
-        $output = $resultcode = null;
-        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        // stdout is the zip, so the script's errors go to a file of their own
+        $errFile = tempnam(ABSettings::$tempFolder, 'flash_backup_err_');
+        $output  = $resultcode = null;
+        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ($errFile ? ' 2> ' . escapeshellarg($errFile) : '') . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        $scriptSaid = $errFile ? trim((string)@file_get_contents($errFile, false, null, 0, 4096)) : '';
+        $scriptSaid = $scriptSaid === '' ? '' : " Script said: " . str_replace("\n", '; ', $scriptSaid);
+        if ($errFile) {
+            @unlink($errFile);
+        }
 
         if (!is_file($target)) {
             self::backupLog("Flash backup failed: cannot write to the destination!", self::LOGLEVEL_ERR);
@@ -561,7 +604,7 @@ class ABHelper {
         if (file_get_contents($target, false, null, 0, 4) === "PK\x03\x04") {
             if ($resultcode != 0) {
                 @unlink($target);
-                self::backupLog("Flash backup failed: the flash backup script returned $resultcode!", self::LOGLEVEL_ERR);
+                self::backupLog("Flash backup failed: the flash backup script returned $resultcode!" . $scriptSaid, self::LOGLEVEL_ERR);
                 return false;
             }
         } else {
@@ -571,11 +614,11 @@ class ABHelper {
             unlink($target);
             self::backupLog("flash backup returned: " . $printed, self::LOGLEVEL_DEBUG);
             if ($printed === '') {
-                self::backupLog("Flash backup failed: no answer from script!", self::LOGLEVEL_ERR);
+                self::backupLog("Flash backup failed: no answer from script!" . $scriptSaid, self::LOGLEVEL_ERR);
                 return false;
             }
             if (!preg_match('/\A[A-Za-z0-9_.-]+-(flash|boot)-backup-[0-9-]+\.zip\z/', $printed)) {
-                self::backupLog("Flash backup failed: unexpected answer from script! See debug log.", self::LOGLEVEL_ERR);
+                self::backupLog("Flash backup failed: unexpected answer from script! See debug log." . $scriptSaid, self::LOGLEVEL_ERR);
                 return false;
             }
 
@@ -591,6 +634,19 @@ class ABHelper {
             }
             $name   = $printed;
             $target = $destination . '/' . $printed;
+        }
+
+        // unzip reads every entry, so a damaged zip fails the run now instead of at restore time
+        $output = $resultcode = null;
+        exec('unzip -tq ' . escapeshellarg($target) . ' 2>&1 ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        if (self::abortRequested()) {
+            return false;
+        }
+        if ($resultcode == 127) {
+            self::backupLog("unzip is not available, so the flash backup was not tested.", self::LOGLEVEL_WARN);
+        } elseif ($resultcode > 1) {
+            self::backupLog("Flash backup failed: the zip is damaged! unzip said: " . implode('; ', $output), self::LOGLEVEL_ERR);
+            return false;
         }
 
         self::backupLog("Flash backup created!");
@@ -640,7 +696,8 @@ class ABHelper {
     public static function getContainerVolumes($container, $skipExclusionCheck = false) {
         global $abSettings;
 
-        $volumes = [];
+        $volumes  = [];
+        $excluded = [];
         foreach ($container['Volumes'] ?? [] as $volume) {
             $hostPath = rtrim(explode(":", $volume)[0], '/');
             if (empty($hostPath)) {
@@ -653,16 +710,21 @@ class ABHelper {
 
                 if (in_array($hostPath, $containerSettings['exclude'])) {
                     self::backupLog("Ignoring '$hostPath' because it's listed in the container's exclusions list!", self::LOGLEVEL_DEBUG);
+                    $excluded[] = $hostPath;
                     continue;
                 }
 
                 if (in_array($hostPath, $abSettings->globalExclusions)) {
                     self::backupLog("Ignoring '$hostPath' because it's listed in the global exclusions list!", self::LOGLEVEL_DEBUG);
+                    $excluded[] = $hostPath;
                     continue;
                 }
             }
 
-            // @todo: if no / inside path, we are dealing with a docker volume and not a bind-mount!
+            if (!str_starts_with($hostPath, '/')) {
+                self::backupLog("'$hostPath' is a Docker volume, not a folder on the host, so it is not backed up.", self::LOGLEVEL_WARN);
+                continue;
+            }
 
             if (!file_exists($hostPath)) {
                 self::backupLog("'$hostPath' does NOT exist! Please check your mappings! Skipping it for now.", self::LOGLEVEL_ERR);
@@ -675,7 +737,8 @@ class ABHelper {
             $volumes[] = $hostPath;
         }
 
-        $volumes = array_unique($volumes); // Remove duplicate Array values => https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1256267
+        // Excluded volumes join the nesting check, so volumes inside them go too: the settings page lists only the outer one
+        $volumes = array_unique(array_merge($volumes, $excluded)); // Remove duplicate Array values => https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1256267
 
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
@@ -694,7 +757,7 @@ class ABHelper {
                 }
             }
         }
-        return $volumes;
+        return array_diff($volumes, $excluded);
     }
 
     /**
@@ -771,6 +834,7 @@ class ABHelper {
                 $startOrder  = $containerListOverride ?: $sortedStartContainers;
                 $plans       = [];
                 $started     = false;
+                $skipped     = [];
 
                 self::backupLog("Method: Stop all containers before continuing.");
                 foreach ($backupOrder as $_container) {
@@ -780,13 +844,20 @@ class ABHelper {
                         $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
                         if ($preContainerRet === 2) {
                             self::backupLog("preContainer script decided to skip backup.");
+                            $skipped[]                   = $container['Name'];
+                            self::$skipStartContainers[] = $container['Name']; // never stopped, so not started either
+                            self::setCurrentContainerName($container, true);
+                            continue;
+                        }
+                        if (!self::stopContainer($container)) {
+                            $skipped[]                   = $container['Name'];
+                            self::$skipStartContainers[] = $container['Name']; // still running
                             self::setCurrentContainerName($container, true);
                             continue;
                         }
                         if ($abSettings->snapshotMode == 'yes') {
                             $plans[$container['Name']] = self::backupPlan($container);
                         }
-                        self::stopContainer($container);
 
                         if (self::abortRequested()) {
                             return false;
@@ -819,6 +890,10 @@ class ABHelper {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
+                        if (in_array($container['Name'], $skipped)) {
+                            self::setCurrentContainerName($container, true);
+                            continue;
+                        }
 
                         if (!self::backupContainer($container, $abDestination, array_key_exists($container['Name'], $plans) ? $plans[$container['Name']] : false)) {
                             self::$errorOccured = true;
@@ -881,7 +956,10 @@ class ABHelper {
                         continue;
                     }
 
-                    self::stopContainer($container);
+                    if (!self::stopContainer($container)) {
+                        self::setCurrentContainerName($container, true);
+                        continue;
+                    }
 
                     if (self::abortRequested()) {
                         return false;
