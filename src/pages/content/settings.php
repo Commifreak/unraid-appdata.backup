@@ -209,15 +209,15 @@ if (strstr('white,azure', $display['theme'])) {
 <p>Welcome to the appdata backup plugin!</p>
 <p>This plugin allows you to back up and restore all your appdata content! It takes care of everything (stop/start
     docker containers) including some extras (update docker containers)</p>
-<p><b>For first time setup</b>, you need to know how this plugin is working! The main options are the <code>Appdata
-        sources</code> and the <code>Backup destination</code>. The latter should be self explaining.<br/>The plugin
-    does not simply copy the contents of <code>appdata</code> anymore (like the previous did). It reads all docker
+<p><b>For first time setup</b>, you need to know how this plugin works! The main options are the <code>Appdata
+        sources</code> and the <code>Backup destination</code>. The latter should be self-explanatory.<br/>The plugin
+    does not simply copy the contents of <code>appdata</code> anymore (like the previous plugin did). It reads all docker
     containers' mapped volumes. And this file/folder list will be the list we work with.</p>
-<p>It also differs between internal and external volumes/mappings. And here the <code>Appdata sources</code> comes to
-    play. Every volume mapping within those paths are considered "internal". Like "for the container to work"-internal
-    (configs, logs etc.).<br/>Any mapping outside those paths are "external". Like storage or something (cloud, plex,
+<p>It also distinguishes between internal and external volumes/mappings. And here the <code>Appdata sources</code> come into
+    play. Every volume mapping within those paths is considered "internal". Like "for the container to work"-internal
+    (configs, logs etc.).<br/>Any mapping outside those paths is "external". Like storage or something (cloud, plex,
     ...).</p>
-<p>In the default configuration, the plugin is just backing up any internal mapping and will skip external ones. You can
+<p>In the default configuration, the plugin only backs up internal mappings and skips external ones. You can
     adjust that for every container.</p>
 <p>Please also read the help block for <b>Appdata sources</b> by clicking the title of the option!</p>
 
@@ -275,7 +275,7 @@ if (($code ?? 0) != 0) {
                    placeholder='Leave empty to disable'/></dd>
 
 
-        <dt><b>Appdata source(s)</b> Please note the infos inside help block!</dt>
+        <dt><b>Appdata source(s)</b> Please read the info in the help block!</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
                                                                  onfocus="$(this).next('.ft').slideDown('fast');"
@@ -290,20 +290,20 @@ if (($code ?? 0) != 0) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Please set your appdata paths here. Appdata paths are paths, which holds your docker data. The
+        <p>Please set your appdata paths here. Appdata paths are paths that hold your docker data. The
             default path is <code>/mnt/user/appdata</code> or <code>/mnt/cache/appdata</code>.<br/>
             If you use any other path, put it in here. If you use multiple appdata paths, set every path via the file
-            browser or paste it here. <b>Everything within those set paths</b> will be considered as "internal" volume
+            browser or paste it here. <b>Everything within those set paths</b> will be considered "internal" volumes
             (see below).</p>
         <p><b>IMPORTANT:</b> This plugin differentiates between internal and external volume paths.<br/>
             <b>Internal</b> ones are volume mappings, which store the main appdata
-            (<code>/mnt/user/appdata/mariadb/</code> would be such a volume). These will be backed up always!<br/>
+            (<code>/mnt/user/appdata/mariadb/</code> would be such a volume). These will always be backed up!<br/>
             <b>External</b> ones are volume mappings, which can hold extra data,
-            (<code>/mnt/user/Downloads/jDownlaoder</code> would be such a volume). These will be backed up optionally
+            (<code>/mnt/user/Downloads/jDownloader</code> would be such a volume). These will be backed up optionally
             only.
         </p>
         <p>The plugin detects every volume mapping within your set "appdata source(s)" as internal ones. Everything else
-            is being detected as external.</p>
+            is detected as external.</p>
         <p>The list of volume mappings is directly read from your container configuration!</p>
     </blockquote>
 
@@ -344,7 +344,7 @@ if (($code ?? 0) != 0) {
         <p><b>Yes, normal</b>: Uses normal gzip compression</p>
         <p><b>Yes, multicore</b>: Uses <a href="https://facebook.github.io/zstd/" target="_blank">zstdmt</a> for
             compression. Please
-            note, that this <i>could</i> decrease other system services during backup.</p>
+            note that this <i>could</i> slow down other system services during backup.</p>
     </blockquote>
 
     <dl>
@@ -393,7 +393,7 @@ if (($code ?? 0) != 0) {
         <dl>
             <dt>
                 <div style="display: table; line-height: 1em;"><b>Skip stopping of containers?</b><br/><small>This will
-                        skip stopping containers and leaves them running. Could lead to broken backup for
+                        skip stopping containers and leave them running. Could lead to broken backups for
                         containers!</small>
                 </div>
             </dt>
@@ -421,7 +421,7 @@ if (($code ?? 0) != 0) {
                 <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
                         lead to
                         broken backups - Only enable if you know what you
-                        do!</small>
+                        are doing!</small>
                 </div>
             </dt>
             <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
@@ -453,7 +453,7 @@ if (($code ?? 0) != 0) {
     <dl>
         <dt><b>Notification Settings:</b></dt>
         <dd><select id='notification' name="notification" data-setting="<?= $abSettings->notification ?>">
-                <option value='<?= ABHelper::LOGLEVEL_ERR ?>'>Errors Only</option>
+                <option value='<?= ABHelper::LOGLEVEL_ERR ?>'>Errors only</option>
                 <option value='<?= ABHelper::LOGLEVEL_WARN ?>'>Warnings and errors</option>
                 <option value='disabled'>Disabled</option>
             </select>
@@ -545,13 +545,13 @@ if (($code ?? 0) != 0) {
         <dt><b>Custom Cron Entry:</b></dt>
         <dd><input type='text' id='backupFrequencyCustom' name="backupFrequencyCustom"
                    value="<?= $abSettings->backupFrequencyCustom ?>"
-                   placeholder="Setting this, will disable the other options"/></dd>
+                   placeholder="Setting this will disable the other options"/></dd>
     </dl>
 
 
     <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
-    <p><b>General note</b>: This plugin always backup every unknown (new) container with the default settings. In this
+    <p><b>General note</b>: This plugin always backs up every unknown (new) container with the default settings. In this
         section you can set settings that deviate from the defaults.</p>
 
     <dl>
@@ -566,7 +566,7 @@ if (($code ?? 0) != 0) {
 
     <div style="display: flex;">
         <div class="dockerSettings" style="flex-grow: 1; flex-basis: 0;">
-            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings. <b>Click on container name to open</b></span>
+            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per-container settings. <b>Click on container name to open</b></span>
             </div>
 
             <datalist id="containerGroups">
@@ -601,10 +601,10 @@ HTML;
                 $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
                 if (empty($volumes)) {
-                    $volumes = "<b>No volumes - container will NOT being backed up!</b>";
+                    $volumes = "<b>No volumes - container will NOT be backed up!</b>";
                 } else {
                     foreach ($volumes as $index => $volume) {
-                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
+                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not be backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
                         $internalVolume  = ABHelper::isVolumeWithinAppdata($volume);
                         $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
                     }
@@ -658,7 +658,7 @@ $plexHint
         </select>
     </dd>
     
-    <dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
+    <dt>Excluded folders/files<br /><small>One path/pattern per line. See "Global exclusions" below for more examples.</small></dt>
     <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
     
 
@@ -688,7 +688,7 @@ $plexHint
 		<option value='no'>No</option>
 	</select>
 </dd>
-    <dt>Skip stopping of container? <small><abbr title="This will skip stopping this container and leaves it running. Could lead to broken backup for this container!">NOT RECOMMENDED!</abbr></small></dt>
+    <dt>Skip stopping of container? <small><abbr title="This will skip stopping this container and leave it running. Could lead to a broken backup for this container!">NOT RECOMMENDED!</abbr></small></dt>
     <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
             <option value=''>Use standard</option>
             <option value='no'>No</option>
@@ -708,7 +708,7 @@ HTML;
         </div>
         <div style="flex-grow: 1; flex-basis: 0; padding-left: 10px; max-width: 35%;">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
-            <p>This defines the start sequence. Stop would be this order in reverse.</p>
+            <p>This defines the start sequence. Containers are stopped in reverse order.</p>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
@@ -732,7 +732,7 @@ HTML;
                 ?>
                 <div class="title"><span class="left"><i
                                 class="fa fa-sort title"></i>Start order for group <?= $group ?></span></div>
-                <p>This defines the start sequence. Stop would be this order in reverse.<br/><b>All containers inside a
+                <p>This defines the start sequence. Containers are stopped in reverse order.<br/><b>All containers inside a
                         group will be stopped (by their order), backed up and then started again.</b></p>
                 <input type="hidden" id="containerGroupOrder_<?= $group ?>" name="containerGroupOrder[<?= $group ?>]"/>
                 <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
@@ -754,12 +754,12 @@ HTML;
     </div>
 
     <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts | <small><i
-                        class="fa fa-info"></i> Those must return exit code 0 for success detection // or 2 (for preContainer) to skip backup</small></span>
+                        class="fa fa-info"></i> Scripts must return exit code 0 for success detection // or 2 (for preContainer) to skip backup</small></span>
     </div>
 
     <blockquote>
-        <p>Scripts must be stored anywhere outside <code>/boot</code> because the boot drive (FAT32) does not support
-            script executions from it!</p>
+        <p>Scripts must be stored outside <code>/boot</code> because the boot drive (FAT32) does not support
+            executing scripts from it!</p>
     </blockquote>
 
     <dl>
@@ -782,7 +782,7 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script BEFORE the backup is starting. Sent arguments: <code>pre-backup</code>, <code>destination
+        <p>Runs the selected script BEFORE the backup starts. Sent arguments: <code>pre-backup</code>, <code>destination
                 path</code></p>
     </blockquote>
 
@@ -851,7 +851,7 @@ HTML;
         </dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Those files will be packed into "extra_files.tar.gz"</p>
+        <p>These files will be packed into "extra_files.tar.gz"</p>
     </blockquote>
 
     <dl>
@@ -865,8 +865,8 @@ HTML;
     <blockquote class='inline_help'>
         <p>With this you can define exclusions which will be used as global exclusion</p>
         <p>You can use parts of paths and/or wildcards like <code>*.png</code>, <code>music/*.m4a</code>,
-            <code>logs</code>. Any folder/file paths matching this patterns will be excluded!<br/><b>Put every
-                exclusions in a seperate line!</b></p>
+            <code>logs</code>. Any folder/file paths matching these patterns will be excluded!<br/><b>Put each
+                exclusion on a separate line!</b></p>
     </blockquote>
 
     <dl>
@@ -890,7 +890,7 @@ HTML;
                 href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
 
     <dt>Want to say "Thank You"?</dt>
-    <dd>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins
+    <dd>You're welcome! 😊 Thanks for using it! <abbr title="All community developers">We</abbr> make those plugins
         with ❤️ (and a lot of ☕). If you like the work, you can donate via <a
                 href="https://www.paypal.com/donate/?hosted_button_id=KE7Z3KLEEY484"
                                                                               target="_blank"><i
@@ -940,6 +940,7 @@ HTML;
                 cancelButtonText: "Nah"
             }, function () {
                 $.ajax(url, {
+                    type: 'POST',
                     data: {action: 'manualBackup'}
                 }).always(function (data) {
                     $('#tab3').click();
@@ -1121,7 +1122,7 @@ HTML;
     }
 
     function copyConfigFromProd() {
-        $.ajax(url + '?action=copyConfigFromProd').done(function (data) {
+        $.ajax(url, {type: 'POST', data: {action: 'copyConfigFromProd'}}).done(function (data) {
             alert(data);
             window.location.href = window.location;
         }).fail(function (data) {

@@ -81,11 +81,11 @@ class ABHelper {
             self::backupLog("Script executed!");
 
             if ($resultcode != 0 && $resultcode != 2) {
-                self::backupLog("Script did not returned 0 (ok) or 2 (skip). It returned $resultcode!", self::LOGLEVEL_WARN);
+                self::backupLog("Script did not return 0 (ok) or 2 (skip). It returned $resultcode!", self::LOGLEVEL_WARN);
             }
             return $resultcode;
         } else {
-            self::backupLog($script . ' is not existing! Skipping!', self::LOGLEVEL_ERR);
+            self::backupLog($script . ' does not exist! Skipping!', self::LOGLEVEL_ERR);
             return false;
         }
     }
@@ -148,7 +148,7 @@ class ABHelper {
      * @return void
      */
     public static function notify($subject, $description, $message = "", $type = "normal") {
-        $command = '/usr/local/emhttp/webGui/scripts/notify -e "Appdata Backup" -s "' . $subject . '" -d "' . $description . '" -m "' . $message . '" -i "' . $type . '" -l "/Settings/AB.Main"';
+        $command = '/usr/local/emhttp/webGui/scripts/notify -e ' . escapeshellarg('Appdata Backup') . ' -s ' . escapeshellarg($subject) . ' -d ' . escapeshellarg($description) . ' -m ' . escapeshellarg($message) . ' -i ' . escapeshellarg($type) . ' -l ' . escapeshellarg('/Settings/AB.Main');
         shell_exec($command);
     }
 
@@ -254,12 +254,17 @@ class ABHelper {
                     continue;
                 }
 
-                self::backupLog("Container '" . $container['Name'] . "' did not started! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
+                if (str_contains($dockerStartCode, "No such container")) {
+                    self::backupLog("Container '" . $container['Name'] . "' has been removed - not starting it.", self::LOGLEVEL_INFO, true, true);
+                    return;
+                }
+
+                self::backupLog("Container '" . $container['Name'] . "' did not start! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
                 if ($dockerStartTry < 3) {
                     $dockerStartTry++;
                     sleep(5);
                 } else {
-                    self::backupLog("Container '" . $container['Name'] . "' did not started after multiple tries, skipping. More infos in debug log", self::LOGLEVEL_ERR);
+                    self::backupLog("Container '" . $container['Name'] . "' did not start after multiple tries, skipping. More info in debug log", self::LOGLEVEL_ERR);
                     $output = null;
                     exec("docker ps -a", $output);
                     self::backupLog("docker ps -a:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
@@ -366,7 +371,7 @@ class ABHelper {
                 }
             }
         } else {
-            self::backupLog("Backing up EXTERNAL volumes, because its enabled!");
+            self::backupLog("Backing up EXTERNAL volumes, because it's enabled!");
         }
 
         $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
@@ -491,7 +496,81 @@ class ABHelper {
                 self::backupLog("Verification ended without issues (took " . gmdate("H:i:s", time() - $tarVerifyTimer) . " (hours:mins:secs))");
             }
         } else {
-            self::backupLog("Skipping verification for this container because its not wanted!", self::LOGLEVEL_WARN);
+            self::backupLog("Skipping verification for this container because it's not wanted!", self::LOGLEVEL_WARN);
+        }
+        return true;
+    }
+
+    /**
+     * Writes the flash drive backup zip into $destination
+     * @param $destination string
+     * @param $script string Unraid's flash_backup script
+     * @return bool
+     */
+    public static function backupFlash($destination, $script = '/usr/local/emhttp/webGui/scripts/flash_backup') {
+        global $abSettings;
+
+        if (!file_exists($script)) {
+            self::backupLog("The flash backup script is not available!", self::LOGLEVEL_ERR);
+            return false;
+        }
+
+        $docroot = '/usr/local/emhttp';
+        $vars    = parse_ini_file(ABSettings::$emhttpVars) ?: [];
+        $server  = str_replace(' ', '_', strtolower($vars['NAME'] ?? 'tower'));
+        $name    = "$server-v" . ($vars['version'] ?? 'unknown') . "-boot-backup-" . date('Ymd-Hi') . ".zip";
+        $target  = $destination . '/' . $name;
+
+        // Unraid 7.4+ streams the zip to stdout; older releases write it elsewhere and print its file name.
+        $output = $resultcode = null;
+        exec(escapeshellarg($script) . ' > ' . escapeshellarg($target) . ' ' . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+
+        if (!is_file($target)) {
+            self::backupLog("Flash backup failed: cannot write to the destination!", self::LOGLEVEL_ERR);
+            return false;
+        }
+
+        if (file_get_contents($target, false, null, 0, 4) === "PK\x03\x04") {
+            if ($resultcode != 0) {
+                @unlink($target);
+                self::backupLog("Flash backup failed: the flash backup script returned $resultcode!", self::LOGLEVEL_ERR);
+                return false;
+            }
+        } else {
+            // The file name is the last line; read only the start in case the script printed something large.
+            $lines   = preg_split('/\R/', trim((string)file_get_contents($target, false, null, 0, 4096)));
+            $printed = trim(end($lines));
+            unlink($target);
+            self::backupLog("flash backup returned: " . $printed, self::LOGLEVEL_DEBUG);
+            if ($printed === '') {
+                self::backupLog("Flash backup failed: no answer from script!", self::LOGLEVEL_ERR);
+                return false;
+            }
+            if (!preg_match('/\A[A-Za-z0-9_.-]+-(flash|boot)-backup-[0-9-]+\.zip\z/', $printed)) {
+                self::backupLog("Flash backup failed: unexpected answer from script! See debug log.", self::LOGLEVEL_ERR);
+                return false;
+            }
+
+            $copied = copy($docroot . '/' . $printed, $destination . '/' . $printed);
+            // Following is from Download.php
+            if (($backup = readlink($docroot . '/' . $printed)) && basename($backup) === $printed) {
+                unlink($backup);
+            }
+            @unlink($docroot . '/' . $printed);
+            if (!$copied) {
+                self::backupLog("Copying flash backup to destination failed!", self::LOGLEVEL_ERR);
+                return false;
+            }
+            $name   = $printed;
+            $target = $destination . '/' . $printed;
+        }
+
+        self::backupLog("Flash backup created!");
+        if (!empty($abSettings->flashBackupCopy)) {
+            self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' as well...");
+            if (!copy($target, $abSettings->flashBackupCopy . '/' . $name)) {
+                self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", self::LOGLEVEL_ERR);
+            }
         }
         return true;
     }
@@ -545,12 +624,12 @@ class ABHelper {
                 $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
                 if (in_array($hostPath, $containerSettings['exclude'])) {
-                    self::backupLog("Ignoring '$hostPath' because its listed in containers exclusions list!", self::LOGLEVEL_DEBUG);
+                    self::backupLog("Ignoring '$hostPath' because it's listed in the container's exclusions list!", self::LOGLEVEL_DEBUG);
                     continue;
                 }
 
                 if (in_array($hostPath, $abSettings->globalExclusions)) {
-                    self::backupLog("Ignoring '$hostPath' because its listed in global exclusions list!", self::LOGLEVEL_DEBUG);
+                    self::backupLog("Ignoring '$hostPath' because it's listed in the global exclusions list!", self::LOGLEVEL_DEBUG);
                     continue;
                 }
             }
@@ -573,7 +652,7 @@ class ABHelper {
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
         });
-        self::backupLog("usorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
+        self::backupLog("sorted volumes: " . print_r($volumes, true), self::LOGLEVEL_DEBUG);
 
         /**
          * Check volumes against nesting
@@ -610,15 +689,22 @@ class ABHelper {
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
         file_put_contents("/tmp/appdata.backup_phperr", $errStr . PHP_EOL, FILE_APPEND);
-        self::backupLog("PHP-ERROR occured! $errno / $errstr $errfile:$errline", self::LOGLEVEL_DEBUG);
+        self::backupLog("PHP-ERROR occurred! $errno / $errstr $errfile:$errline", self::LOGLEVEL_DEBUG);
 
         return true;
     }
 
     public static function updateContainer($name) {
-        global $abSettings;
+        global $abSettings, $dockerClient;
         self::backupLog("Installing planned update for $name...");
         exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($name));
+
+        // update_container removes and recreates the container, so a missing one means the recreate failed.
+        $dockerClient->flushCaches();
+        if (!$dockerClient->doesContainerExist($name)) {
+            self::backupLog("Updating '$name' failed: the container no longer exists!", self::LOGLEVEL_ERR);
+            return;
+        }
 
         if ($abSettings->updateLogWanted == 'yes') {
             self::notify("Appdata Backup", "Container '$name' updated!", "Container '$name' was successfully updated during this backup run!");
@@ -633,7 +719,7 @@ class ABHelper {
         switch ($method) {
             case 'stopAll':
 
-                self::backupLog("Method: Stop all container before continuing.");
+                self::backupLog("Method: Stop all containers before continuing.");
                 foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {

@@ -7,6 +7,12 @@
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
+// CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit;
+}
+
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
 require_once dirname(__DIR__) . '/include/ABHelper.php';
 
@@ -65,7 +71,7 @@ $abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His")
 ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
 if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
-    ABHelper::backupLog("Destination is unavailable or not writeable! Did you created the destination folder?", ABHelper::LOGLEVEL_ERR);
+    ABHelper::backupLog("Destination is unavailable or not writeable! Did you create the destination folder?", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
 
@@ -148,7 +154,7 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
         }
 
         if (isset($allInfo[$container['Name']]) && ($allInfo[$container['Name']]['updated'] ?? 'true') == 'false') { # string 'false' = Update available!
-            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available! Schedule update after backup...");
+            ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled and update is available! Scheduling update after backup...");
             $dockerUpdateList[] = $container['Name'];
         } else {
             ABHelper::backupLog("Auto-Update for '{$container['Name']}' is enabled but no update is available.");
@@ -177,36 +183,9 @@ continuationForAll:
  */
 if ($abSettings->flashBackup == 'yes') {
     ABHelper::backupLog("Backing up the flash drive.");
-    $docroot = '/usr/local/emhttp';
-    $script  = $docroot . '/webGui/scripts/flash_backup';
-    if (!file_exists($script)) {
-        ABHelper::backupLog("The flash backup script is not available!", ABHelper::LOGLEVEL_ERR);
-    } else {
-        $output = null;
-        exec($script . " " . ABSettings::$externalCmdPidCapture, $output);
-        ABHelper::backupLog("flash backup returned: " . implode(", ", $output), ABHelper::LOGLEVEL_DEBUG);
-        if (empty($output[0])) {
-            ABHelper::backupLog("Flash backup failed: no answer from script!", ABHelper::LOGLEVEL_ERR);
-        } else {
-            if (!copy($docroot . '/' . $output[0], $abDestination . '/' . $output[0])) {
-                ABHelper::backupLog("Copying flash backup to destination failed!", ABHelper::LOGLEVEL_ERR);
-            } else {
-                ABHelper::backupLog("Flash backup created!");
-                if (!empty($abSettings->flashBackupCopy)) {
-                    ABHelper::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' as well...");
-                    if (!copy($docroot . '/' . $output[0], $abSettings->flashBackupCopy . '/' . $output[0])) {
-                        ABHelper::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", ABHelper::LOGLEVEL_ERR);
-                    }
-                }
-                // Following is from Download.php
-                if ($backup = readlink($docroot . '/' . $output[0])) {
-                    unlink($backup);
-                }
-                @unlink($docroot . '/' . $output[0]);
-            }
-        }
+    if (!ABHelper::backupFlash($abDestination)) {
+        ABHelper::$errorOccured = true;
     }
-
 }
 
 if (ABHelper::abortRequested()) {
@@ -255,7 +234,7 @@ if (!empty($abSettings->includeFiles)) {
     if (empty($extrasChecked)) {
         ABHelper::backupLog("The tested extra files list is empty! Skipping extra files", ABHelper::LOGLEVEL_WARN);
     } else {
-        ABHelper::backupLog("Extra files to backup: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog("Extra files to back up: " . implode(', ', $extrasChecked), ABHelper::LOGLEVEL_DEBUG);
 
         $tarExcludes = [];
         if (!empty($abSettings->globalExclusions)) {
@@ -336,11 +315,13 @@ if (ABHelper::$errorOccured) {
                     $toKeep[] = $backupItem; // Keep the errornous object - Better safe than sorry.
                     continue;
                 }
-                if ($backupDate >= $nowDate && !in_array($backupItem, $toKeep)) {
+                if (in_array($backupItem, $toKeep)) {
+                    ABHelper::backupLog("Keeping $backupItem, because it is within the minimum number of backups", ABHelper::LOGLEVEL_DEBUG);
+                } elseif ($backupDate >= $nowDate) {
                     ABHelper::backupLog("Keeping " . $backupItem, ABHelper::LOGLEVEL_DEBUG);
                     $toKeep[] = $backupItem;
                 } else {
-                    ABHelper::backupLog("Discarding $backupItem, because its newer or already in toKeep", ABHelper::LOGLEVEL_DEBUG);
+                    ABHelper::backupLog("Discarding $backupItem, because it is older than the cutoff", ABHelper::LOGLEVEL_DEBUG);
                 }
             }
         }

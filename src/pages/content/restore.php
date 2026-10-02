@@ -14,11 +14,11 @@ if (!ABHelper::isArrayOnline()) {
 ?>
 
 <div class="title"><span class="left"><i class="fa fa-rotate-left title"></i>Restore</span></div>
-<p>On this page, you are able to restore a previous made backup.</p>
+<p>On this page, you are able to restore a previously made backup.</p>
 <p>The restore process is able to:</p>
 <ul>
-    <li>Restore Container data</li>
-    <li>Restore container template xml</li>
+    <li>Restore container data</li>
+    <li>Restore container template XML</li>
     <li>Restore extra files</li>
     <li>Restore backup configuration</li>
 </ul>
@@ -26,9 +26,9 @@ if (!ABHelper::isArrayOnline()) {
 <p>The restore process <b>is NOT able to</b>:</p>
 <ul>
     <li>Create your docker containers</li>
-    <li>Take care of stopping containers prior restore
+    <li>Take care of stopping containers prior to the restore
         <ul>
-            <li>Please stop all maybe affected containers yourself prior to the restore!</li>
+            <li>Please stop all potentially affected containers yourself prior to the restore!</li>
         </ul>
     </li>
 </ul>
@@ -52,7 +52,7 @@ if (!ABHelper::isArrayOnline()) {
     <dl>
         <dt><b>Backup destination:</b></dt>
         <dd>
-            <div style="display: table">The <b>default</b> destination will be the same as it were during backup. If the
+            <div style="display: table">The <b>default</b> destination will be the same as it was during backup. If the
                 destination does not exist, it will be
                 created. Any existing data will be overwritten!<br/>
                 <b>If you want to force a custom destination</b>, enter it below. The archive will be extracted
@@ -194,6 +194,7 @@ if (!ABHelper::isArrayOnline()) {
 
     function startRestore() {
         $.ajax(url, {
+            type: 'POST',
             data: $('#restoreForm').serialize() + '&action=startRestore'
         }).always(function () {
             $('#tab3').click();
