@@ -132,11 +132,11 @@ class ABHelper {
         }
 
         if ($level == self::LOGLEVEL_ERR) { // Log errors always
-            self::notify("[AppdataBackup] Error!", "Please check the backup log!", $msg, 'alert');
+            self::notify("[AppdataBackup] Error!", "Please check the backup log!", "$sectionString $msg", 'alert');
         }
 
         if ($level == self::LOGLEVEL_WARN && self::$targetLogLevel == self::LOGLEVEL_WARN) {
-            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", $msg, 'warning');
+            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", "$sectionString $msg", 'warning');
         }
     }
 
