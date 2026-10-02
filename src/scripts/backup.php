@@ -330,7 +330,7 @@ if (ABHelper::$errorOccured) {
             ABHelper::backupLog("Delete backups older than " . $nowDate->format("Ymd_His"), ABHelper::LOGLEVEL_DEBUG);
 
             foreach ($curBackupsState as $backupItem) {
-                $correctedItem = array_reverse(explode("/", $backupItem))[0];
+                $correctedItem = preg_replace('/-failed$/', '', array_reverse(explode("/", $backupItem))[0]); // failed sets age out like the others
                 $backupDate    = date_create_from_format("??_Ymd_His", $correctedItem);
                 if (!$backupDate) {
                     ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_DEBUG);
