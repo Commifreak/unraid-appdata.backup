@@ -16,6 +16,11 @@ class ABSnapshot {
     private static array $active = [];
 
     /**
+     * @var int create() calls in this run, so snapshots taken within the same second get different tags
+     */
+    private static int $creates = 0;
+
+    /**
      * Snapshots the filesystems holding $volumes. Takes nothing and returns false if any volume cannot be snapshotted.
      * @param array $volumes
      * @return bool
@@ -38,7 +43,7 @@ class ABSnapshot {
             $sources[$source['root']] = $source;
         }
 
-        $tag = self::PREFIX . date('Ymd_His');
+        $tag = self::PREFIX . date('Ymd_His') . '_' . ++self::$creates;
         foreach ($sources as $source) {
             self::removeStale($source);
             $snapshot = $source['type'] == 'zfs' ? self::createZfs($source, $tag) : self::createBtrfs($source, $tag);

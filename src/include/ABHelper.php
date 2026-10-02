@@ -777,14 +777,14 @@ class ABHelper {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
-                        if ($abSettings->snapshotMode == 'yes') {
-                            $plans[$container['Name']] = self::backupPlan($container);
-                        }
                         $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
                         if ($preContainerRet === 2) {
                             self::backupLog("preContainer script decided to skip backup.");
                             self::setCurrentContainerName($container, true);
                             continue;
+                        }
+                        if ($abSettings->snapshotMode == 'yes') {
+                            $plans[$container['Name']] = self::backupPlan($container);
                         }
                         self::stopContainer($container);
 
