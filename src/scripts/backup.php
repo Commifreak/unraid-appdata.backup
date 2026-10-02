@@ -225,7 +225,7 @@ if (!empty($abSettings->includeFiles)) {
         if (!empty($extra) && file_exists($extra)) {
             if (is_link($extra)) {
                 ABHelper::backupLog("Specified extra file/folder '$extra' is a symlink. Will convert it to its real path!", ABHelper::LOGLEVEL_WARN);
-                $extra = readlink($extra); // file_exists checks symlinks for target existence, so at this point, we know, the symlink exists!
+                $extra = realpath($extra); // readlink() stops after one link and keeps relative targets relative
             }
             $extrasChecked[] = $extra;
         } else {
