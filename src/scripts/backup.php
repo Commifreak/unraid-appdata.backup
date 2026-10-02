@@ -314,6 +314,11 @@ if (empty($abDestination) || !is_dir($abDestination)) {
     }
 }
 
+// An abort during the checksums or the flush must not let retention delete older sets
+if (ABHelper::abortRequested()) {
+    goto abort;
+}
+
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
@@ -364,10 +369,6 @@ if (ABHelper::$errorOccured) {
         }
 
     }
-}
-
-if (ABHelper::abortRequested()) {
-    goto abort;
 }
 
 abort:

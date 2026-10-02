@@ -24,6 +24,9 @@ class ABIntegrity {
         $timer = time();
         $lines = [];
         foreach ($files as $file) {
+            if (ABHelper::abortRequested()) {
+                return;
+            }
             $name = basename($file);
             // sha256sum escapes names with a backslash or newline, so those are left out to keep the file valid
             if (!is_file($file) || $name === self::FILE || in_array($name, self::$unverified) || strpbrk($name, "\\\n") !== false) {
@@ -31,13 +34,16 @@ class ABIntegrity {
             }
             $hash = hash_file('sha256', $file);
             if ($hash === false) {
-                ABHelper::backupLog("Cannot read $name to write its checksum!", ABHelper::LOGLEVEL_WARN);
+                ABHelper::backupLog("Cannot read $name to write its checksum!", ABHelper::LOGLEVEL_ERR);
+                ABHelper::$errorOccured = true;
                 continue;
             }
             $lines[] = "$hash  $name";
         }
-        if (file_put_contents($set . '/' . self::FILE, implode("\n", $lines) . "\n") === false) {
-            ABHelper::backupLog("Writing " . self::FILE . " failed!", ABHelper::LOGLEVEL_WARN);
+        $content = implode("\n", $lines) . "\n";
+        if (file_put_contents($set . '/' . self::FILE, $content) !== strlen($content)) {
+            ABHelper::backupLog("Writing " . self::FILE . " failed!", ABHelper::LOGLEVEL_ERR);
+            ABHelper::$errorOccured = true;
             return;
         }
         ABHelper::backupLog("Checksums written for " . count($lines) . " files (took " . gmdate("H:i:s", time() - $timer) . ")");
@@ -69,15 +75,15 @@ class ABIntegrity {
                 ABHelper::backupLog("Check cancelled!", ABHelper::LOGLEVEL_WARN);
                 return false;
             }
-            // Plain names only, so an edited list cannot point outside the set
+            // Plain names and no symlinks, so an edited list cannot point outside the set
             if (!preg_match('/^([0-9a-f]{64}) [ *]([^\/]+)$/', $line, $match)) {
                 ABHelper::backupLog("Unreadable line in " . self::FILE . ": $line", ABHelper::LOGLEVEL_WARN);
                 $failed++;
                 continue;
             }
             $listed[] = $match[2];
-            if (!is_file($real . '/' . $match[2])) {
-                ABHelper::backupLog("{$match[2]} is missing!", ABHelper::LOGLEVEL_WARN);
+            if (is_link($real . '/' . $match[2]) || !is_file($real . '/' . $match[2])) {
+                ABHelper::backupLog("{$match[2]} is missing or not a plain file!", ABHelper::LOGLEVEL_WARN);
                 $failed++;
             } elseif (hash_file('sha256', $real . '/' . $match[2]) !== $match[1]) {
                 ABHelper::backupLog("{$match[2]} does not match its checksum!", ABHelper::LOGLEVEL_WARN);
@@ -89,7 +95,7 @@ class ABIntegrity {
 
         $unlisted = array_diff(array_map('basename', array_filter(glob($real . '/*') ?: [], 'is_file')), $listed, [self::FILE, 'backup.log', 'backup.debug.log', ABSettings::$settingsFile]);
         if ($unlisted) {
-            ABHelper::backupLog("No checksum for: " . implode(', ', $unlisted) . " (verification is off for their container)");
+            ABHelper::backupLog("No checksum for: " . implode(', ', $unlisted) . " (verification is off for their container, or the list was changed)");
         }
         $took = gmdate("H:i:s", time() - $timer);
         if ($failed) {
