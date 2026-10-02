@@ -6,6 +6,7 @@
 
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
+use unraid\plugins\AppdataBackup\ABSnapshot;
 
 // CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
 if (PHP_SAPI !== 'cli') {
@@ -344,6 +345,7 @@ if (ABHelper::abortRequested()) {
 
 abort:
 ABHelper::setCurrentContainerName(null);
+ABSnapshot::destroyAll(); // an aborted run can still hold snapshots
 if (ABHelper::abortRequested()) {
     ABHelper::$errorOccured = true;
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);

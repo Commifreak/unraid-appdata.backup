@@ -3,6 +3,7 @@
 namespace unraid\plugins\AppdataBackup;
 
 require_once __DIR__ . '/ABSettings.php';
+require_once __DIR__ . '/ABSnapshot.php';
 
 /**
  * This is a helper class for some useful things
@@ -343,14 +344,9 @@ class ABHelper {
     }
 
 
-    /**
-     * The heart func: take care of creating a backup!
-     * @param $container array
-     * @param $destination string The generated backup folder for this backup run
-     * @return bool
-     */
-    public static function backupContainer($container, $destination) {
-        global $abSettings, $dockerClient;
+    /** Volumes and tar exclude options for a container, or null if its backup is skipped */
+    public static function backupPlan($container) {
+        global $abSettings;
 
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
@@ -360,7 +356,7 @@ class ABHelper {
 
         if ($containerSettings['skipBackup'] == 'yes') {
             self::backupLog("Should NOT backup this container at all. Only include it in stop/start. Skipping backup...");
-            return true;
+            return null;
         }
 
         if ($containerSettings['backupExtVolumes'] == 'no') {
@@ -374,7 +370,10 @@ class ABHelper {
             self::backupLog("Backing up EXTERNAL volumes, because it's enabled!");
         }
 
-        $tarExcludes = ['--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook')];
+        $tarExcludes = [
+            '--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook'),
+            '--exclude ' . escapeshellarg('.' . ABSnapshot::PREFIX . '*'), // a leftover btrfs snapshot can sit inside a volume, see ABSnapshot::btrfsFolder()
+        ];
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
@@ -396,6 +395,29 @@ class ABHelper {
                 $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
         }
+
+        return ['volumes' => array_values($volumes), 'tarExcludes' => $tarExcludes];
+    }
+
+    /**
+     * The heart func: take care of creating a backup!
+     * @param $container array
+     * @param $destination string The generated backup folder for this backup run
+     * @param $plan array|null|false From backupPlan(); false works it out here
+     * @return bool
+     */
+    public static function backupContainer($container, $destination, $plan = false) {
+        global $abSettings, $dockerClient;
+
+        if ($plan === false) {
+            $plan = self::backupPlan($container);
+        }
+        if ($plan === null) {
+            return true;
+        }
+        $volumes           = $plan['volumes'];
+        $tarExcludes       = $plan['tarExcludes'];
+        $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
         if (empty($volumes)) {
             self::backupLog($container['Name'] . " does not have any volume to back up! Skipping. Please consider ignoring this container.", self::LOGLEVEL_WARN);
@@ -441,9 +463,12 @@ class ABHelper {
         $tarBackupTimer = time();
 
         $output = $resultcode = null;
-        exec("tar " . $finalTarOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        exec(ABSnapshot::command("tar " . $finalTarOptions, $volumes) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
+        if (ABSnapshot::setupFailed($resultcode, $output)) {
+            return false;
+        }
         if ($resultcode > 0) {
             self::backupLog("tar creation failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
 
@@ -471,9 +496,12 @@ class ABHelper {
             self::backupLog("Final verify command: " . $finalTarVerifyOptions, self::LOGLEVEL_DEBUG);
 
             $output = $resultcode = null;
-            exec("tar " . $finalTarVerifyOptions . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+            exec(ABSnapshot::command("tar " . $finalTarVerifyOptions, $volumes) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
             self::backupLog("Tar out: " . implode('; ', $output), self::LOGLEVEL_DEBUG);
 
+            if (ABSnapshot::setupFailed($resultcode, $output)) {
+                return false;
+            }
             if ($resultcode > 0) {
                 self::backupLog("tar verification failed! Tar said: " . implode('; ', $output), $containerSettings['ignoreBackupErrors'] == 'yes' ? self::LOGLEVEL_INFO : self::LOGLEVEL_ERR);
                 /**
@@ -711,6 +739,26 @@ class ABHelper {
         }
     }
 
+    /** Starts containers and group members in start order; false if an abort was requested */
+    private static function startContainers($containers) {
+        self::backupLog("Set containers to previous state");
+        foreach ($containers as $_container) {
+            $resolvedContainer = self::resolveContainer($_container);
+            foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
+                self::setCurrentContainerName($container);
+                self::startContainer($container);
+
+                if (self::abortRequested()) {
+                    return false;
+                }
+            }
+            self::setCurrentContainerName($_container, true);
+        }
+
+        self::setCurrentContainerName(null);
+        return true;
+    }
+
     public static function doBackupMethod($method, $containerListOverride = null) {
         global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination, $dockerUpdateList;
 
@@ -719,8 +767,13 @@ class ABHelper {
         switch ($method) {
             case 'stopAll':
 
+                $backupOrder = $containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers;
+                $startOrder  = $containerListOverride ?: $sortedStartContainers;
+                $plans       = [];
+                $started     = false;
+
                 self::backupLog("Method: Stop all containers before continuing.");
-                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
+                foreach ($backupOrder as $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
@@ -729,6 +782,9 @@ class ABHelper {
                             self::backupLog("preContainer script decided to skip backup.");
                             self::setCurrentContainerName($container, true);
                             continue;
+                        }
+                        if ($abSettings->snapshotMode == 'yes') {
+                            $plans[$container['Name']] = self::backupPlan($container);
                         }
                         self::stopContainer($container);
 
@@ -745,13 +801,26 @@ class ABHelper {
                     return false;
                 }
 
+                if ($plans) {
+                    $volumes = array_merge(...array_column(array_filter($plans), 'volumes'));
+                    if ($volumes && ABSnapshot::create($volumes)) {
+                        self::backupLog("Snapshots taken - starting the containers before the backup.");
+                        if (!self::startContainers($startOrder)) {
+                            return false;
+                        }
+                        $started = true;
+                    } elseif ($volumes) {
+                        self::backupLog("Snapshots are not possible for this run - backing up with the containers stopped.", self::LOGLEVEL_WARN);
+                    }
+                }
+
                 self::backupLog("Starting backup for containers");
-                foreach ($containerListOverride ? array_reverse($containerListOverride) : $sortedStopContainers as $_container) {
+                foreach ($backupOrder as $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
                         self::setCurrentContainerName($container);
 
-                        if (!self::backupContainer($container, $abDestination)) {
+                        if (!self::backupContainer($container, $abDestination, array_key_exists($container['Name'], $plans) ? $plans[$container['Name']] : false)) {
                             self::$errorOccured = true;
                         }
 
@@ -769,6 +838,7 @@ class ABHelper {
                 }
 
                 self::setCurrentContainerName(null);
+                ABSnapshot::destroyAll();
 
                 if (self::abortRequested()) {
                     return false;
@@ -780,21 +850,9 @@ class ABHelper {
                     return false;
                 }
 
-                self::backupLog("Set containers to previous state");
-                foreach ($containerListOverride ?: $sortedStartContainers as $_container) {
-                    $resolvedContainer = self::resolveContainer($_container);
-                    foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
-                        self::setCurrentContainerName($container);
-                        self::startContainer($container);
-
-                        if (self::abortRequested()) {
-                            return false;
-                        }
-                    }
-                    self::setCurrentContainerName($_container, true);
+                if (!$started && !self::startContainers($startOrder)) {
+                    return false;
                 }
-
-                self::setCurrentContainerName(null);
 
                 break;
             case 'oneAfterTheOther':
@@ -829,11 +887,19 @@ class ABHelper {
                         return false;
                     }
 
-                    if (!self::backupContainer($container, $abDestination)) {
+                    $plan     = self::backupPlan($container);
+                    $snapshot = $abSettings->snapshotMode == 'yes' && !empty($plan['volumes']) && ABSnapshot::create($plan['volumes']);
+                    if ($snapshot) {
+                        self::backupLog("Snapshot taken - starting the container before the backup.");
+                        self::startContainer($container);
+                    }
+
+                    if (!self::backupContainer($container, $abDestination, $plan)) {
                         self::$errorOccured = true;
                     }
 
                     ABHelper::handlePrePostScript($abSettings->postContainerBackupScript, 'post-container', $container['Name']);
+                    ABSnapshot::destroyAll();
 
                     if (self::abortRequested()) {
                         return false;
@@ -847,7 +913,9 @@ class ABHelper {
                         return false;
                     }
 
-                    self::startContainer($container);
+                    if (!$snapshot) {
+                        self::startContainer($container);
+                    }
 
                     if (self::abortRequested()) {
                         return false;
