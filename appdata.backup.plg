@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.10.02.4">
-        <!ENTITY sha256    "2ef65436a3baa52e62f77c16419e1468b91b8975cee00a6377eee0d24a51f28f">
+        <!ENTITY version   "2026.10.02.5">
+        <!ENTITY sha256    "1db0c8cf5b0f87ba38a5698acf290b403fb9e52d59baffa750fd404fe421f6e0">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "chodeus/unraid-appdata.backup">
@@ -17,7 +17,8 @@
         <![CDATA[
         ➕New  🩹Fix 🔧Change
 
-###2026.10.02.4 (test build, chodeus/unraid-appdata.backup)
+###2026.10.02.5 (test build, chodeus/unraid-appdata.backup)
+- 🩹 A failed flash backup marks the run as failed, so retention keeps the older backup sets
 - 🩹 Escape notification text before it reaches the shell
 - 🩹 Back up the flash drive on Unraid 7.4, whose flash backup script now streams the zip
 - 🩹 Read exclusion and path lists with any line endings [PR 74](https://github.com/Commifreak/unraid-appdata.backup/pull/74)
