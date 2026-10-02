@@ -682,7 +682,8 @@ class ABHelper {
     public static function getContainerVolumes($container, $skipExclusionCheck = false) {
         global $abSettings;
 
-        $volumes = [];
+        $volumes  = [];
+        $excluded = [];
         foreach ($container['Volumes'] ?? [] as $volume) {
             $hostPath = rtrim(explode(":", $volume)[0], '/');
             if (empty($hostPath)) {
@@ -695,11 +696,13 @@ class ABHelper {
 
                 if (in_array($hostPath, $containerSettings['exclude'])) {
                     self::backupLog("Ignoring '$hostPath' because it's listed in the container's exclusions list!", self::LOGLEVEL_DEBUG);
+                    $excluded[] = $hostPath;
                     continue;
                 }
 
                 if (in_array($hostPath, $abSettings->globalExclusions)) {
                     self::backupLog("Ignoring '$hostPath' because it's listed in the global exclusions list!", self::LOGLEVEL_DEBUG);
+                    $excluded[] = $hostPath;
                     continue;
                 }
             }
@@ -717,7 +720,8 @@ class ABHelper {
             $volumes[] = $hostPath;
         }
 
-        $volumes = array_unique($volumes); // Remove duplicate Array values => https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1256267
+        // Excluded volumes join the nesting check, so volumes inside them go too: the settings page lists only the outer one
+        $volumes = array_unique(array_merge($volumes, $excluded)); // Remove duplicate Array values => https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1256267
 
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
@@ -736,7 +740,7 @@ class ABHelper {
                 }
             }
         }
-        return $volumes;
+        return array_diff($volumes, $excluded);
     }
 
     /**
