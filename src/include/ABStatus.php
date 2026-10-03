@@ -90,10 +90,11 @@ class ABStatus {
             return;
         }
         file_put_contents(ABSettings::$pluginDir . '/' . self::CACHE, json_encode([
-            'recorded' => time(),
-            'duration' => $duration,
+            'recorded'    => time(),
+            'destination' => $settings->destination,
+            'duration'    => $duration,
             // Set names, not timestamps: a writer in another timezone (php -r skips local_prepend.php) cannot shift them
-            'sets'     => array_map(fn($set) => ['date' => $set['date']->format('Ymd_His'), 'state' => $set['state'], 'size' => $set['size']], $sets),
+            'sets'        => array_map(fn($set) => ['date' => $set['date']->format('Ymd_His'), 'state' => $set['state'], 'size' => $set['size']], $sets),
         ]));
     }
 
@@ -101,7 +102,7 @@ class ABStatus {
     public static function summary(ABSettings $settings) {
         $now     = new \DateTime();
         $cache   = json_decode((string)@file_get_contents(ABSettings::$pluginDir . '/' . self::CACHE), true);
-        $cache   = is_array($cache) && isset($cache['recorded'], $cache['sets']) ? $cache : null;
+        $cache   = is_array($cache) && isset($cache['recorded'], $cache['sets']) && ($cache['destination'] ?? null) === $settings->destination ? $cache : null;
         $sets    = array_map(fn($set) => ['date' => \DateTime::createFromFormat('Ymd_His', (string)$set['date'])] + $set, $cache['sets'] ?? []);
         $ok      = array_values(array_filter($sets, fn($set) => $set['state'] === 'ok'));
         $failed  = array_values(array_filter($sets, fn($set) => $set['state'] === 'failed'));
