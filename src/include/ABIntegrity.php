@@ -60,7 +60,13 @@ class ABIntegrity {
             ABHelper::backupLog("'$set' is not a backup set!", ABHelper::LOGLEVEL_ERR);
             return false;
         }
-        $list = @file($real . '/' . self::FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $manifest = $real . '/' . self::FILE;
+        // file() reads it whole: a symlinked or oversized list could point outside the set or exhaust memory
+        if (is_link($manifest) || (is_file($manifest) && filesize($manifest) > 1048576)) {
+            ABHelper::backupLog(self::FILE . " in $real is not a plain checksum list, so it cannot be checked!", ABHelper::LOGLEVEL_ERR);
+            return false;
+        }
+        $list = @file($manifest, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if (!$list) {
             ABHelper::backupLog("$real has no " . self::FILE . ", so it cannot be checked. Backups get one from this plugin version on.", ABHelper::LOGLEVEL_ERR);
             return false;
