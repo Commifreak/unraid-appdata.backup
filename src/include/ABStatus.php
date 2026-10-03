@@ -15,16 +15,21 @@ class ABStatus {
     /** Days without a successful backup before the page warns, by schedule */
     const STALE_DAYS = ['daily' => 2, 'weekly' => 9, 'monthly' => 35];
 
-    /** Sets in $destination, newest first: path, date, state (ok, failed, incomplete) and size in bytes */
+    /** Sets in $destination, newest first: path, date, state (ok, failed, incomplete) and size in bytes; false if a listing fails */
     public static function sets($destination) {
+        $destination = rtrim($destination, '/');
+        // scandir, not glob: a [ or ? in the destination would be read as a pattern
+        if (($names = scandir($destination)) === false) {
+            return false;
+        }
         $sets = [];
-        foreach (glob(rtrim($destination, '/') . '/ab_*', GLOB_ONLYDIR) ?: [] as $dir) {
-            if (!preg_match(self::SET_PATTERN, basename($dir), $m)) {
+        foreach ($names as $name) {
+            $dir = $destination . '/' . $name;
+            if (!preg_match(self::SET_PATTERN, $name, $m) || !is_dir($dir)) {
                 continue;
             }
-            $size = 0;
-            foreach (glob($dir . '/*') ?: [] as $file) {
-                $size += is_file($file) ? (int)filesize($file) : 0;
+            if (($size = self::size($dir)) === false) {
+                return false;
             }
             $sets[] = [
                 'path'  => $dir,
@@ -37,20 +42,20 @@ class ABStatus {
         return $sets;
     }
 
-    /** Seconds from the first to the last line of a set's backup.log, or null */
-    public static function duration($set) {
-        $log   = $set['path'] . '/backup.log';
-        $lines = is_file($log) ? file($log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) : false;
-        if (!$lines) {
-            return null;
+    /** Bytes in the files of $dir, or false if it cannot be listed or a size cannot be read */
+    private static function size($dir) {
+        if (($files = scandir($dir)) === false) {
+            return false;
         }
-        $first = self::logTime(reset($lines));
-        $last  = self::logTime(end($lines));
-        return $first && $last ? $last->getTimestamp() - $first->getTimestamp() : null;
-    }
-
-    private static function logTime($line) {
-        return preg_match('/^\[(\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2})\]/', $line, $m) ? \DateTime::createFromFormat('d.m.Y H:i:s', $m[1]) : null;
+        $size = 0;
+        foreach ($files as $file) {
+            $bytes = is_file($dir . '/' . $file) ? filesize($dir . '/' . $file) : 0;
+            if ($bytes === false) {
+                return false;
+            }
+            $size += $bytes;
+        }
+        return $size;
     }
 
     /** Next scheduled run, or null for a custom or disabled schedule */
@@ -78,15 +83,15 @@ class ABStatus {
         return null;
     }
 
-    /** Records the sets for summary(); runs at the end of a backup, while the backup disks are awake anyway */
-    public static function saveSummary(ABSettings $settings) {
-        if (empty($settings->destination) || !is_dir($settings->destination)) {
+    /** Records the sets and the run's duration for summary(); runs at the end of a backup, while the backup disks are awake anyway */
+    public static function saveSummary(ABSettings $settings, $duration) {
+        // A failed listing keeps the last summary rather than recording "no sets"
+        if (empty($settings->destination) || ($sets = self::sets($settings->destination)) === false) {
             return;
         }
-        $sets = self::sets($settings->destination);
         file_put_contents(ABSettings::$pluginDir . '/' . self::CACHE, json_encode([
             'recorded' => time(),
-            'duration' => $sets && $sets[0]['state'] !== 'incomplete' ? self::duration($sets[0]) : null,
+            'duration' => $duration,
             // Set names, not timestamps: a writer in another timezone (php -r skips local_prepend.php) cannot shift them
             'sets'     => array_map(fn($set) => ['date' => $set['date']->format('Ymd_His'), 'state' => $set['state'], 'size' => $set['size']], $sets),
         ]));

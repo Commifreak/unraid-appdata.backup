@@ -409,9 +409,8 @@ if (!empty($abDestination) && is_dir($abDestination)) {
     exec("chmod -R u=rw,g=r,o=- " . escapeshellarg($abDestination));
     exec("chmod u=rwx,g=rx,o=- " . escapeshellarg($abDestination));
 
+    ABStatus::saveSummary($abSettings, time() - $backupStarted->getTimestamp());
 }
-
-ABStatus::saveSummary($abSettings);
 
 ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination ?? 'false', (ABHelper::$errorOccured ? 'false' : 'true'));
 
