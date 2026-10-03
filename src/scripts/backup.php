@@ -7,6 +7,7 @@
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
+use unraid\plugins\AppdataBackup\ABStatus;
 use unraid\plugins\AppdataBackup\ABSnapshot;
 
 // CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
@@ -17,6 +18,7 @@ if (PHP_SAPI !== 'cli') {
 
 require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php");
 require_once dirname(__DIR__) . '/include/ABHelper.php';
+require_once dirname(__DIR__) . '/include/ABStatus.php';
 
 set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
@@ -407,6 +409,7 @@ if (!empty($abDestination) && is_dir($abDestination)) {
     exec("chmod -R u=rw,g=r,o=- " . escapeshellarg($abDestination));
     exec("chmod u=rwx,g=rx,o=- " . escapeshellarg($abDestination));
 
+    ABStatus::saveSummary($abSettings, time() - $backupStarted->getTimestamp());
 }
 
 ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination ?? 'false', (ABHelper::$errorOccured ? 'false' : 'true'));

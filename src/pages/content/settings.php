@@ -158,6 +158,7 @@ if (strstr('white,azure', $display['theme'])) {
 
 ?>
 <link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.filetree.css') ?>">
+<?php include_once __DIR__ . '/head.php'; ?>
 <style>
     .fileTree {
         background: <?=$bgcolor?>;
@@ -195,8 +196,11 @@ if (strstr('white,azure', $display['theme'])) {
     }
 
     .sortable li {
-        cursor: n-resize;
         margin: 0 15px 15px 15px;
+    }
+
+    .sortable .ab-drag {
+        cursor: n-resize;
     }
 
     .caBackupMigrationDiv {
@@ -376,7 +380,7 @@ if (($code ?? 0) != 0) {
 
     <dl id="flashBackupCopy_dl">
         <dt>
-            <div style="display: table; line-height: 1em;"><b>Copy the flash backup to a custom destination</b><br/>This
+            <div style="line-height: 1em;"><b>Copy the flash backup to a custom destination</b><br/>This
                 is optional
             </div>
         </dt>
@@ -398,7 +402,7 @@ if (($code ?? 0) != 0) {
         <p>This saves <code>/etc/libvirt/qemu</code></p>
     </blockquote>
 
-    <div class="title" onclick="$(this).next().show();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
+    <div class="title" onclick="$(this).next().toggle();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
     </div>
     <div style="display: none;">
         <blockquote>These settings are the <b>global defaults</b> for all containers. You can adjust them per container
@@ -406,7 +410,7 @@ if (($code ?? 0) != 0) {
         </blockquote>
         <dl>
             <dt>
-                <div style="display: table; line-height: 1em;"><b>Skip stopping of containers?</b><br/><small>This will
+                <div style="line-height: 1em;"><b>Skip stopping of containers?</b><br/><small>This will
                         skip stopping containers and leave them running. Could lead to broken backups for
                         containers!</small>
                 </div>
@@ -419,7 +423,7 @@ if (($code ?? 0) != 0) {
             </dd>
 
             <dt>
-                <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
+                <div style="line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
                         any
                         errors during backup. This option just adds an extra layer of security</small>
                 </div>
@@ -432,7 +436,7 @@ if (($code ?? 0) != 0) {
             </dd>
 
             <dt>
-                <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
+                <div style="line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
                         lead to
                         broken backups - Only enable if you know what you
                         are doing!</small>
@@ -446,7 +450,7 @@ if (($code ?? 0) != 0) {
             </dd>
 
             <dt>
-                <div style="display: table; line-height: 1em;"><b>Enable <code>--ignore-case</code> for
+                <div style="line-height: 1em;"><b>Enable <code>--ignore-case</code> for
                         tar?</b><br/><small>This ignores case sensitivity for exclusions.</small>
                 </div>
             </dt>
@@ -578,8 +582,8 @@ if (($code ?? 0) != 0) {
         </dd>
     </dl>
 
-    <div style="display: flex;">
-        <div class="dockerSettings" style="flex-grow: 1; flex-basis: 0;">
+    <div class="ab-docker-cols">
+        <div class="dockerSettings">
             <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per-container settings. <b>Click on container name to open</b></span>
             </div>
 
@@ -628,20 +632,10 @@ HTML;
                 $containerExcludes = implode("\r\n", $containerSetting['exclude']);
 
                 echo <<<HTML
-<style>
-.containerSettingsDt {
-    overflow: hidden;
-    white-space: nowrap
-}
-.containerSettingsDt:after {
-    opacity: 0.1;
-    content: "  _____________________________________________________________________________________________________________________________________________________________________";
-}
-</style>
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
-        <dl>
+        <dl class="ab-container-row">
         <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">&nbsp;&nbsp;Skip?</label>
+        <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
             <option value="yes">Yes</option>
@@ -649,7 +643,7 @@ HTML;
     </dd>
         </dl>
 
-<blockquote class='inline_help'>
+<blockquote class='inline_help ab-box'>
 <dl>
 $plexHint
 <dt>Configured volumes <small>- (Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
@@ -678,8 +672,9 @@ $plexHint
 
 
 
-<div onclick="$(this).next().toggle();"><a style="cursor:pointer;">Show advanced options</a></div>
-	<div style="display: none;">
+</dl>
+<div class="ab-advanced-toggle" onclick="$(this).next().toggle();"><a>Show advanced options</a></div>
+	<div style="display: none;"><dl>
 	
 	<dt>Skip backup? <small>Only stop/start</small></dt>
 <dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
@@ -709,9 +704,7 @@ $plexHint
             <option value='yes'>Yes</option>
         </select></dd>
         
-	</div>
-
-</dl>
+	</dl></div>
 </blockquote>
 HTML;
 
@@ -720,7 +713,7 @@ HTML;
             ?>
 
         </div>
-        <div style="flex-grow: 1; flex-basis: 0; padding-left: 10px; max-width: 35%;">
+        <div class="ab-start-order">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
             <p>This defines the start sequence. Containers are stopped in reverse order.</p>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
@@ -734,7 +727,7 @@ HTML;
                     $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);
                     $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
                     echo <<<HTML
-<li id="containerOrder_{$internalName}"><i class="fa fa-sort"></i> $imageHtml $name</li>
+<li id="containerOrder_{$internalName}"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
 HTML;
 
                 }
@@ -755,7 +748,7 @@ HTML;
                     foreach ($sortedContainers as $container) {
                         $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
                         echo <<<HTML
-<li id="containerGroupOrder[{$group}]={$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+<li id="containerGroupOrder[{$group}]={$container['Name']}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
 HTML;
 
                     }
@@ -899,16 +892,16 @@ HTML;
     </dd>
 
     <dt>Maintainer</dt>
-    <dd>2022 - now: <a href="https://forums.unraid.net/profile/140912-kluthr/" target="_blank">Robin</a> <a
+    <dd><span>2022 - now: <a href="https://forums.unraid.net/profile/140912-kluthr/" target="_blank">Robin</a> <a
                 href="https://kluthr.de" target="_blank">Kluth</a> | 2015-2022 <a
-                href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
+                href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></span></dd>
 
     <dt>Want to say "Thank You"?</dt>
-    <dd>You're welcome! 😊 Thanks for using it! <abbr title="All community developers">We</abbr> make those plugins
+    <dd><span>You're welcome! 😊 Thanks for using it! <abbr title="All community developers">We</abbr> make those plugins
         with ❤️ (and a lot of ☕). If you like the work, you can donate via <a
                 href="https://www.paypal.com/donate/?hosted_button_id=KE7Z3KLEEY484"
                                                                               target="_blank"><i
-                    class="fa fa-paypal"></i> PayPal</a>.
+                    class="fa fa-paypal"></i> PayPal</a>.</span>
     </dd>
 
     <dt>GitHub repository</dt>
@@ -931,7 +924,7 @@ HTML;
 
         $('.ftAttach').fileTreeAttach();
         $('.ftAttach').attr('placeholder', 'Please click to select');
-        $('.sortable').sortable();
+        $('.sortable').sortable({handle: '.ab-drag'});
 
         /**
          * Select correct setting value

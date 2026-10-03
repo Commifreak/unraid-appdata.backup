@@ -1,0 +1,265 @@
+/* Plugin-scoped: Unraid's dl/dt/dd are floats up to 7.1 and a responsive grid from 7.2, so these classes set
+   their own layout. No Unraid CSS variables: 6.12 and 7.0 have none. */
+
+.ab-container-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    padding: 0.2rem 0 0.2rem 12px;
+    line-height: 2.2rem;
+}
+
+.ab-container-row > dt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    float: none;
+    width: auto;
+    margin: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.ab-container-row > dt::after {
+    content: "";
+    flex: 1 1 auto;
+    min-width: 1rem;
+    border-bottom: 1px dotted;
+    opacity: 0.3;
+}
+
+.ab-container-row > dd {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.ab-container-row > dd select {
+    width: auto;
+    min-width: 7rem;
+}
+
+/* Stacked on phones: see the media query at the end */
+.ab-docker-cols {
+    display: flex;
+    gap: 1rem 10px;
+}
+
+.ab-docker-cols > div {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.ab-docker-cols > .ab-start-order {
+    max-width: 35%;
+}
+
+/* 7.2+ lines labels up on the baseline, which for a textarea is its bottom edge */
+#abSettingsForm textarea {
+    vertical-align: top;
+}
+
+blockquote.inline_help.ab-box,
+.ab-status,
+.ab-restore-list {
+    width: auto;
+    margin: 0.5rem 0 1rem 12px;
+    padding: 0.5rem 1rem;
+    text-align: left;
+    color: inherit;
+    background: rgba(127, 127, 127, 0.08);
+    border: 1px solid rgba(127, 127, 127, 0.35);
+    border-radius: 4px;
+}
+
+/* A translucent tint of Unraid's help-box blue, so the text keeps the theme's colour */
+blockquote.inline_help.ab-box {
+    background: rgba(91, 192, 222, 0.22);
+    border-color: rgba(91, 192, 222, 0.6);
+}
+
+.ab-box dl,
+.ab-grid {
+    display: grid;
+    grid-template-columns: minmax(12rem, 32%) minmax(0, 1fr);
+    gap: 0.6rem 1.5rem;
+    align-items: baseline;
+    margin: 0;
+    padding: 0.5rem 0;
+    line-height: normal;
+}
+
+.ab-box dl > dt,
+.ab-grid > dt {
+    float: none;
+    width: auto;
+    margin: 0;
+    text-align: right;
+    white-space: normal;
+    font-weight: normal;
+}
+
+.ab-box dl > dd,
+.ab-grid > dd {
+    display: block;
+    margin: 0;
+    white-space: normal;
+}
+
+/* settings.php colours blockquote controls for the old light-blue box; inside .ab-box they follow the theme */
+.ab-box select,
+.ab-box textarea,
+.ab-box input[type="text"] {
+    color: inherit;
+    border-bottom-color: rgba(127, 127, 127, 0.6);
+}
+
+/* Unraid 7 leaves text inputs at their 20-character default, which cuts off the group field's hint */
+.ab-box input[list] {
+    width: 400px;
+    max-width: 100%;
+}
+
+.ab-advanced-toggle {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.ab-advanced-toggle a {
+    cursor: pointer;
+}
+
+.ab-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.ab-inline > button {
+    margin: 0;
+}
+
+.ab-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+}
+
+.ab-check input {
+    margin: 0;
+}
+
+.ab-check input:disabled + span {
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.ab-restore-lists {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    margin: 0.5rem 0 1rem 12px;
+}
+
+.ab-restore-lists > .ab-restore-list {
+    flex: 1 1 24rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.ab-restore-list-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ab-list-help {
+    margin: 0.25rem 0 0.5rem;
+    opacity: 0.75;
+}
+
+/* columns fill top to bottom, so the sorted names read down each column, then left to right */
+.ab-checklist {
+    columns: 14rem;
+    column-gap: 1rem;
+}
+
+/* The full name is in the label's title: restoreCheck() in restore.php */
+.ab-checklist > .ab-check {
+    display: block;
+    break-inside: avoid;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ab-checklist > .ab-check input {
+    margin: 0 0.4rem 0 0;
+    vertical-align: middle;
+}
+
+.ab-log {
+    height: 500px;
+    overflow: auto;
+    padding: 0.5rem;
+    border: 1px solid rgba(127, 127, 127, 0.4);
+    border-radius: 4px;
+}
+
+.ab-warn {
+    margin: 0.4rem 0;
+    padding-left: 0.6rem;
+    border-left: 3px solid #e68a00;
+}
+
+/* Phones. Only Unraid 7.2+ reaches this: up to 7.1 the viewport is pinned to 1300px */
+@media (max-width: 768px) {
+    .ab-docker-cols {
+        flex-direction: column;
+    }
+
+    .ab-docker-cols > .ab-start-order {
+        max-width: none;
+    }
+
+    .ab-container-row > dt {
+        flex-wrap: wrap;
+        white-space: normal;
+        line-height: 1.4;
+    }
+
+    .ab-container-row > dt::after {
+        display: none;
+    }
+
+    .ab-box dl,
+    .ab-grid {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 0.25rem;
+    }
+
+    .ab-box dl > dt,
+    .ab-grid > dt {
+        text-align: left;
+    }
+
+    .ab-box dl > dd,
+    .ab-grid > dd {
+        margin-bottom: 0.6rem;
+    }
+
+    .ab-box textarea,
+    .ab-box input[type="text"] {
+        max-width: 100%;
+    }
+}
