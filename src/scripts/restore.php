@@ -34,7 +34,7 @@ $unraidVersion           = parse_ini_file('/etc/unraid-version');
 $emhttpPluginVersionPath = '/usr/local/emhttp/plugins/' . ABSettings::$appName . '/version';
 $pluginVersion           = file_exists($emhttpPluginVersionPath) ? file_get_contents($emhttpPluginVersionPath) : null;
 ABHelper::backupLog("plugin-version: " . $pluginVersion, ABHelper::LOGLEVEL_DEBUG);
-ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog(ABHelper::dump('unraid-version', $unraidVersion), ABHelper::LOGLEVEL_DEBUG);
 
 /**
  * Some basic checks
@@ -44,10 +44,10 @@ if (!ABHelper::isArrayOnline()) {
     exit;
 }
 
-ABHelper::backupLog(print_r($argv, true), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog(ABHelper::dump('Arguments', $argv), ABHelper::LOGLEVEL_DEBUG);
 
 $config = json_decode($argv[1], true);
-ABHelper::backupLog(print_r($config, true), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog(ABHelper::dump('Restore settings', $config), ABHelper::LOGLEVEL_DEBUG);
 
 $tarDestination = empty(trim($config['customRestoreDestination'])) ? '/' : $config['customRestoreDestination'];
 if (!file_exists($tarDestination)) {
@@ -192,7 +192,7 @@ if (!isset($config['restoreItem']['vmMeta'])) {
     } else {
         $output = $resultcode = null;
         exec('tar -C ' . escapeshellarg($tarDestination) . ' -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-        ABHelper::backupLog("tar return: $resultcode, output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog(ABHelper::dump("tar return: $resultcode, output", $output), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("Restoring VM meta failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {

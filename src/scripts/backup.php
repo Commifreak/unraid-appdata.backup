@@ -49,7 +49,7 @@ $unraidVersion           = parse_ini_file('/etc/unraid-version');
 $emhttpPluginVersionPath = '/usr/local/emhttp/plugins/' . ABSettings::$appName . '/version';
 $pluginVersion           = file_exists($emhttpPluginVersionPath) ? file_get_contents($emhttpPluginVersionPath) : null;
 ABHelper::backupLog("plugin-version: " . $pluginVersion, ABHelper::LOGLEVEL_DEBUG);
-ABHelper::backupLog("unraid-version: " . ABHelper::dump($unraidVersion), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog(ABHelper::dump('unraid-version', $unraidVersion), ABHelper::LOGLEVEL_DEBUG);
 
 /**
  * Some basic checks
@@ -104,7 +104,7 @@ if (ABHelper::abortRequested()) {
 $dockerClient     = new DockerClient();
 $dockerContainers = $dockerClient->getDockerContainers();
 
-ABHelper::backupLog("Containers:" . PHP_EOL . implode(PHP_EOL, array_map([ABHelper::class, 'dump'], $dockerContainers ?: [])), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog(ABHelper::dump('Containers', array_column($dockerContainers ?: [], null, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
 
 if (empty($dockerContainers)) {
@@ -150,7 +150,7 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
     /**
      * Log container specific settings one time
      */
-    ABHelper::backupLog($container['Name'] . " specific settings: " . ABHelper::dump($containerSettings), ABHelper::LOGLEVEL_DEBUG);
+    ABHelper::backupLog(ABHelper::dump($container['Name'] . ' specific settings', $containerSettings), ABHelper::LOGLEVEL_DEBUG);
 
     if ($containerSettings['skip'] == 'no' && $containerSettings['updateContainer'] == 'yes') {
 
@@ -158,7 +158,7 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
             ABHelper::backupLog("Requesting docker template meta...", ABHelper::LOGLEVEL_DEBUG);
             $dockerTemplates = new \DockerTemplates();
             $allInfo         = $dockerTemplates->getAllInfo(true, true);
-            ABHelper::backupLog(var_export($allInfo, true), ABHelper::LOGLEVEL_DEBUG);
+            ABHelper::backupLog(ABHelper::dump('Docker template info', $allInfo), ABHelper::LOGLEVEL_DEBUG);
         }
 
         if (isset($allInfo[$container['Name']]) && ($allInfo[$container['Name']]['updated'] ?? 'true') == 'false') { # string 'false' = Update available!
@@ -213,7 +213,7 @@ if ($abSettings->backupVMMeta == 'yes') {
         $output = $resultcode = null;
         // -C / stores the same relative names restore.php expects, without tar's leading-slash warning
         exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " -C / " . escapeshellarg(ltrim(ABSettings::$qemuFolder, '/') . '/') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-        ABHelper::backupLog("tar return: $resultcode and output: " . ABHelper::dump($output), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog(ABHelper::dump("tar return: $resultcode, output", $output), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("Error while backing up VM XMLs! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {
@@ -229,7 +229,7 @@ if (ABHelper::abortRequested()) {
 
 if (!empty($abSettings->includeFiles)) {
     ABSteps::start('Backing up extra files');
-    ABHelper::backupLog("Include files is NOT empty: " . ABHelper::dump($abSettings->includeFiles), ABHelper::LOGLEVEL_DEBUG);
+    ABHelper::backupLog(ABHelper::dump('Include files', $abSettings->includeFiles), ABHelper::LOGLEVEL_DEBUG);
     $extrasChecked = [];
     foreach ($abSettings->includeFiles as $extra) {
         $extra = $path = trim($extra);
@@ -252,7 +252,7 @@ if (!empty($abSettings->includeFiles)) {
 
         $tarExcludes = [];
         if (!empty($abSettings->globalExclusions)) {
-            ABHelper::backupLog("Got global excludes! " . ABHelper::dump($abSettings->globalExclusions), ABHelper::LOGLEVEL_DEBUG);
+            ABHelper::backupLog(ABHelper::dump('Global excludes', $abSettings->globalExclusions), ABHelper::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
                 $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
@@ -340,7 +340,7 @@ if (ABHelper::$errorOccured) {
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
 
         $toKeep = array_slice($goodBackups, 0, $keepMinBackupsNum);
-        ABHelper::backupLog("toKeep after slicing: " . ABHelper::dump($toKeep), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog(ABHelper::dump('toKeep after slicing', $toKeep), ABHelper::LOGLEVEL_DEBUG);
 
         if (!empty($abSettings->deleteBackupsOlderThan)) {
             $nowDate = new DateTime();

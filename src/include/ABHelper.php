@@ -80,7 +80,7 @@ class ABHelper {
             $output = $resultcode = null;
             self::backupLog("Executing script $cmd...");
             exec($cmd, $output, $resultcode);
-            self::backupLog($script . " CODE: " . $resultcode . " - " . print_r($output, true), self::LOGLEVEL_DEBUG);
+            self::backupLog(self::dump($script . " CODE: " . $resultcode . ", output", $output), self::LOGLEVEL_DEBUG);
             self::backupLog("Script executed!");
 
             if ($resultcode != 0 && $resultcode != 2) {
@@ -265,7 +265,7 @@ class ABHelper {
                     $nowRunning = $dockerClient->getDockerContainers();
                     foreach ($nowRunning as $nowRunningContainer) {
                         if ($nowRunningContainer["Name"] == $container['Name']) {
-                            self::backupLog("AFTER backing up container status: " . print_r($nowRunningContainer, true), self::LOGLEVEL_DEBUG);
+                            self::backupLog(self::dump('AFTER backing up container status', $nowRunningContainer), self::LOGLEVEL_DEBUG);
                         }
                     }
                     $dockerContainerStarted = true;
@@ -285,7 +285,7 @@ class ABHelper {
                     self::backupLog("Container '" . $container['Name'] . "' did not start after multiple tries, skipping. More info in debug log", self::LOGLEVEL_ERR);
                     $output = null;
                     exec("docker ps -a", $output);
-                    self::backupLog("docker ps -a:" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+                    self::backupLog(self::dump('docker ps -a', $output), self::LOGLEVEL_DEBUG);
                     break; // Exit do-while
                 }
             } else {
@@ -363,7 +363,7 @@ class ABHelper {
     public static function backupPlan($container) {
         global $abSettings;
 
-        self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . self::dump($container['Volumes'] ?? []), self::LOGLEVEL_DEBUG);
+        self::backupLog(self::dump("Backup {$container['Name']} - Container Volumeinfo", $container['Volumes'] ?? []), self::LOGLEVEL_DEBUG);
 
         $volumes = self::getContainerVolumes($container);
 
@@ -407,7 +407,7 @@ class ABHelper {
         }
 
         if (!empty($abSettings->globalExclusions)) {
-            self::backupLog("Got global excludes! " . self::dump($abSettings->globalExclusions), self::LOGLEVEL_DEBUG);
+            self::backupLog(self::dump('Global excludes', $abSettings->globalExclusions), self::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
                 if (in_array($globalExclusion, $mapped) && !self::isWithinVolumes($globalExclusion, $volumes)) {
                     self::backupLog("Global exclusion \"$globalExclusion\" is a whole volume of this container, so that volume is left out", self::LOGLEVEL_DEBUG);
@@ -505,7 +505,7 @@ class ABHelper {
             foreach ($volumes as $volume) {
                 $output = null;
                 exec("lsof -nl +D " . escapeshellarg($volume), $output);
-                self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+                self::backupLog(self::dump("lsof($volume)", $output), self::LOGLEVEL_DEBUG);
             }
 
             ABIntegrity::$unverified[] = basename($destination); // kept despite the failure, so it gets no checksum
@@ -544,13 +544,13 @@ class ABHelper {
                 foreach ($volumes as $volume) {
                     $output = null;
                     exec("lsof -nl +D " . escapeshellarg($volume), $output);
-                    self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
+                    self::backupLog(self::dump("lsof($volume)", $output), self::LOGLEVEL_DEBUG);
                 }
 
                 $nowRunning = $dockerClient->getDockerContainers();
                 foreach ($nowRunning as $nowRunningContainer) {
                     if ($nowRunningContainer["Name"] == $container['Name']) {
-                        self::backupLog("AFTER verify: " . print_r($nowRunningContainer, true), self::LOGLEVEL_DEBUG);
+                        self::backupLog(self::dump('AFTER verify', $nowRunningContainer), self::LOGLEVEL_DEBUG);
                     }
                 }
                 ABIntegrity::$unverified[] = basename($destination); // kept despite the failure, so it gets no checksum
@@ -744,7 +744,7 @@ class ABHelper {
         usort($volumes, function ($a, $b) {
             return strlen($a) <=> strlen($b);
         });
-        self::backupLog("sorted volumes: " . self::dump($volumes), self::LOGLEVEL_DEBUG);
+        self::backupLog(self::dump('sorted volumes', $volumes), self::LOGLEVEL_DEBUG);
 
         /**
          * Check volumes against nesting
@@ -799,9 +799,25 @@ class ABHelper {
         }
     }
 
-    /** $value on one line for the debug log, every field kept */
-    public static function dump($value) {
-        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    /** "$label:" then $value one field per line, nested values indented below: print_r's layout without its brackets */
+    public static function dump($label, $value) {
+        return $label . ':' . self::dumpValue($value, '  ');
+    }
+
+    private static function dumpValue($value, $indent) {
+        if (!is_array($value) || $value === []) {
+            return ' ' . match (true) {
+                $value === true => 'yes',
+                $value === false => 'no',
+                $value === null, $value === '', $value === [] => '-',
+                default => (string)$value,
+            };
+        }
+        $lines = '';
+        foreach ($value as $key => $item) {
+            $lines .= PHP_EOL . $indent . (array_is_list($value) ? '-' : "$key:") . self::dumpValue($item, $indent . '  ');
+        }
+        return $lines;
     }
 
     /** $path with glob()'s metacharacters escaped, so a [, ? or * in a folder name matches only itself */
