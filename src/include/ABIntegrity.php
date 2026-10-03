@@ -10,7 +10,7 @@ class ABIntegrity {
     const FILE = 'checksums.sha256';
 
     /**
-     * @var array Archives of containers with verification off: no checksum, which spares them the extra read
+     * @var array Archives that get no checksum: their container has verification off, or tar failed and the error was ignored
      */
     public static array $unverified = [];
 
@@ -101,7 +101,7 @@ class ABIntegrity {
 
         $unlisted = array_diff(array_map('basename', array_filter(glob($real . '/*') ?: [], 'is_file')), $listed, [self::FILE, 'backup.log', 'backup.debug.log', ABSettings::$settingsFile]);
         if ($unlisted) {
-            ABHelper::backupLog("No checksum for: " . implode(', ', $unlisted) . " (verification is off for their container, or the list was changed)");
+            ABHelper::backupLog("No checksum for: " . implode(', ', $unlisted) . " (verification off for their container, an ignored tar failure, or a changed list)");
         }
         $took = gmdate("H:i:s", time() - $timer);
         if ($failed) {
