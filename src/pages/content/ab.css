@@ -1,8 +1,6 @@
-/* Plugin-scoped layout. Unraid styles dl/dt/dd as floats up to 7.1 and as a responsive grid from 7.2,
-   so these classes set their own layout instead of overriding Unraid's rules. No Unraid CSS variables:
-   6.12 and 7.0 have none. */
+/* Plugin-scoped: Unraid's dl/dt/dd are floats up to 7.1 and a responsive grid from 7.2, so these classes set
+   their own layout. No Unraid CSS variables: 6.12 and 7.0 have none. */
 
-/* Per-container rows: name, dotted leader, then "Skip?" with its select on one line */
 .ab-container-row {
     display: flex;
     align-items: center;
@@ -49,7 +47,7 @@
     min-width: 7rem;
 }
 
-/* Container list beside the start order; stacked on phones (see the end of this file) */
+/* Stacked on phones: see the media query at the end */
 .ab-docker-cols {
     display: flex;
     gap: 1rem 10px;
@@ -69,7 +67,6 @@
     vertical-align: top;
 }
 
-/* Boxes: the per-container settings and the status summary, in neutral colours for every theme */
 blockquote.inline_help.ab-box,
 .ab-status,
 .ab-restore-list {
@@ -83,14 +80,12 @@ blockquote.inline_help.ab-box,
     border-radius: 4px;
 }
 
-/* The container options box keeps Unraid's help-box blue as a tint: light blue on light themes, deep blue on
-   dark ones, while the text follows the theme */
+/* A translucent tint of Unraid's help-box blue, so the text keeps the theme's colour */
 blockquote.inline_help.ab-box {
     background: rgba(91, 192, 222, 0.22);
     border-color: rgba(91, 192, 222, 0.6);
 }
 
-/* Label | control grid, the same on every Unraid version */
 .ab-box dl,
 .ab-grid {
     display: grid;
@@ -141,7 +136,6 @@ blockquote.inline_help.ab-box {
     cursor: pointer;
 }
 
-/* A control and its button, or a checkbox and its label, side by side */
 .ab-inline {
     display: flex;
     flex-wrap: wrap;
@@ -169,7 +163,6 @@ blockquote.inline_help.ab-box {
     font-style: italic;
 }
 
-/* Restore: templates and containers side by side, each a sorted multi-column list */
 .ab-restore-lists {
     display: flex;
     flex-wrap: wrap;
@@ -201,7 +194,7 @@ blockquote.inline_help.ab-box {
     column-gap: 1rem;
 }
 
-/* one line per name, cut off with an ellipsis; the full name is the label's title */
+/* The full name is in the label's title: restoreCheck() in restore.php */
 .ab-checklist > .ab-check {
     display: block;
     break-inside: avoid;
@@ -215,7 +208,6 @@ blockquote.inline_help.ab-box {
     vertical-align: middle;
 }
 
-/* Status / Log */
 .ab-log {
     height: 500px;
     overflow: auto;
