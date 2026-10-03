@@ -781,6 +781,11 @@ class ABHelper {
         return false;
     }
 
+    /** $path with glob()'s metacharacters escaped, so a [, ? or * in a folder name matches only itself */
+    public static function globQuote($path) {
+        return addcslashes($path, '\\*?[');
+    }
+
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
         file_put_contents("/tmp/appdata.backup_phperr", $errStr . PHP_EOL, FILE_APPEND);

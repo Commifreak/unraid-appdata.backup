@@ -301,7 +301,7 @@ end:
 
 if (empty($abDestination) || !is_dir($abDestination)) {
     ABHelper::$errorOccured = true; // an early exit made no backup set, so nothing below may treat the run as clean
-} elseif (($setFiles = glob($abDestination . '/*')) === false) {
+} elseif (($setFiles = glob(ABHelper::globQuote($abDestination) . '/*')) === false) {
     ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
     ABHelper::$errorOccured = true;
 } elseif (!ABHelper::$errorOccured) {
@@ -329,7 +329,7 @@ if (ABHelper::$errorOccured) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
     } else { // Retention enabled
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
-        $curBackupsState   = array_reverse(glob(rtrim($abSettings->destination, '/') . '/ab_*'));// glob return sorted by name. Without naming, thats the oldest first, newest at the end
+        $curBackupsState   = array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*'));// glob return sorted by name. Without naming, thats the oldest first, newest at the end
 
         // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
