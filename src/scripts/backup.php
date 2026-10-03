@@ -9,6 +9,7 @@ use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
 use unraid\plugins\AppdataBackup\ABStatus;
 use unraid\plugins\AppdataBackup\ABSnapshot;
+use unraid\plugins\AppdataBackup\ABSteps;
 
 // CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
 if (PHP_SAPI !== 'cli') {
@@ -48,7 +49,7 @@ $unraidVersion           = parse_ini_file('/etc/unraid-version');
 $emhttpPluginVersionPath = '/usr/local/emhttp/plugins/' . ABSettings::$appName . '/version';
 $pluginVersion           = file_exists($emhttpPluginVersionPath) ? file_get_contents($emhttpPluginVersionPath) : null;
 ABHelper::backupLog("plugin-version: " . $pluginVersion, ABHelper::LOGLEVEL_DEBUG);
-ABHelper::backupLog("unraid-version: " . print_r($unraidVersion, true), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog("unraid-version: " . ABHelper::dump($unraidVersion), ABHelper::LOGLEVEL_DEBUG);
 
 /**
  * Some basic checks
@@ -69,6 +70,9 @@ if (empty($abSettings->destination)) {
     ABHelper::backupLog("Destination is not set!", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
+
+ABSteps::plan($abSettings);
+ABSteps::start('Preparing');
 
 $abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
 
@@ -100,7 +104,7 @@ if (ABHelper::abortRequested()) {
 $dockerClient     = new DockerClient();
 $dockerContainers = $dockerClient->getDockerContainers();
 
-ABHelper::backupLog("Containers: " . print_r($dockerContainers, true), ABHelper::LOGLEVEL_DEBUG);
+ABHelper::backupLog("Containers:" . PHP_EOL . implode(PHP_EOL, array_map([ABHelper::class, 'dump'], $dockerContainers ?: [])), ABHelper::LOGLEVEL_DEBUG);
 
 
 if (empty($dockerContainers)) {
@@ -146,7 +150,7 @@ foreach ($dockerContainers as $container) { // Use unraids docker container list
     /**
      * Log container specific settings one time
      */
-    ABHelper::backupLog($container['Name'] . " specific settings: " . print_r($containerSettings, true), ABHelper::LOGLEVEL_DEBUG);
+    ABHelper::backupLog($container['Name'] . " specific settings: " . ABHelper::dump($containerSettings), ABHelper::LOGLEVEL_DEBUG);
 
     if ($containerSettings['skip'] == 'no' && $containerSettings['updateContainer'] == 'yes') {
 
@@ -190,7 +194,7 @@ if (ABHelper::abortRequested()) {
  * FlashBackup
  */
 if ($abSettings->flashBackup == 'yes') {
-    ABHelper::backupLog("Backing up the flash drive.");
+    ABSteps::start('Backing up the flash drive');
     if (!ABHelper::backupFlash($abDestination)) {
         ABHelper::$errorOccured = true;
     }
@@ -201,20 +205,19 @@ if (ABHelper::abortRequested()) {
 }
 
 if ($abSettings->backupVMMeta == 'yes') {
+    ABSteps::start('Backing up VM meta');
 
     if (!file_exists(ABSettings::$qemuFolder)) {
         ABHelper::backupLog("VM meta should be backed up but VM manager is disabled!", ABHelper::LOGLEVEL_WARN);
     } else {
-        ABHelper::backupLog("VM meta backup enabled! Backing up...");
-
         $output = $resultcode = null;
         // -C / stores the same relative names restore.php expects, without tar's leading-slash warning
         exec("tar -czf " . escapeshellarg($abDestination . '/vm_meta.tgz') . " -C / " . escapeshellarg(ltrim(ABSettings::$qemuFolder, '/') . '/') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-        ABHelper::backupLog("tar return: $resultcode and output: " . print_r($output, true), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog("tar return: $resultcode and output: " . ABHelper::dump($output), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("Error while backing up VM XMLs! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         } else {
-            ABHelper::backupLog("Done!");
+            ABHelper::backupLog("VM meta backed up.");
         }
     }
 }
@@ -225,7 +228,8 @@ if (ABHelper::abortRequested()) {
 
 
 if (!empty($abSettings->includeFiles)) {
-    ABHelper::backupLog("Include files is NOT empty:" . PHP_EOL . print_r($abSettings->includeFiles, true), ABHelper::LOGLEVEL_DEBUG);
+    ABSteps::start('Backing up extra files');
+    ABHelper::backupLog("Include files is NOT empty: " . ABHelper::dump($abSettings->includeFiles), ABHelper::LOGLEVEL_DEBUG);
     $extrasChecked = [];
     foreach ($abSettings->includeFiles as $extra) {
         $extra = $path = trim($extra);
@@ -248,7 +252,7 @@ if (!empty($abSettings->includeFiles)) {
 
         $tarExcludes = [];
         if (!empty($abSettings->globalExclusions)) {
-            ABHelper::backupLog("Got global excludes! " . PHP_EOL . print_r($abSettings->globalExclusions, true), ABHelper::LOGLEVEL_DEBUG);
+            ABHelper::backupLog("Got global excludes! " . ABHelper::dump($abSettings->globalExclusions), ABHelper::LOGLEVEL_DEBUG);
             foreach ($abSettings->globalExclusions as $globalExclusion) {
                 $tarExcludes[] = '--exclude ' . escapeshellarg($globalExclusion);
             }
@@ -305,6 +309,7 @@ if (empty($abDestination) || !is_dir($abDestination)) {
     ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
     ABHelper::$errorOccured = true;
 } elseif (!ABHelper::$errorOccured) {
+    ABSteps::start('Writing checksums');
     ABIntegrity::writeChecksums($abDestination, $setFiles);
     // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
     ABHelper::backupLog("Flushing the backup to disk...");
@@ -321,10 +326,10 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+ABSteps::start('Retention');
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
-    ABHelper::backupLog("Checking retention...");
     if (empty($abSettings->keepMinBackups) && empty($abSettings->deleteBackupsOlderThan)) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
     } else { // Retention enabled
@@ -335,7 +340,7 @@ if (ABHelper::$errorOccured) {
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
 
         $toKeep = array_slice($goodBackups, 0, $keepMinBackupsNum);
-        ABHelper::backupLog("toKeep after slicing:" . PHP_EOL . print_r($toKeep, true), ABHelper::LOGLEVEL_DEBUG);
+        ABHelper::backupLog("toKeep after slicing: " . ABHelper::dump($toKeep), ABHelper::LOGLEVEL_DEBUG);
 
         if (!empty($abSettings->deleteBackupsOlderThan)) {
             $nowDate = new DateTime();
@@ -375,6 +380,7 @@ if (ABHelper::$errorOccured) {
 
 abort:
 ABHelper::setCurrentContainerName(null);
+ABSteps::start('Finishing');
 ABSnapshot::destroyAll(); // an aborted run can still hold snapshots
 if (ABHelper::abortRequested()) {
     ABHelper::$errorOccured = true;
@@ -414,8 +420,10 @@ if (!empty($abDestination) && is_dir($abDestination)) {
 
 ABHelper::handlePrePostScript($abSettings->postRunScript, 'post-run', $abDestination ?? 'false', (ABHelper::$errorOccured ? 'false' : 'true'));
 
-if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
-    unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
+foreach ([ABSettings::$stateFileAbort, ABSettings::$stateFileStep] as $stateFile) {
+    if (file_exists(ABSettings::$tempFolder . '/' . $stateFile)) {
+        unlink(ABSettings::$tempFolder . '/' . $stateFile);
+    }
 }
 unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
 

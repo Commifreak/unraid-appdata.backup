@@ -125,15 +125,6 @@ class ABStatus {
         ];
     }
 
-    public static function bytes($bytes) {
-        foreach (['B', 'KB', 'MB', 'GB', 'TB'] as $unit) {
-            if ($bytes < 1024 || $unit === 'TB') {
-                return round($bytes, $unit === 'B' ? 0 : 1) . ' ' . $unit;
-            }
-            $bytes /= 1024;
-        }
-    }
-
     public static function minutes($seconds) {
         $minutes = (int)round($seconds / 60);
         return $minutes < 60 ? "$minutes min" : intdiv($minutes, 60) . ' h ' . ($minutes % 60) . ' min';

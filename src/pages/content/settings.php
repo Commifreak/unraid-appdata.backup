@@ -415,7 +415,7 @@ if (($code ?? 0) != 0) {
                         containers!</small>
                 </div>
             </dt>
-            <dd><select id='verifyBackup' name="defaults[dontStop]"
+            <dd><select id='dontStop' name="defaults[dontStop]"
                         data-setting="<?= $abSettings->defaults['dontStop'] ?>">
                     <option value='no'>No</option>
                     <option value='yes'>Yes</option>
