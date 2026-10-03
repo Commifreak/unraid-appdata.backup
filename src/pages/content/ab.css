@@ -222,6 +222,15 @@ blockquote.inline_help.ab-box {
     border-left: 3px solid #e68a00;
 }
 
+.ab-step {
+    margin: 0 0 0.75rem;
+    font-weight: bold;
+}
+
+.ab-step:empty {
+    display: none;
+}
+
 /* Phones. Only Unraid 7.2+ reaches this: up to 7.1 the viewport is pinned to 1300px */
 @media (max-width: 768px) {
     .ab-docker-cols {

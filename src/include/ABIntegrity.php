@@ -46,7 +46,7 @@ class ABIntegrity {
             ABHelper::$errorOccured = true;
             return;
         }
-        ABHelper::backupLog("Checksums written for " . count($lines) . " files (took " . gmdate("H:i:s", time() - $timer) . ")");
+        ABHelper::backupLog("Checksums written for " . count($lines) . " files (took " . ABHelper::took(time() - $timer) . ")");
     }
 
     /**
@@ -104,7 +104,7 @@ class ABIntegrity {
         if ($unlisted) {
             ABHelper::backupLog("No checksum for: " . implode(', ', $unlisted) . " (verification off for their container, an ignored tar failure, or a changed list)");
         }
-        $took = gmdate("H:i:s", time() - $timer);
+        $took = ABHelper::took(time() - $timer);
         if ($failed) {
             ABHelper::backupLog("$failed of " . count($list) . " files failed the check (took $took)!", ABHelper::LOGLEVEL_ERR);
             return false;

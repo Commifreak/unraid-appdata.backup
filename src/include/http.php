@@ -32,13 +32,26 @@ if (isset($action)) {
                 $log = nl2br(htmlspecialchars(file_get_contents($logFile))); // the Status tab inserts this as HTML
             }
 
+            $running  = ABHelper::scriptRunning();
+            $stepFile = ABSettings::$tempFolder . '/' . ABSettings::$stateFileStep;
+            // A step file older than the running file is left over from an earlier run (or a verify or restore is running)
+            $step = $running && @filemtime($stepFile) >= @filemtime(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning) ? (string)@file_get_contents($stepFile) : '';
+
             $data = [
-                'running' => ABHelper::scriptRunning(),
-                'log'     => $log
+                'running' => $running,
+                'log'     => $log,
+                'step'    => $step
             ];
 
             echo json_encode($data);
 
+            break;
+        case 'getStatus':
+            require_once __DIR__ . '/ABStatus.php';
+            $abSettings = new ABSettings();
+            ob_start();
+            include dirname(__DIR__) . '/pages/content/status.php';
+            echo json_encode(['html' => ob_get_clean()]);
             break;
         case 'manualBackup':
             exec('php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null &');

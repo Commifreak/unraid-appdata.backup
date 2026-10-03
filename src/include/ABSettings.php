@@ -25,6 +25,7 @@ class ABSettings {
     public static $stateFileScriptRunning = 'running';
     public static $stateFileAbort = 'abort';
     public static $stateExtCmd = 'extCmd';
+    public static $stateFileStep = 'step';
 
     public static $emhttpVars = '/var/local/emhttp/var.ini';
 

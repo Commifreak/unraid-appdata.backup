@@ -2,55 +2,17 @@
 
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
-use unraid\plugins\AppdataBackup\ABStatus;
 
 if (!ABHelper::isArrayOnline()) {
     echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
     return;
 }
 
-require_once dirname(__DIR__, 2) . '/include/ABStatus.php';
 include_once __DIR__ . '/head.php';
-
-$abSettings = $abSettings ?? new ABSettings();
-$summary    = ABStatus::summary($abSettings);
-$date       = fn($set) => $set['date']->format('d.m.Y H:i');
-
-if ($summary['latest']) {
-    $state = ['ok' => 'OK', 'failed' => 'failed', 'incomplete' => 'incomplete'][$summary['latest']['state']];
-    $rows['Last backup'] = $date($summary['latest']) . ' &middot; ' . $state . ($summary['duration'] !== null ? ' &middot; took ' . ABStatus::minutes($summary['duration']) : '');
-} else {
-    $rows['Last backup'] = $summary['recorded'] ? 'None yet' : 'Shown after the next backup run';
-}
-if ($summary['recorded']) {
-    $rows['Backup sets'] = count($summary['ok']) . ' good (' . ABStatus::bytes($summary['okSize']) . ')'
-        . ($summary['failed'] ? ', ' . count($summary['failed']) . ' failed (' . ABStatus::bytes($summary['failedSize']) . ')' : '')
-        . ($summary['ok'] ? ' &middot; newest ' . $date($summary['ok'][0]) . ', oldest ' . $date($summary['ok'][count($summary['ok']) - 1]) : '')
-        . ' &middot; as of the last backup run';
-}
-$rows['Next scheduled run'] = $summary['next'] ? $summary['next']->format('D d.m.Y H:i') : ($abSettings->backupFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->backupFrequencyCustom) : 'Not scheduled');
-$rows['Free space'] = $summary['free'] === false ? 'Unknown' : ABStatus::bytes($summary['free']) . ' free' . ($summary['ok'] ? ' &middot; newest backup ' . ABStatus::bytes($summary['ok'][0]['size']) : '');
-
-$warnings = [];
-if ($summary['stale'] !== false) {
-    $warnings[] = $summary['stale'] === null ? 'No successful backup yet.' : 'No successful backup for ' . $summary['stale'] . ' days (schedule: ' . $abSettings->backupFrequency . ').';
-}
-if ($summary['lowSpace']) {
-    $warnings[] = 'Free space (' . ABStatus::bytes($summary['free']) . ') is less than the newest backup (' . ABStatus::bytes($summary['ok'][0]['size']) . ').';
-}
 
 ?>
 
-<div class="ab-status">
-    <dl class="ab-grid">
-<?php foreach ($rows as $label => $value): ?>
-        <dt><?= $label ?></dt><dd><?= $value ?></dd>
-<?php endforeach; ?>
-    </dl>
-<?php foreach ($warnings as $warning): ?>
-    <p class="ab-warn"><?= $warning ?></p>
-<?php endforeach; ?>
-</div>
+<div id="abStatus"><?php include __DIR__ . '/status.php'; ?></div>
 
 <style>
     .backupRunning {
@@ -71,6 +33,7 @@ if ($summary['lowSpace']) {
 </style>
 
 <h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
+<p id="abStep" class="ab-step"></p>
 <span>You can find the normal log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$logfile; ?></code></span>
 <br/>
 <span>You can find the debug &nbsp;log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile; ?></code></span>
@@ -85,6 +48,7 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
 
 <script>
     let url = "/plugins/<?= ABSettings::$appName ?>/include/http.php";
+    let wasRunning = false;
 
     $(function () {
         setInterval(function () {
@@ -144,6 +108,15 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
                 $('#backupStatusText').removeClass('backupRunning');
                 $('#backupStatusText').addClass('backupNotRunning');
             }
+
+            $('#abStep').text(data.running ? (data.step || '') : '');
+            // The run writes its summary just before it ends, so the box can be refreshed now
+            if (wasRunning && !data.running) {
+                $.get(url, {action: 'getStatus'}, function (status) {
+                    $('#abStatus').html(status.html);
+                });
+            }
+            wasRunning = !!data.running;
         }).fail(function () {
             $("#abLog").html("Something went wrong while talking to the backend :(");
         });
