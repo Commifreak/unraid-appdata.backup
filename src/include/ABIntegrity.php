@@ -100,7 +100,7 @@ class ABIntegrity {
             }
         }
 
-        $unlisted = array_diff(array_map('basename', array_filter(glob($real . '/*') ?: [], 'is_file')), $listed, [self::FILE, 'backup.log', 'backup.debug.log', ABSettings::$settingsFile]);
+        $unlisted = array_diff(array_map('basename', array_filter(glob(ABHelper::globQuote($real) . '/*') ?: [], 'is_file')), $listed, [self::FILE, 'backup.log', 'backup.debug.log', ABSettings::$settingsFile]);
         if ($unlisted) {
             ABHelper::backupLog("No checksum for: " . implode(', ', $unlisted) . " (verification off for their container, an ignored tar failure, or a changed list)");
         }

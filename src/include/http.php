@@ -56,7 +56,7 @@ if (isset($action)) {
             break;
         case 'checkRestoreSource':
 
-            $files = glob(rtrim($_GET['src'], '/') . "/ab_*");
+            $files = glob(ABHelper::globQuote(rtrim($_GET['src'], '/')) . "/ab_*");
             if (empty($files)) {
                 echo json_encode(['result' => false]);
                 exit;

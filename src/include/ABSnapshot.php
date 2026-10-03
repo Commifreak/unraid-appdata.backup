@@ -252,7 +252,7 @@ class ABSnapshot {
         if ($source['type'] == 'zfs') {
             exec('zfs list -H -t snapshot -o name -d 1 ' . escapeshellarg($source['dataset']) . ' 2>/dev/null', $stale);
         } else {
-            $stale = glob($source['into'] . '/.' . self::PREFIX . '*', GLOB_ONLYDIR) ?: [];
+            $stale = glob(ABHelper::globQuote($source['into']) . '/.' . self::PREFIX . '*', GLOB_ONLYDIR) ?: [];
         }
         foreach ($stale as $name) {
             if (in_array($name, array_column(self::$active, 'name'))) {
