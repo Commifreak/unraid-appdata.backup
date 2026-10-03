@@ -126,7 +126,7 @@ if (isset($action)) {
             exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_POST)) . ' > /dev/null &');
             break;
         case 'verifySet':
-            exec('php ' . dirname(__DIR__) . '/scripts/verify.php ' . escapeshellarg((string)($_POST['set'] ?? '')) . ' > /dev/null &');
+            exec('php ' . escapeshellarg(dirname(__DIR__) . '/scripts/verify.php') . ' ' . escapeshellarg((string)($_POST['set'] ?? '')) . ' > /dev/null &');
             break;
 
         case 'copyConfigFromProd':

@@ -514,6 +514,7 @@ class ABHelper {
                 self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
             }
 
+            ABIntegrity::$unverified[] = basename($destination); // kept despite the failure, so it gets no checksum
             return $containerSettings['ignoreBackupErrors'] == 'yes';
         }
 
@@ -556,6 +557,7 @@ class ABHelper {
                         self::backupLog("AFTER verify: " . print_r($nowRunningContainer, true), self::LOGLEVEL_DEBUG);
                     }
                 }
+                ABIntegrity::$unverified[] = basename($destination); // kept despite the failure, so it gets no checksum
                 return $containerSettings['ignoreBackupErrors'] == 'yes';
             } else {
                 self::backupLog("Verification ended without issues (took " . gmdate("H:i:s", time() - $tarVerifyTimer) . " (hours:mins:secs))");

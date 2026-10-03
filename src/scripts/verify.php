@@ -24,7 +24,8 @@ exec("rm -f " . escapeshellarg(ABSettings::$tempFolder) . "/*.log");
 file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP (checking a backup)!! :D");
-ABIntegrity::verifySet($argv[1] ?? '');
+$ok = ABIntegrity::verifySet($argv[1] ?? '');
 ABHelper::backupLog("DONE!");
 
 unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
+exit($ok ? 0 : 1);
