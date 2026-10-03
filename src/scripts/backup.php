@@ -326,7 +326,7 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
-ABSteps::start('Checking retention');
+ABSteps::start('Retention');
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {

@@ -10,6 +10,8 @@ if (!ABHelper::isArrayOnline()) {
 
 include_once __DIR__ . '/head.php';
 
+$abRunningAtRender = ABHelper::scriptRunning();
+
 ?>
 
 <div id="abStatus"><?php include __DIR__ . '/status.php'; ?></div>
@@ -48,7 +50,7 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
 
 <script>
     let url = "/plugins/<?= ABSettings::$appName ?>/include/http.php";
-    let wasRunning = false;
+    let wasRunning = <?= $abRunningAtRender ? 'true' : 'false' ?>; // as when the box above was drawn
 
     $(function () {
         setInterval(function () {

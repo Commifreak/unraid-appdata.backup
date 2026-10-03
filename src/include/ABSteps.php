@@ -25,7 +25,7 @@ class ABSteps {
             $settings->backupVMMeta == 'yes' ? 'Backing up VM meta' : null,
             $settings->includeFiles ? 'Backing up extra files' : null,
             'Writing checksums',
-            'Checking retention',
+            'Retention',
             'Finishing',
         ]));
     }
