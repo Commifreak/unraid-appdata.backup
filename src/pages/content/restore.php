@@ -204,7 +204,6 @@ if (!ABHelper::isArrayOnline()) {
         $('#' + $(this).data('target') + ' input:not(:disabled)').prop('checked', $(this).data('checked') == 1);
     });
 
-    // An item the chosen set does not contain is disabled and says so
     function setRestoreItem(id, available) {
         $('#' + id).prop('disabled', !available).prop('checked', false).next('span').text(available ? 'Yes' : 'Not in this backup');
     }
