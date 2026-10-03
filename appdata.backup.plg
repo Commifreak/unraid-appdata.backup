@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.10.02.6">
-        <!ENTITY sha256    "e97c445ce154b148f0f7a7e2e1223506012860d55bfcc8324e866c682a6b9d99">
+        <!ENTITY version   "2026.10.03.1">
+        <!ENTITY sha256    "431879891310fd84b7aad1615b153ff3c18f32d2bb6b0e3cb2c034ee7939183b">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "chodeus/unraid-appdata.backup">
