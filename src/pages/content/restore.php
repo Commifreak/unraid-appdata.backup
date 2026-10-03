@@ -73,6 +73,7 @@ if (!ABHelper::isArrayOnline()) {
             <dt><b>Select backup:</b></dt>
             <dd><select required id="restoreBackupList" name="restoreBackupList"></select>
                 <button onclick="checkRestoreItem(); return false;">Next</button>
+                <button onclick="verifySet(); return false;" title="Compares the files listed in checksums.sha256 with the checksums written at backup time">Verify checksums</button>
             </dd>
         </dl>
     </div>
@@ -189,6 +190,15 @@ if (!ABHelper::isArrayOnline()) {
                     confirmButtonText: "Ok"
                 });
             }
+        });
+    }
+
+    function verifySet() {
+        $.ajax(url, {
+            type: 'POST',
+            data: {action: 'verifySet', set: $('#restoreBackupList').val()}
+        }).always(function () {
+            $('#tab3').click();
         });
     }
 

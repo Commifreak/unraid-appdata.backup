@@ -5,6 +5,7 @@
  */
 
 use unraid\plugins\AppdataBackup\ABHelper;
+use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
 use unraid\plugins\AppdataBackup\ABSnapshot;
 
@@ -302,14 +303,20 @@ if (empty($abDestination) || !is_dir($abDestination)) {
     ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
     ABHelper::$errorOccured = true;
 } elseif (!ABHelper::$errorOccured) {
+    ABIntegrity::writeChecksums($abDestination, $setFiles);
     // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
     ABHelper::backupLog("Flushing the backup to disk...");
     $output = $resultcode = null;
-    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, [$abDestination]))) . ' 2>&1', $output, $resultcode);
+    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, array_filter([$abDestination . '/' . ABIntegrity::FILE], 'is_file'), [$abDestination]))) . ' 2>&1', $output, $resultcode);
     if ($resultcode != 0) {
         ABHelper::backupLog("Flushing the backup to disk failed! sync said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
         ABHelper::$errorOccured = true;
     }
+}
+
+// An abort during the checksums or the flush must not let retention delete older sets
+if (ABHelper::abortRequested()) {
+    goto abort;
 }
 
 if (ABHelper::$errorOccured) {
@@ -362,10 +369,6 @@ if (ABHelper::$errorOccured) {
         }
 
     }
-}
-
-if (ABHelper::abortRequested()) {
-    goto abort;
 }
 
 abort:

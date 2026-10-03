@@ -4,6 +4,7 @@ namespace unraid\plugins\AppdataBackup;
 
 require_once __DIR__ . '/ABSettings.php';
 require_once __DIR__ . '/ABSnapshot.php';
+require_once __DIR__ . '/ABIntegrity.php';
 
 /**
  * This is a helper class for some useful things
@@ -513,6 +514,7 @@ class ABHelper {
                 self::backupLog("lsof($volume)" . PHP_EOL . print_r($output, true), self::LOGLEVEL_DEBUG);
             }
 
+            ABIntegrity::$unverified[] = basename($destination); // kept despite the failure, so it gets no checksum
             return $containerSettings['ignoreBackupErrors'] == 'yes';
         }
 
@@ -555,12 +557,14 @@ class ABHelper {
                         self::backupLog("AFTER verify: " . print_r($nowRunningContainer, true), self::LOGLEVEL_DEBUG);
                     }
                 }
+                ABIntegrity::$unverified[] = basename($destination); // kept despite the failure, so it gets no checksum
                 return $containerSettings['ignoreBackupErrors'] == 'yes';
             } else {
                 self::backupLog("Verification ended without issues (took " . gmdate("H:i:s", time() - $tarVerifyTimer) . " (hours:mins:secs))");
             }
         } else {
             self::backupLog("Skipping verification for this container because it's not wanted!", self::LOGLEVEL_WARN);
+            ABIntegrity::$unverified[] = basename($destination);
         }
         return true;
     }
