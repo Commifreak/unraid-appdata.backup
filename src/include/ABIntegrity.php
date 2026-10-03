@@ -68,7 +68,8 @@ class ABIntegrity {
         }
         $list = @file($manifest, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if (!$list) {
-            ABHelper::backupLog($list === false ? "$real has no " . self::FILE . ", so it cannot be checked. Backups get one from this plugin version on." : self::FILE . " in $real lists no files, so there is nothing to check.", ABHelper::LOGLEVEL_ERR);
+            $why = $list !== false ? 'lists no files' : (file_exists($manifest) ? 'cannot be read' : null);
+            ABHelper::backupLog($why ? self::FILE . " in $real $why, so it cannot be checked." : "$real has no " . self::FILE . ", so it cannot be checked. Backups get one from this plugin version on.", ABHelper::LOGLEVEL_ERR);
             return false;
         }
 
