@@ -305,7 +305,7 @@ class ABHelper {
      * Sort docker containers, provided by dynamix DockerClient and provided order array
      * @param $containers array DockerClient container array
      * @param $order array order array
-     * @param $reverse bool return reverse order (unknown containers are always placed to the end of the returning array
+     * @param $reverse bool return the start order reversed (containers missing from $order come last when starting, first when stopping)
      * @return array with name as key and DockerClient info-array as value
      */
     public static function sortContainers($containers, $order, $reverse = false, $removeSkipped = true, array $group = []) {
