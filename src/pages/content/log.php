@@ -21,20 +21,12 @@ $abRunningAtRender = ABHelper::scriptRunning();
         color: green;
     }
 
-    .backupRunning:after {
-        content: 'running';
-    }
-
     .backupNotRunning {
         color: red;
     }
-
-    .backupNotRunning:after {
-        content: 'not running';
-    }
 </style>
 
-<h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
+<h3 id="abJobStatus"></h3>
 <p id="abStep" class="ab-step"></p>
 <span>You can find the normal log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$logfile; ?></code></span>
 <br/>
@@ -44,15 +36,18 @@ $abRunningAtRender = ABHelper::scriptRunning();
 You are currently viewing the <b id="currentLogType">normal</b> log!
 <br/>
 <div class='ab-log' id='abLog'>Loading...</div>
-<input type='button' id="abortBtn" value='Abort' disabled/>
+<input type='button' id="abortBtn" value='Abort' title="Asks the running job to stop at its next safe point. An aborted backup is marked failed, and containers it had stopped and not started yet stay stopped." disabled/>
 <input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
 
 
 <script>
     let url = "/plugins/<?= ABSettings::$appName ?>/include/http.php";
     let wasRunning = <?= $abRunningAtRender ? 'true' : 'false' ?>; // as when the box above was drawn
+    let abBusy = ''; // the running job, from the last poll: it blocks every .ab-job button on all three tabs
+    let abStartingUntil = 0; // a job start was just sent and the poll may not show it yet
 
     $(function () {
+        checkBackup();
         setInterval(function () {
             checkBackup();
         }, 1000);
@@ -99,17 +94,17 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
                 $('#didContainer').css('display', 'none');
                 $('#abortBtn').prop('disabled', false);
                 $('#shareDbgLogBtn').prop('disabled', true);
-                $('#backupStatusText').removeClass('backupNotRunning');
-                $('#backupStatusText').addClass('backupRunning');
+                $('#abJobStatus').attr('class', 'backupRunning').text(data.job + '.');
                 $('#abLog').animate({
                     scrollTop: $('#abLog')[0].scrollHeight - $('#abLog')[0].clientHeight
                 }, 100);
             } else {
                 $('#abortBtn').prop('disabled', true);
                 $('#shareDbgLogBtn').prop('disabled', false);
-                $('#backupStatusText').removeClass('backupRunning');
-                $('#backupStatusText').addClass('backupNotRunning');
+                $('#abJobStatus').attr('class', '').html('The backup is <span class="backupNotRunning">not running</span>.');
             }
+            abBusy = data.running ? data.job : '';
+            abLockButtons();
 
             $('#abStep').text(data.running ? (data.step || '') : '');
             // The run writes its summary just before it ends, so the box can be refreshed now
@@ -121,6 +116,30 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
             wasRunning = !!data.running;
         }).fail(function () {
             $("#abLog").html("Something went wrong while talking to the backend :(");
+        });
+    }
+
+    function abLockButtons() {
+        $('.ab-job').each(function () {
+            const reason = abBusy || (Date.now() < abStartingUntil ? 'Starting…' : '') || $(this).attr('data-blocked') || '';
+            let note = $(this).next('.ab-reason');
+            if (!note.length) {
+                note = $('<small class="ab-reason"></small>').insertAfter(this);
+            }
+            $(this).prop('disabled', reason !== '');
+            note.text(reason);
+        });
+    }
+
+    /** The poll can miss a job that just started, so the buttons stay locked for up to 5 s: a double click cannot send two starts */
+    function abStartJob(data) {
+        abStartingUntil = Date.now() + 5000;
+        abLockButtons();
+        $.ajax(url, {type: 'POST', data: data}).fail(function () {
+            abStartingUntil = 0;
+            abLockButtons();
+        }).always(function () {
+            $('#tab3').click();
         });
     }
 </script>

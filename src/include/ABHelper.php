@@ -681,6 +681,12 @@ class ABHelper {
         }
     }
 
+    /** What the job holding the lock is doing, from its script name, for the buttons it blocks */
+    public static function runningJob($pid) {
+        $script = current(array_filter(explode("\0", (string)@file_get_contents("/proc/$pid/cmdline")), fn($arg) => str_ends_with($arg, '.php')));
+        return ['backup.php' => 'Backup in progress', 'restore.php' => 'Restore in progress', 'verify.php' => 'Checksum check in progress'][basename((string)$script)] ?? 'Another job is running';
+    }
+
     /**
      * @return bool
      * @todo: register_shutdown_function? in beiden Scripts? Damit kill und goto :end?
@@ -792,10 +798,11 @@ class ABHelper {
 
     public static function bytes($bytes) {
         foreach (['B', 'KB', 'MB', 'GB', 'TB'] as $unit) {
-            if ($bytes < 1024 || $unit === 'TB') {
+            // 1000s, as Unraid's own pages count
+            if ($bytes < 1000 || $unit === 'TB') {
                 return round($bytes, $unit === 'B' ? 0 : 1) . ' ' . $unit;
             }
-            $bytes /= 1024;
+            $bytes /= 1000;
         }
     }
 

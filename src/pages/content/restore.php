@@ -46,19 +46,14 @@ if (!ABHelper::isArrayOnline()) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>The folder which contains <code>ab_xxx</code> folders.</p>
+        <p>The folder that holds your <code>ab_…</code> backup sets, normally your <b>Backup destination</b>.</p>
     </blockquote>
 
 
     <dl>
         <dt><b>Backup destination:</b></dt>
         <dd>
-            <div style="display: table">The <b>default</b> destination will be the same as it was during backup. If the
-                destination does not exist, it will be
-                created. Any existing data will be overwritten!<br/>
-                <b>If you want to force a custom destination</b>, enter it below. The archive will be extracted
-                there<br/>
-                <b>THIS IS ONLY APPLICABLE TO ARCHIVES!</b><br/>
+            <div style="display: table"><b>Any existing data will be overwritten!</b><br/>
                 <input type='text' class='ftAttach' id="customRestoreDestination" name="customRestoreDestination"
                        placeholder="Force custom destination"
                        data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"><br/><br/>
@@ -66,17 +61,23 @@ if (!ABHelper::isArrayOnline()) {
             </div>
         </dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p>Leave empty to restore everything to where it was backed up from. A folder here extracts the archives into it instead; templates and plugin settings still go to their usual place.</p>
+    </blockquote>
 
 
     <div id="restoreBackupDiv" style="display: none">
         <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 2: Select backup</span></div>
         <dl>
             <dt><b>Select backup:</b></dt>
-            <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList"></select>
+            <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList" onchange="verifyAvailability();"></select>
                 <button onclick="checkRestoreItem(); return false;">Next</button>
-                <button onclick="verifySet(); return false;" title="Compares the files listed in checksums.sha256 with the checksums written at backup time">Verify checksums</button></div>
+                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Re-reads every file listed in this set's checksums.sha256 and compares it with the checksum written at backup time. Runs in the background; the result shows on Status / Log.">Verify checksums</button></div>
             </dd>
         </dl>
+        <blockquote class='inline_help'>
+            <p>The backup set to restore from. <b>Verify checksums</b> checks it first: every file listed in its <code>checksums.sha256</code> is re-read and compared with the checksum written at backup time.</p>
+        </blockquote>
     </div>
 
     <div id="restoreItemsDiv" style="display: none">
@@ -109,18 +110,18 @@ if (!ABHelper::isArrayOnline()) {
 
         <div class="ab-restore-lists">
             <div class="ab-restore-list">
-                <div class="ab-restore-list-head"><b>Restore templates</b> <span class="ab-pick"><a href="#" data-target="restoreTemplatesDD" data-checked="1">All</a> / <a href="#" data-target="restoreTemplatesDD" data-checked="0">None</a></span></div>
-                <p class="ab-list-help">Copies the selected Docker templates back, so the containers can be added again with their saved settings.</p>
+                <dl class="ab-restore-list-head"><dt><b>Restore templates</b></dt><dd><span class="ab-pick"><a href="#" data-target="restoreTemplatesDD" data-checked="1">All</a> / <a href="#" data-target="restoreTemplatesDD" data-checked="0">None</a></span></dd></dl>
+                <blockquote class='inline_help'><p>Copies the selected Docker templates back, so the containers can be added again with their saved settings.</p></blockquote>
                 <div class="ab-checklist" id="restoreTemplatesDD"></div>
             </div>
             <div class="ab-restore-list">
-                <div class="ab-restore-list-head"><b>Restore containers</b> <span class="ab-pick"><a href="#" data-target="restoreContainersDD" data-checked="1">All</a> / <a href="#" data-target="restoreContainersDD" data-checked="0">None</a></span></div>
-                <p class="ab-list-help">Extracts each container's data back where it came from, or into the custom destination. Existing files are overwritten, so stop the containers first.</p>
+                <dl class="ab-restore-list-head"><dt><b>Restore containers</b></dt><dd><span class="ab-pick"><a href="#" data-target="restoreContainersDD" data-checked="1">All</a> / <a href="#" data-target="restoreContainersDD" data-checked="0">None</a></span></dd></dl>
+                <blockquote class='inline_help'><p>Extracts each container's data back where it came from, or into the custom destination. Existing files are overwritten, so stop the containers first.</p></blockquote>
                 <div class="ab-checklist" id="restoreContainersDD"></div>
             </div>
         </div>
 
-        <button onclick="startRestore(); return false;">Do it!</button>
+        <button class="ab-job" onclick="startRestore(); return false;" title="Starts the restore in the background; follow it on Status / Log.">Do it!</button>
     </div>
 
 </form>
@@ -136,8 +137,9 @@ if (!ABHelper::isArrayOnline()) {
                 $('#restoreBackupDiv').show();
                 $.each(data.result, function (i) {
                     var name = data.result[i]['name'];
-                    $('#restoreBackupList').append('<option value="' + data.result[i]['path'] + '">' + name + '</option>');
+                    $('#restoreBackupList').append($('<option>').val(data.result[i]['path']).attr('data-checksums', data.result[i]['checksums'] ? '1' : '').text(name));
                 });
+                verifyAvailability();
             } else {
                 $('#restoreBackupDiv').hide();
                 swal({
@@ -198,13 +200,13 @@ if (!ABHelper::isArrayOnline()) {
         });
     }
 
+    function verifyAvailability() {
+        $('#verifySetBtn').attr('data-blocked', $('#restoreBackupList option:selected').attr('data-checksums') === '1' ? '' : 'No checksums in this set');
+        abLockButtons();
+    }
+
     function verifySet() {
-        $.ajax(url, {
-            type: 'POST',
-            data: {action: 'verifySet', set: $('#restoreBackupList').val()}
-        }).always(function () {
-            $('#tab3').click();
-        });
+        abStartJob({action: 'verifySet', set: $('#restoreBackupList').val()});
     }
 
     const byName = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
@@ -219,11 +221,6 @@ if (!ABHelper::isArrayOnline()) {
     }
 
     function startRestore() {
-        $.ajax(url, {
-            type: 'POST',
-            data: $('#restoreForm').serialize() + '&action=startRestore'
-        }).always(function () {
-            $('#tab3').click();
-        });
+        abStartJob($('#restoreForm').serialize() + '&action=startRestore');
     }
 </script>
