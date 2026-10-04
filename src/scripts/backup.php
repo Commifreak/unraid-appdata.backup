@@ -30,17 +30,8 @@ $backupStarted = new DateTime();
 
 
 if (!ABHelper::claimRun()) {
-    ABHelper::notify("Appdata Backup", "Still running", "There is something running already.");
     exit;
 }
-
-if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
-    unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
-}
-
-if (file_exists(ABSettings::$tempFolder)) {
-    exec("rm " . ABSettings::$tempFolder . '/*.log');
-} // Creation of tempFolder is handled by backupLog
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 $unraidVersion           = parse_ini_file('/etc/unraid-version');

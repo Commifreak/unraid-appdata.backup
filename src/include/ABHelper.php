@@ -663,13 +663,18 @@ class ABHelper {
         return true;
     }
 
-    /** Takes the run lock and records this process as the running job; false while another backup, restore or check holds it */
+    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, while another backup, restore or check holds the lock */
     public static function claimRun() {
         $lock = @fopen(ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock, 'c');
         if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+            self::notify("Appdata Backup", "Still running", "There is something running already.");
             return false;
         }
         self::$runLock = $lock;
+        if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
+            unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
+        }
+        exec("rm -f " . escapeshellarg(ABSettings::$tempFolder) . "/*.log");
         file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
         return true;
     }
