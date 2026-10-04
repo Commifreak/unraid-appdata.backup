@@ -32,6 +32,9 @@ class ABHelper {
 
     public static $targetLogLevel = '';
 
+    /** @var resource|null The run lock from claimRun(): the kernel drops it when this process ends, however it ends */
+    private static $runLock = null;
+
     /**
      * Logs a message to the system log
      * @param $string
@@ -657,6 +660,17 @@ class ABHelper {
                 self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", self::LOGLEVEL_ERR);
             }
         }
+        return true;
+    }
+
+    /** Takes the run lock and records this process as the running job; false while another backup, restore or check holds it */
+    public static function claimRun() {
+        $lock = @fopen(ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock, 'c');
+        if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+            return false;
+        }
+        self::$runLock = $lock;
+        file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
         return true;
     }
 

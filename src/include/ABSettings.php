@@ -23,6 +23,7 @@ class ABSettings {
     public static $debugLogFile = 'ab.debug.log';
 
     public static $stateFileScriptRunning = 'running';
+    public static $stateFileLock = 'lock'; // never deleted: see ABHelper::claimRun()
     public static $stateFileAbort = 'abort';
     public static $stateExtCmd = 'extCmd';
     public static $stateFileStep = 'step';
