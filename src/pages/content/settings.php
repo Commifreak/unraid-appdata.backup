@@ -622,10 +622,10 @@ if (($code ?? 0) != 0) {
                 'extVolumes' => 'Also backs up this container\'s volumes outside your appdata sources (arrow icon). With No they\'re left out, and the log lists which.',
                 'update' => 'If an update is available, installs it right after this container\'s backup. <b>Use standard</b> follows <b>Update containers after backup?</b>',
                 'exclude' => 'Left out of this container\'s archive: one path or pattern per line, such as <code>/mnt/user/appdata/plex/Cache</code> or <code>*.log</code>. Write paths the way the volume is mapped (<code>/mnt/cache/…</code> or <code>/mnt/user/…</code>). Listing a whole volume leaves that volume out.',
-                'skipBackup' => 'Stops and starts this container with the others but doesn\'t back it up. For a container that has to be down while the others are backed up.',
+                'skipBackup' => 'Stops and starts this container with the others but doesn\'t back it up, for a container that has to be down while the others are backed up. With <b>Skip stopping of container?</b> on, it isn\'t stopped either.',
                 'verify' => 'Overrides <b>Verify Backup?</b> in Advanced settings for this container. With No its archive isn\'t checked and gets no checksum.',
                 'ignoreErrors' => 'Overrides <b>Ignore errors during backup?</b> in Advanced settings for this container. With Yes, a tar error here is logged as info and doesn\'t fail the run.',
-                'dontStop' => 'Backs this container up while it keeps running. Not recommended: files that change during the backup can leave a broken archive. <b>Use standard</b> follows Advanced settings.',
+                'dontStop' => 'Leaves this container running while it is backed up. Not recommended: files that change during the backup can leave a broken archive. <b>Use standard</b> follows Advanced settings.',
             ];
 
             foreach ($allContainers as $container) {
