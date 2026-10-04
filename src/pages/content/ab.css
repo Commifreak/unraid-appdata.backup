@@ -239,7 +239,7 @@ blockquote.inline_help.ab-box {
     display: none;
 }
 
-/* Why a job button is greyed out: abLockButtons() in log.php adds it after the button and fills it */
+/* No markup has it: abLockButtons() in log.php adds it after each job button */
 .ab-reason {
     margin-left: 0.5rem;
     font-style: italic;

@@ -615,7 +615,6 @@ if (($code ?? 0) != 0) {
             $dockerClient  = new DockerClient();
             $allContainers = $dockerClient->getDockerContainers();
 
-            // One text per option, shown in every container's panel
             $containerHelp = [
                 'volumes' => 'This container\'s volume mappings; click one to add it to the exclusions. Folder icon: inside an appdata source, always backed up. Arrow icon: external, backed up only with <b>Save external volumes?</b>',
                 'group' => 'Containers in the same group are stopped, backed up and started as one unit, in the group\'s own order. Type a new name to create a group; the <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&amp;comment=1250363" target="_blank">forum hints</a> have examples.',

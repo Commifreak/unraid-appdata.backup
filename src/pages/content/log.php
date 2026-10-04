@@ -36,7 +36,7 @@ $abRunningAtRender = ABHelper::scriptRunning();
 You are currently viewing the <b id="currentLogType">normal</b> log!
 <br/>
 <div class='ab-log' id='abLog'>Loading...</div>
-<input type='button' id="abortBtn" value='Abort' title="Stops the running job right away. An aborted backup is marked failed, and containers it had stopped and not started yet stay stopped." disabled/>
+<input type='button' id="abortBtn" value='Abort' title="Asks the running job to stop at its next safe point. An aborted backup is marked failed, and containers it had stopped and not started yet stay stopped." disabled/>
 <input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
 
 
@@ -119,7 +119,6 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
         });
     }
 
-    /** Greys out each .ab-job button while a job runs or starts, or its own data-blocked reason applies, with the reason beside it */
     function abLockButtons() {
         $('.ab-job').each(function () {
             const reason = abBusy || (Date.now() < abStartingUntil ? 'Starting…' : '') || $(this).attr('data-blocked') || '';
@@ -132,7 +131,7 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
         });
     }
 
-    /** Sends a job start; the buttons stay locked until the poll shows the job, so a double click cannot send two */
+    /** The poll can miss a job that just started, so the buttons stay locked for up to 5 s: a double click cannot send two starts */
     function abStartJob(data) {
         abStartingUntil = Date.now() + 5000;
         abLockButtons();
