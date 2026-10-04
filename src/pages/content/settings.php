@@ -267,7 +267,7 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>The plugin takes note of not started containers before backup and leaves them stopped afterwards.</p>
+        <p><b>Stop all</b> keeps every container down for the whole backup. <b>For each container</b> stops, backs up and starts them one at a time (a group counts as one), so each is down only for its own backup. Containers that were already stopped stay stopped.</p>
     </blockquote>
 
     <dl>
@@ -278,7 +278,7 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Containers start again as soon as their data is snapshotted, and the backup is made from the snapshot, so they are already running when the post-container and post-backup scripts run. A volume can be snapshotted on ZFS or btrfs (under /mnt/user, the share must be exclusive) when nothing else is mounted inside it. Otherwise its container stays stopped during the backup (when stopping all containers, the whole run does).</p>
+        <p>Stops the containers, snapshots their data and starts them again, then backs up from the snapshot, so they're only down while they stop and start. Works on ZFS and btrfs (a /mnt/user share must be exclusive) when nothing else is mounted inside the volume; otherwise that container stays stopped for its backup, or with <b>Stop all</b> the whole run does. Post-container and post-backup scripts run with the containers already up.</p>
     </blockquote>
 
     <dl>
@@ -287,12 +287,21 @@ if (($code ?? 0) != 0) {
         <dd><input id='deleteBackupsOlderThan' name="deleteBackupsOlderThan" type='number'
                    value='<?= $abSettings->deleteBackupsOlderThan ?>'
                    placeholder='Leave empty to disable'/></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set.</p>
+    </blockquote>
 
+    <dl>
         <dt><b>Keep at least this many backups:</b></dt>
         <dd><input id='keepMinBackups' name="keepMinBackups" type='number' value='<?= $abSettings->keepMinBackups ?>'
                    placeholder='Leave empty to disable'/></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>The newest this-many good sets are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
+    </blockquote>
 
-
+    <dl>
         <dt><b>Appdata source(s)</b> Please read the info in the help block!</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
@@ -331,7 +340,12 @@ if (($code ?? 0) != 0) {
         <dd><input type='text' required class='ftAttach' id="destination" name="destination"
                    value="<?= $abSettings->destination ?>"
                    data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Each run creates a dated <code>ab_YYYYMMDD_HHMMSS</code> folder here. Pick disks other than the ones your appdata is on, such as a share on the array, so one failure can't take both.</p>
+    </blockquote>
 
+    <dl>
         <dt><b>Use Compression?</b></dt>
         <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>"
                     onchange="checkMultiCoreCpuCount();">
@@ -341,8 +355,12 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p><b>Yes, normal</b> compresses with gzip on one core. <b>Yes, multicore</b> uses zstd on several cores: much faster, but it can slow other services during the backup.</p>
+    </blockquote>
 
-    <dl id="compressionCpuLimit_dl">
+    <div id="compressionCpuLimit_dl">
+    <dl>
         <dt><b>How many cores should be used?</b></dt>
         <dd><select id='compressionCpuLimit' name="compressionCpuLimit"
                     data-setting="<?= $abSettings->compressionCpuLimit ?>">
@@ -357,13 +375,10 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
     </dl>
-
     <blockquote class='inline_help'>
-        <p><b>Yes, normal</b>: Uses normal gzip compression</p>
-        <p><b>Yes, multicore</b>: Uses <a href="https://facebook.github.io/zstd/" target="_blank">zstdmt</a> for
-            compression. Please
-            note that this <i>could</i> slow down other system services during backup.</p>
+        <p>How many cores zstd may use with <b>Yes, multicore</b>. All cores is fastest; fewer leaves room for everything else running.</p>
     </blockquote>
+    </div>
 
     <dl>
         <dt><b>Backup the flash drive?</b></dt>
@@ -375,20 +390,21 @@ if (($code ?? 0) != 0) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>This puts a compressed copy of your flash drive inside the backup as well.</p>
+        <p>Puts a zip of your flash drive (Unraid's own flash backup) in each backup set and test-reads it. If the flash drive dies, the Unraid USB Creator can restore it from that zip.</p>
     </blockquote>
 
-    <dl id="flashBackupCopy_dl">
-        <dt>
-            <div style="line-height: 1em;"><b>Copy the flash backup to a custom destination</b><br/>This
-                is optional
-            </div>
-        </dt>
+    <div id="flashBackupCopy_dl">
+    <dl>
+        <dt><b>Copy the flash backup to a custom destination</b></dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="flashBackupCopy" name="flashBackupCopy"
                    value="<?= $abSettings->flashBackupCopy ?>"
                    data-pickroot="/mnt/"
                    data-pickfolders/></dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p>Optional: also copies the flash zip to this folder, for example one that another machine backs up. Leave empty to skip.</p>
+    </blockquote>
+    </div>
 
     <dl>
         <dt><b>Backup VM meta?</b></dt>
@@ -399,7 +415,7 @@ if (($code ?? 0) != 0) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>This saves <code>/etc/libvirt/qemu</code></p>
+        <p>Saves your VM definitions from <code>/etc/libvirt/qemu</code> as <code>vm_meta.tgz</code>. That's only the VM settings: back up the vdisks separately.</p>
     </blockquote>
 
     <div class="title" onclick="$(this).next().toggle();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
@@ -409,59 +425,56 @@ if (($code ?? 0) != 0) {
             if you want.
         </blockquote>
         <dl>
-            <dt>
-                <div style="line-height: 1em;"><b>Skip stopping of containers?</b><br/><small>This will
-                        skip stopping containers and leave them running. Could lead to broken backups for
-                        containers!</small>
-                </div>
-            </dt>
+            <dt><b>Skip stopping of containers?</b></dt>
             <dd><select id='dontStop' name="defaults[dontStop]"
                         data-setting="<?= $abSettings->defaults['dontStop'] ?>">
                     <option value='no'>No</option>
                     <option value='yes'>Yes</option>
                 </select>
             </dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>Backs up containers while they keep running. Files that change during the backup, databases especially, can leave a broken archive. Each container can override this.</p>
+        </blockquote>
 
-            <dt>
-                <div style="line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
-                        any
-                        errors during backup. This option just adds an extra layer of security</small>
-                </div>
-            </dt>
+        <dl>
+            <dt><b>Verify Backup?</b></dt>
             <dd><select id='verifyBackup' name="defaults[verifyBackup]"
                         data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
             </dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>After each archive is written, reads it back and compares it with the data it was made from. That takes about as long again (no extra downtime with snapshots), and only verified archives get a checksum.</p>
+        </blockquote>
 
-            <dt>
-                <div style="line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
-                        lead to
-                        broken backups - Only enable if you know what you
-                        are doing!</small>
-                </div>
-            </dt>
+        <dl>
+            <dt><b>Ignore errors during backup?</b></dt>
             <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
                         data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
             </dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>Logs tar errors as info instead of failing the run, so the set isn't marked failed and old sets still get deleted. The affected archive may be incomplete and gets no checksum.</p>
+        </blockquote>
 
-            <dt>
-                <div style="line-height: 1em;"><b>Enable <code>--ignore-case</code> for
-                        tar?</b><br/><small>This ignores case sensitivity for exclusions.</small>
-                </div>
-            </dt>
+        <dl>
+            <dt><b>Enable <code>--ignore-case</code> for tar?</b></dt>
             <dd><select id='ignoreExclusionCase' name="ignoreExclusionCase"
                         data-setting="<?= $abSettings->ignoreExclusionCase ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
             </dd>
-
         </dl>
+        <blockquote class='inline_help'>
+            <p>Exclusions match regardless of upper or lower case, so <code>*.log</code> also leaves out <code>DEBUG.LOG</code>. Applies to every container and to the extra files.</p>
+        </blockquote>
     </div>
 
     <div class="title"><span class="left"><i
@@ -581,6 +594,9 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p>Default for every container: if an update is available, it's installed right after that container's backup. Each container can override this.</p>
+    </blockquote>
 
     <div class="ab-docker-cols">
         <div class="dockerSettings">
@@ -598,6 +614,20 @@ if (($code ?? 0) != 0) {
             <?php
             $dockerClient  = new DockerClient();
             $allContainers = $dockerClient->getDockerContainers();
+
+            // One text per option, shown in every container's panel
+            $containerHelp = [
+                'skip' => 'Yes leaves this container out completely: it isn&#x27;t stopped, backed up or started.',
+                'volumes' => 'This container\'s volume mappings; click one to add it to the exclusions. Folder icon: inside an appdata source, always backed up. Arrow icon: external, backed up only with <b>Save external volumes?</b>',
+                'group' => 'Containers in the same group are stopped, backed up and started as one unit, in the group\'s own order. Type a new name to create a group; the <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&amp;comment=1250363" target="_blank">forum hints</a> have examples.',
+                'extVolumes' => 'Also backs up this container\'s volumes outside your appdata sources (arrow icon). With No they\'re left out, and the log lists which.',
+                'update' => 'If an update is available, installs it right after this container\'s backup. <b>Use standard</b> follows <b>Update containers after backup?</b>',
+                'exclude' => 'Left out of this container\'s archive: one path or pattern per line, such as <code>/mnt/user/appdata/plex/Cache</code> or <code>*.log</code>. Write paths the way the volume is mapped (<code>/mnt/cache/…</code> or <code>/mnt/user/…</code>). Listing a whole volume leaves that volume out.',
+                'skipBackup' => 'Stops and starts this container with the others but doesn\'t back it up. For a container that has to be down while the others are backed up.',
+                'verify' => 'Overrides <b>Verify Backup?</b> in Advanced settings for this container. With No its archive isn\'t checked and gets no checksum.',
+                'ignoreErrors' => 'Overrides <b>Ignore errors during backup?</b> in Advanced settings for this container. With Yes, a tar error here is logged as info and doesn\'t fail the run.',
+                'dontStop' => 'Backs this container up while it keeps running. Not recommended: files that change during the backup can leave a broken archive. <b>Use standard</b> follows Advanced settings.',
+            ];
 
             foreach ($allContainers as $container) {
                 $isPlex = str_contains(strtolower($container['Name']), 'plex');
@@ -635,7 +665,7 @@ HTML;
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl class="ab-container-row">
         <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">Skip?</label>
+        <dd><label for="{$container['Name']}_skip" title="{$containerHelp['skip']}">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
             <option value="yes">Yes</option>
@@ -646,49 +676,58 @@ HTML;
 <blockquote class='inline_help ab-box'>
 <dl>
 $plexHint
-<dt>Configured volumes <small>- (Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
+<dt>Configured volumes</dt>
 <dd><div style="display: table">$volumes</div></dd>
-
-<dt>Member of group (type something in to create one) <small>- <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for more</small></dt>
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['volumes']}</p></blockquote>
+<dl>
+<dt>Member of group</dt>
 <dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$container['Name']}_group' name="containerSettings[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
-
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['group']}</p></blockquote>
+<dl>
 <dt>Save external volumes?</dt>
 <dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
 		<option value='no'>No</option>
 		<option value='yes'>Yes</option>
 	</select></dd>
-	
-	<dt>Update container after backup?</dt>
-    <dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['extVolumes']}</p></blockquote>
+<dl>
+<dt>Update container after backup?</dt>
+<dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
             <option value=''>Use standard</option>
             <option value='yes'>Yes</option>
             <option value='no'>No</option>
         </select>
     </dd>
-    
-    <dt>Excluded folders/files<br /><small>One path/pattern per line. See "Global exclusions" below for more examples.</small></dt>
-    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
-    
-
-
-
 </dl>
+<blockquote class='inline_help'><p>{$containerHelp['update']}</p></blockquote>
+<dl>
+<dt>Excluded folders/files</dt>
+<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['exclude']}</p></blockquote>
 <div class="ab-advanced-toggle" onclick="$(this).next().toggle();"><a>Show advanced options</a></div>
-	<div style="display: none;"><dl>
-	
-	<dt>Skip backup? <small>Only stop/start</small></dt>
+<div style="display: none;">
+<dl>
+<dt>Skip backup?</dt>
 <dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
 		<option value='no'>No, do backup as well</option>
 		<option value='yes'>Yes, skip backup and do stop/start only</option>
 	</select></dd>
-	
-	<dt>Verify Backup?</dt>
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['skipBackup']}</p></blockquote>
+<dl>
+<dt>Verify Backup?</dt>
 <dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
 		<option value=''>Use standard</option>
 		<option value='yes'>Yes</option>
 		<option value='no'>No</option>
 	</select></dd>
-	
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['verify']}</p></blockquote>
+<dl>
 <dt>Ignore errors during backup?</dt>
 <dd>
     <select id='{$container['Name']}_ignoreBackupErrors' name="containerSettings[{$container['Name']}][ignoreBackupErrors]" data-setting="{$containerSetting['ignoreBackupErrors']}">
@@ -697,14 +736,18 @@ $plexHint
 		<option value='no'>No</option>
 	</select>
 </dd>
-    <dt>Skip stopping of container? <small><abbr title="This will skip stopping this container and leave it running. Could lead to a broken backup for this container!">NOT RECOMMENDED!</abbr></small></dt>
-    <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['ignoreErrors']}</p></blockquote>
+<dl>
+<dt>Skip stopping of container?</dt>
+<dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
             <option value=''>Use standard</option>
             <option value='no'>No</option>
             <option value='yes'>Yes</option>
         </select></dd>
-        
-	</dl></div>
+</dl>
+<blockquote class='inline_help'><p>{$containerHelp['dontStop']}</p></blockquote>
+</div>
 </blockquote>
 HTML;
 
@@ -858,7 +901,7 @@ HTML;
         </dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>These files will be packed into "extra_files.tar.gz"</p>
+        <p>Other files or folders to back up on every run, packed into one <code>extra_files</code> archive in the set. Global exclusions and --ignore-case apply to them too.</p>
     </blockquote>
 
     <dl>
@@ -879,7 +922,7 @@ HTML;
     <dl>
         <dt>Done?</dt>
         <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" class="ab-job" style="margin-left: 15px;">Manual backup</button><small class="ab-reason"></small></span>
+            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button><small class="ab-reason"></small></span>
         </dd>
     </dl>
 </form>

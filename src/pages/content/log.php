@@ -36,8 +36,8 @@ $abRunningAtRender = ABHelper::scriptRunning();
 You are currently viewing the <b id="currentLogType">normal</b> log!
 <br/>
 <div class='ab-log' id='abLog'>Loading...</div>
-<input type='button' id="abortBtn" value='Abort' disabled/>
-<input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
+<input type='button' id="abortBtn" value='Abort' title="Stops the running job right away and marks its set failed. Containers it had stopped and not started yet stay stopped." disabled/>
+<input type='button' id="switchLog" data-log-type="normal" value='Switch log' title="Switches between the normal and the debug log."/>
 
 
 <script>

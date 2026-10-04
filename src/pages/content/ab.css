@@ -176,16 +176,24 @@ blockquote.inline_help.ab-box {
     margin: 0;
 }
 
+/* A dl, so a click on the title opens its help: Unraid's dl, dt and dd layout is undone here */
 .ab-restore-list-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
+    margin: 0 0 0.5rem;
+    line-height: normal;
 }
 
-.ab-list-help {
-    margin: 0.25rem 0 0.5rem;
-    opacity: 0.75;
+.ab-restore-list-head > dt,
+.ab-restore-list-head > dd {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
 }
 
 /* columns fill top to bottom, so the sorted names read down each column, then left to right */
@@ -240,6 +248,10 @@ blockquote.inline_help.ab-box {
 
 .ab-reason:empty {
     display: none;
+}
+
+.ab-status dt[title] {
+    cursor: help;
 }
 
 /* Phones. Only Unraid 7.2+ reaches this: up to 7.1 the viewport is pinned to 1300px */

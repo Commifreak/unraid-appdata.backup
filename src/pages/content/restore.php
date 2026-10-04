@@ -46,19 +46,14 @@ if (!ABHelper::isArrayOnline()) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>The folder which contains <code>ab_xxx</code> folders.</p>
+        <p>The folder that holds your <code>ab_…</code> backup sets, normally your <b>Backup destination</b>.</p>
     </blockquote>
 
 
     <dl>
         <dt><b>Backup destination:</b></dt>
         <dd>
-            <div style="display: table">The <b>default</b> destination will be the same as it was during backup. If the
-                destination does not exist, it will be
-                created. Any existing data will be overwritten!<br/>
-                <b>If you want to force a custom destination</b>, enter it below. The archive will be extracted
-                there<br/>
-                <b>THIS IS ONLY APPLICABLE TO ARCHIVES!</b><br/>
+            <div style="display: table"><b>Any existing data will be overwritten!</b><br/>
                 <input type='text' class='ftAttach' id="customRestoreDestination" name="customRestoreDestination"
                        placeholder="Force custom destination"
                        data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"><br/><br/>
@@ -66,6 +61,9 @@ if (!ABHelper::isArrayOnline()) {
             </div>
         </dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p>Leave empty to restore everything to where it was backed up from. A folder here extracts the archives into it instead; templates and plugin settings still go to their usual place.</p>
+    </blockquote>
 
 
     <div id="restoreBackupDiv" style="display: none">
@@ -74,9 +72,12 @@ if (!ABHelper::isArrayOnline()) {
             <dt><b>Select backup:</b></dt>
             <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList" onchange="verifyAvailability();"></select>
                 <button onclick="checkRestoreItem(); return false;">Next</button>
-                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Compares the files listed in checksums.sha256 with the checksums written at backup time">Verify checksums</button><small class="ab-reason"></small></div>
+                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Re-reads every file in this set and compares it with the checksum written at backup time. Runs in the background; the result shows on Status / Log.">Verify checksums</button><small class="ab-reason"></small></div>
             </dd>
         </dl>
+        <blockquote class='inline_help'>
+            <p>The backup set to restore from. <b>Verify checksums</b> checks it first: every file is re-read and compared with the checksum written at backup time.</p>
+        </blockquote>
     </div>
 
     <div id="restoreItemsDiv" style="display: none">
@@ -109,18 +110,18 @@ if (!ABHelper::isArrayOnline()) {
 
         <div class="ab-restore-lists">
             <div class="ab-restore-list">
-                <div class="ab-restore-list-head"><b>Restore templates</b> <span class="ab-pick"><a href="#" data-target="restoreTemplatesDD" data-checked="1">All</a> / <a href="#" data-target="restoreTemplatesDD" data-checked="0">None</a></span></div>
-                <p class="ab-list-help">Copies the selected Docker templates back, so the containers can be added again with their saved settings.</p>
+                <dl class="ab-restore-list-head"><dt><b>Restore templates</b></dt><dd><span class="ab-pick"><a href="#" data-target="restoreTemplatesDD" data-checked="1">All</a> / <a href="#" data-target="restoreTemplatesDD" data-checked="0">None</a></span></dd></dl>
+                <blockquote class='inline_help'><p>Copies the selected Docker templates back, so the containers can be added again with their saved settings.</p></blockquote>
                 <div class="ab-checklist" id="restoreTemplatesDD"></div>
             </div>
             <div class="ab-restore-list">
-                <div class="ab-restore-list-head"><b>Restore containers</b> <span class="ab-pick"><a href="#" data-target="restoreContainersDD" data-checked="1">All</a> / <a href="#" data-target="restoreContainersDD" data-checked="0">None</a></span></div>
-                <p class="ab-list-help">Extracts each container's data back where it came from, or into the custom destination. Existing files are overwritten, so stop the containers first.</p>
+                <dl class="ab-restore-list-head"><dt><b>Restore containers</b></dt><dd><span class="ab-pick"><a href="#" data-target="restoreContainersDD" data-checked="1">All</a> / <a href="#" data-target="restoreContainersDD" data-checked="0">None</a></span></dd></dl>
+                <blockquote class='inline_help'><p>Extracts each container's data back where it came from, or into the custom destination. Existing files are overwritten, so stop the containers first.</p></blockquote>
                 <div class="ab-checklist" id="restoreContainersDD"></div>
             </div>
         </div>
 
-        <button class="ab-job" onclick="startRestore(); return false;">Do it!</button><small class="ab-reason"></small>
+        <button class="ab-job" onclick="startRestore(); return false;" title="Starts the restore in the background; follow it on Status / Log.">Do it!</button><small class="ab-reason"></small>
     </div>
 
 </form>
