@@ -879,7 +879,7 @@ HTML;
     <dl>
         <dt>Done?</dt>
         <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" style="margin-left: 15px;">Manual backup</button></span>
+            <button id="manualBackup" class="ab-job" style="margin-left: 15px;">Manual backup</button><small class="ab-reason"></small></span>
         </dd>
     </dl>
 </form>

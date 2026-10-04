@@ -4,6 +4,7 @@ require_once __DIR__ . '/ABSettings.php';
 require_once __DIR__ . '/ABHelper.php';
 
 use unraid\plugins\AppdataBackup\ABHelper;
+use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
 
 $writeActions = ['manualBackup', 'abort', 'startRestore', 'verifySet', 'copyConfigFromProd'];
@@ -39,6 +40,7 @@ if (isset($action)) {
 
             $data = [
                 'running' => $running,
+                'job'     => $running ? ABHelper::runningJob($running) : '',
                 'log'     => $log,
                 'step'    => $step
             ];
@@ -82,8 +84,9 @@ if (isset($action)) {
                     continue;
                 }
                 $result[] = [
-                    'path' => $file,
-                    'name' => $date->format('d.m.Y H:i:s')
+                    'path'      => $file,
+                    'name'      => $date->format('d.m.Y H:i:s'),
+                    'checksums' => is_file($file . '/' . ABIntegrity::FILE)
                 ];
 
             }

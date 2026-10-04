@@ -231,6 +231,17 @@ blockquote.inline_help.ab-box {
     display: none;
 }
 
+/* Why a job button is greyed out: set by abLockButtons() in log.php */
+.ab-reason {
+    margin-left: 0.5rem;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.ab-reason:empty {
+    display: none;
+}
+
 /* Phones. Only Unraid 7.2+ reaches this: up to 7.1 the viewport is pinned to 1300px */
 @media (max-width: 768px) {
     .ab-docker-cols {

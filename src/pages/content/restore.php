@@ -72,9 +72,9 @@ if (!ABHelper::isArrayOnline()) {
         <div class="title"><span class="left"><i class="fa fa-folder title"></i>Step 2: Select backup</span></div>
         <dl>
             <dt><b>Select backup:</b></dt>
-            <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList"></select>
+            <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList" onchange="verifyAvailability();"></select>
                 <button onclick="checkRestoreItem(); return false;">Next</button>
-                <button onclick="verifySet(); return false;" title="Compares the files listed in checksums.sha256 with the checksums written at backup time">Verify checksums</button></div>
+                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Compares the files listed in checksums.sha256 with the checksums written at backup time">Verify checksums</button><small class="ab-reason"></small></div>
             </dd>
         </dl>
     </div>
@@ -120,7 +120,7 @@ if (!ABHelper::isArrayOnline()) {
             </div>
         </div>
 
-        <button onclick="startRestore(); return false;">Do it!</button>
+        <button class="ab-job" onclick="startRestore(); return false;">Do it!</button><small class="ab-reason"></small>
     </div>
 
 </form>
@@ -136,8 +136,9 @@ if (!ABHelper::isArrayOnline()) {
                 $('#restoreBackupDiv').show();
                 $.each(data.result, function (i) {
                     var name = data.result[i]['name'];
-                    $('#restoreBackupList').append('<option value="' + data.result[i]['path'] + '">' + name + '</option>');
+                    $('#restoreBackupList').append('<option value="' + data.result[i]['path'] + '" data-checksums="' + (data.result[i]['checksums'] ? '1' : '') + '">' + name + '</option>');
                 });
+                verifyAvailability();
             } else {
                 $('#restoreBackupDiv').hide();
                 swal({
@@ -196,6 +197,11 @@ if (!ABHelper::isArrayOnline()) {
                 });
             }
         });
+    }
+
+    function verifyAvailability() {
+        $('#verifySetBtn').attr('data-blocked', $('#restoreBackupList option:selected').attr('data-checksums') === '1' ? '' : 'No checksums in this set');
+        abLockButtons();
     }
 
     function verifySet() {

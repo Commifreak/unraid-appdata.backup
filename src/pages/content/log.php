@@ -21,20 +21,12 @@ $abRunningAtRender = ABHelper::scriptRunning();
         color: green;
     }
 
-    .backupRunning:after {
-        content: 'running';
-    }
-
     .backupNotRunning {
         color: red;
     }
-
-    .backupNotRunning:after {
-        content: 'not running';
-    }
 </style>
 
-<h3>The backup is <span id="backupStatusText" class=""></span>.</h3>
+<h3 id="abJobStatus"></h3>
 <p id="abStep" class="ab-step"></p>
 <span>You can find the normal log at: <code><?= ABSettings::$tempFolder . '/' . ABSettings::$logfile; ?></code></span>
 <br/>
@@ -51,8 +43,10 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
 <script>
     let url = "/plugins/<?= ABSettings::$appName ?>/include/http.php";
     let wasRunning = <?= $abRunningAtRender ? 'true' : 'false' ?>; // as when the box above was drawn
+    let abBusy = ''; // the running job, from the last poll: it blocks every .ab-job button on all three tabs
 
     $(function () {
+        checkBackup();
         setInterval(function () {
             checkBackup();
         }, 1000);
@@ -99,17 +93,17 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
                 $('#didContainer').css('display', 'none');
                 $('#abortBtn').prop('disabled', false);
                 $('#shareDbgLogBtn').prop('disabled', true);
-                $('#backupStatusText').removeClass('backupNotRunning');
-                $('#backupStatusText').addClass('backupRunning');
+                $('#abJobStatus').attr('class', 'backupRunning').text(data.job + '.');
                 $('#abLog').animate({
                     scrollTop: $('#abLog')[0].scrollHeight - $('#abLog')[0].clientHeight
                 }, 100);
             } else {
                 $('#abortBtn').prop('disabled', true);
                 $('#shareDbgLogBtn').prop('disabled', false);
-                $('#backupStatusText').removeClass('backupRunning');
-                $('#backupStatusText').addClass('backupNotRunning');
+                $('#abJobStatus').attr('class', '').html('The backup is <span class="backupNotRunning">not running</span>.');
             }
+            abBusy = data.running ? data.job : '';
+            abLockButtons();
 
             $('#abStep').text(data.running ? (data.step || '') : '');
             // The run writes its summary just before it ends, so the box can be refreshed now
@@ -121,6 +115,14 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
             wasRunning = !!data.running;
         }).fail(function () {
             $("#abLog").html("Something went wrong while talking to the backend :(");
+        });
+    }
+
+    /** Greys out each .ab-job button while a job runs or its own data-blocked reason applies, with the reason beside it */
+    function abLockButtons() {
+        $('.ab-job').each(function () {
+            const reason = abBusy || $(this).attr('data-blocked') || '';
+            $(this).prop('disabled', reason !== '').next('.ab-reason').text(reason);
         });
     }
 </script>
