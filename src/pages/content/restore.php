@@ -72,7 +72,7 @@ if (!ABHelper::isArrayOnline()) {
             <dt><b>Select backup:</b></dt>
             <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList" onchange="verifyAvailability();"></select>
                 <button onclick="checkRestoreItem(); return false;">Next</button>
-                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Re-reads every file in this set and compares it with the checksum written at backup time. Runs in the background; the result shows on Status / Log.">Verify checksums</button><small class="ab-reason"></small></div>
+                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Re-reads every file in this set and compares it with the checksum written at backup time. Runs in the background; the result shows on Status / Log.">Verify checksums</button></div>
             </dd>
         </dl>
         <blockquote class='inline_help'>
@@ -121,7 +121,7 @@ if (!ABHelper::isArrayOnline()) {
             </div>
         </div>
 
-        <button class="ab-job" onclick="startRestore(); return false;" title="Starts the restore in the background; follow it on Status / Log.">Do it!</button><small class="ab-reason"></small>
+        <button class="ab-job" onclick="startRestore(); return false;" title="Starts the restore in the background; follow it on Status / Log.">Do it!</button>
     </div>
 
 </form>

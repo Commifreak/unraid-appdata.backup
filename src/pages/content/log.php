@@ -37,7 +37,7 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
 <br/>
 <div class='ab-log' id='abLog'>Loading...</div>
 <input type='button' id="abortBtn" value='Abort' title="Stops the running job right away and marks its set failed. Containers it had stopped and not started yet stay stopped." disabled/>
-<input type='button' id="switchLog" data-log-type="normal" value='Switch log' title="Switches between the normal and the debug log."/>
+<input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
 
 
 <script>
@@ -122,7 +122,12 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
     function abLockButtons() {
         $('.ab-job').each(function () {
             const reason = abBusy || $(this).attr('data-blocked') || '';
-            $(this).prop('disabled', reason !== '').next('.ab-reason').text(reason);
+            let note = $(this).next('.ab-reason');
+            if (!note.length) {
+                note = $('<small class="ab-reason"></small>').insertAfter(this);
+            }
+            $(this).prop('disabled', reason !== '');
+            note.text(reason);
         });
     }
 </script>

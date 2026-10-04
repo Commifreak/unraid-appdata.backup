@@ -12,10 +12,7 @@ $summary    = ABStatus::summary($abSettings);
 $date       = fn($set) => $set['date']->format('d.m.Y H:i');
 $rows       = [];
 $tips       = [
-    'Last backup' => 'When the newest backup set was made, whether it finished OK, and how long the run took.',
-    'Backup sets' => 'Good and failed sets in the backup destination, counted when the last run finished.',
-    'Next scheduled run' => 'From the schedule set under Notifications and scheduling.',
-    'Free space' => 'Free space where backups are written. Under /mnt/user, Unraid adds up every disk the share can use; each archive still has to fit on one disk.',
+    'Free space' =>'Free space where backups are written. Under /mnt/user, Unraid adds up every disk the share can use; each archive still has to fit on one disk.',
 ];
 
 if ($summary['latest']) {
@@ -45,7 +42,7 @@ if ($summary['lowSpace']) {
 <div class="ab-status">
     <dl class="ab-grid">
 <?php foreach ($rows as $label => $value): ?>
-        <dt title="<?= htmlspecialchars($tips[$label]) ?>"><?= $label ?></dt><dd><?= $value ?></dd>
+        <dt<?= isset($tips[$label]) ? ' title="' . htmlspecialchars($tips[$label]) . '"' : '' ?>><?= $label ?></dt><dd><?= $value ?></dd>
 <?php endforeach; ?>
     </dl>
 <?php foreach ($warnings as $warning): ?>

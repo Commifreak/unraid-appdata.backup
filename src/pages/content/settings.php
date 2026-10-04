@@ -617,7 +617,6 @@ if (($code ?? 0) != 0) {
 
             // One text per option, shown in every container's panel
             $containerHelp = [
-                'skip' => 'Yes leaves this container out completely: it isn&#x27;t stopped, backed up or started.',
                 'volumes' => 'This container\'s volume mappings; click one to add it to the exclusions. Folder icon: inside an appdata source, always backed up. Arrow icon: external, backed up only with <b>Save external volumes?</b>',
                 'group' => 'Containers in the same group are stopped, backed up and started as one unit, in the group\'s own order. Type a new name to create a group; the <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&amp;comment=1250363" target="_blank">forum hints</a> have examples.',
                 'extVolumes' => 'Also backs up this container\'s volumes outside your appdata sources (arrow icon). With No they\'re left out, and the log lists which.',
@@ -665,7 +664,7 @@ HTML;
 <div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
         <dl class="ab-container-row">
         <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip" title="{$containerHelp['skip']}">Skip?</label>
+        <dd><label for="{$container['Name']}_skip">Skip?</label>
         <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
             <option value="no">No</option>
             <option value="yes">Yes</option>
@@ -922,7 +921,7 @@ HTML;
     <dl>
         <dt>Done?</dt>
         <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button><small class="ab-reason"></small></span>
+            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button></span>
         </dd>
     </dl>
 </form>
