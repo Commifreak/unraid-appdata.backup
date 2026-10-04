@@ -36,7 +36,7 @@ $abRunningAtRender = ABHelper::scriptRunning();
 You are currently viewing the <b id="currentLogType">normal</b> log!
 <br/>
 <div class='ab-log' id='abLog'>Loading...</div>
-<input type='button' id="abortBtn" value='Abort' title="Stops the running job right away and marks its set failed. Containers it had stopped and not started yet stay stopped." disabled/>
+<input type='button' id="abortBtn" value='Abort' title="Stops the running job right away. An aborted backup is marked failed, and containers it had stopped and not started yet stay stopped." disabled/>
 <input type='button' id="switchLog" data-log-type="normal" value='Switch log'/>
 
 
@@ -44,6 +44,7 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
     let url = "/plugins/<?= ABSettings::$appName ?>/include/http.php";
     let wasRunning = <?= $abRunningAtRender ? 'true' : 'false' ?>; // as when the box above was drawn
     let abBusy = ''; // the running job, from the last poll: it blocks every .ab-job button on all three tabs
+    let abStartingUntil = 0; // a job start was just sent and the poll may not show it yet
 
     $(function () {
         checkBackup();
@@ -118,16 +119,28 @@ You are currently viewing the <b id="currentLogType">normal</b> log!
         });
     }
 
-    /** Greys out each .ab-job button while a job runs or its own data-blocked reason applies, with the reason beside it */
+    /** Greys out each .ab-job button while a job runs or starts, or its own data-blocked reason applies, with the reason beside it */
     function abLockButtons() {
         $('.ab-job').each(function () {
-            const reason = abBusy || $(this).attr('data-blocked') || '';
+            const reason = abBusy || (Date.now() < abStartingUntil ? 'Starting…' : '') || $(this).attr('data-blocked') || '';
             let note = $(this).next('.ab-reason');
             if (!note.length) {
                 note = $('<small class="ab-reason"></small>').insertAfter(this);
             }
             $(this).prop('disabled', reason !== '');
             note.text(reason);
+        });
+    }
+
+    /** Sends a job start; the buttons stay locked until the poll shows the job, so a double click cannot send two */
+    function abStartJob(data) {
+        abStartingUntil = Date.now() + 5000;
+        abLockButtons();
+        $.ajax(url, {type: 'POST', data: data}).fail(function () {
+            abStartingUntil = 0;
+            abLockButtons();
+        }).always(function () {
+            $('#tab3').click();
         });
     }
 </script>

@@ -72,11 +72,11 @@ if (!ABHelper::isArrayOnline()) {
             <dt><b>Select backup:</b></dt>
             <dd><div class="ab-inline"><select required id="restoreBackupList" name="restoreBackupList" onchange="verifyAvailability();"></select>
                 <button onclick="checkRestoreItem(); return false;">Next</button>
-                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Re-reads every file in this set and compares it with the checksum written at backup time. Runs in the background; the result shows on Status / Log.">Verify checksums</button></div>
+                <button id="verifySetBtn" class="ab-job" onclick="verifySet(); return false;" title="Re-reads every file listed in this set's checksums.sha256 and compares it with the checksum written at backup time. Runs in the background; the result shows on Status / Log.">Verify checksums</button></div>
             </dd>
         </dl>
         <blockquote class='inline_help'>
-            <p>The backup set to restore from. <b>Verify checksums</b> checks it first: every file is re-read and compared with the checksum written at backup time.</p>
+            <p>The backup set to restore from. <b>Verify checksums</b> checks it first: every file listed in its <code>checksums.sha256</code> is re-read and compared with the checksum written at backup time.</p>
         </blockquote>
     </div>
 
@@ -137,7 +137,7 @@ if (!ABHelper::isArrayOnline()) {
                 $('#restoreBackupDiv').show();
                 $.each(data.result, function (i) {
                     var name = data.result[i]['name'];
-                    $('#restoreBackupList').append('<option value="' + data.result[i]['path'] + '" data-checksums="' + (data.result[i]['checksums'] ? '1' : '') + '">' + name + '</option>');
+                    $('#restoreBackupList').append($('<option>').val(data.result[i]['path']).attr('data-checksums', data.result[i]['checksums'] ? '1' : '').text(name));
                 });
                 verifyAvailability();
             } else {
@@ -206,12 +206,7 @@ if (!ABHelper::isArrayOnline()) {
     }
 
     function verifySet() {
-        $.ajax(url, {
-            type: 'POST',
-            data: {action: 'verifySet', set: $('#restoreBackupList').val()}
-        }).always(function () {
-            $('#tab3').click();
-        });
+        abStartJob({action: 'verifySet', set: $('#restoreBackupList').val()});
     }
 
     const byName = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
@@ -226,11 +221,6 @@ if (!ABHelper::isArrayOnline()) {
     }
 
     function startRestore() {
-        $.ajax(url, {
-            type: 'POST',
-            data: $('#restoreForm').serialize() + '&action=startRestore'
-        }).always(function () {
-            $('#tab3').click();
-        });
+        abStartJob($('#restoreForm').serialize() + '&action=startRestore');
     }
 </script>

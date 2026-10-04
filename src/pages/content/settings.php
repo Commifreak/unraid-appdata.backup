@@ -267,7 +267,7 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p><b>Stop all</b> keeps every container down for the whole backup. <b>For each container</b> stops, backs up and starts them one at a time (a group counts as one), so each is down only for its own backup. Containers that were already stopped stay stopped.</p>
+        <p>Without snapshots, <b>Stop all</b> keeps every container down for the whole backup, while <b>For each container</b> stops, backs up and starts them one at a time (a group counts as one), so each is down only for its own backup. Containers that were already stopped stay stopped.</p>
     </blockquote>
 
     <dl>
@@ -278,7 +278,7 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Stops the containers, snapshots their data and starts them again, then backs up from the snapshot, so they're only down while they stop and start. Works on ZFS and btrfs (a /mnt/user share must be exclusive) when nothing else is mounted inside the volume; otherwise that container stays stopped for its backup, or with <b>Stop all</b> the whole run does. Post-container and post-backup scripts run with the containers already up.</p>
+        <p>Stops the containers, snapshots their data and starts them again, then backs up from the snapshot, so they're only down while they stop and start. Works on ZFS and btrfs (a /mnt/user share must be exclusive) when nothing else is mounted inside the volume; otherwise that container stays stopped for its backup, or with <b>Stop all</b> the whole run does. When the snapshot works, post-container and post-backup scripts run with the containers already up.</p>
     </blockquote>
 
     <dl>
@@ -988,12 +988,7 @@ HTML;
                 confirmButtonText: "Yep",
                 cancelButtonText: "Nah"
             }, function () {
-                $.ajax(url, {
-                    type: 'POST',
-                    data: {action: 'manualBackup'}
-                }).always(function (data) {
-                    $('#tab3').click();
-                });
+                abStartJob({action: 'manualBackup'});
             });
             return false;
         });
