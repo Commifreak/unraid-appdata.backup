@@ -43,7 +43,8 @@ HTML;
 
     }
 
-    $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+    $image   = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
+    $imageRef = htmlspecialchars((string)($container['Image'] ?? ''), ENT_QUOTES); // names are [a-zA-Z0-9_.-] by Docker's rules, icon URLs and image refs are not
     $volumes = ABHelper::getContainerVolumes($container, true);
 
     if (empty($volumes)) {
@@ -83,7 +84,7 @@ HTML;
     echo <<<HTML
 $actualSettingsDiv
         <dl class="ab-container-row">
-        <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr>$multiMappingSpan</dt>
+        <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='$imageRef' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr>$multiMappingSpan</dt>
 $rowControl
         </dl>
 

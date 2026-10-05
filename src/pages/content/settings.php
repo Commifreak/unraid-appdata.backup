@@ -663,7 +663,7 @@ if (($code ?? 0) != 0) {
                     $isGroup = $container['isGroup'];
                     $name         = $container['Name'] ?? key($container);
                     $internalName = $isGroup ? '__grp__' . $name : $name;
-                    $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);
+                    $image        = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                     $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
                     echo <<<HTML
 <li id="containerOrder_{$internalName}"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
@@ -685,7 +685,7 @@ HTML;
                     <?php
                     $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
                     foreach ($sortedContainers as $container) {
-                        $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                        $image = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                         echo <<<HTML
 <li id="containerGroupOrder[{$group}]={$container['Name']}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
 HTML;
