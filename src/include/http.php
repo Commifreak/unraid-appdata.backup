@@ -141,7 +141,8 @@ if (isset($action)) {
             }
 
             require_once __DIR__ . '/ABStatus.php';
-            $config['setAge'] = preg_match(ABStatus::SET_PATTERN, basename($item), $m) ? time() - \DateTime::createFromFormat('Ymd_His', $m[1])->getTimestamp() : null;
+            $setTime          = ABStatus::setTime(basename($item));
+            $config['setAge'] = $setTime === null ? null : time() - $setTime;
             $config['newer']  = ABStatus::newerElsewhere(new ABSettings(), $item, $config['containers'] ?: []) ?: new stdClass(); // {} in JSON, never []
 
             echo json_encode(['result' => $config]);

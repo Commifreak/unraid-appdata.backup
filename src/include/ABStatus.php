@@ -16,15 +16,19 @@ class ABStatus {
     /** Days without a successful backup before the page warns, by schedule */
     const STALE_DAYS = ['daily' => 2, 'weekly' => 9, 'monthly' => 35];
 
+    /** The time in a set folder's name (ab_YYYYMMDD_HHMMSS[-failed]), or null when it is not a set */
+    public static function setTime($name) {
+        return preg_match(self::SET_PATTERN, $name, $m) ? \DateTime::createFromFormat('Ymd_His', $m[1])->getTimestamp() : null;
+    }
+
     /**
      * For each archive of $set, the age in seconds of a newer successful set holding the same container in the other schedule's destination
      * @return array archive name => age, only for archives that have one
      */
     public static function newerElsewhere(ABSettings $settings, $set, array $archives) {
-        if (!preg_match(self::SET_PATTERN, basename($set), $m)) {
+        if (($setTime = self::setTime(basename($set))) === null) {
             return [];
         }
-        $setTime = \DateTime::createFromFormat('Ymd_His', $m[1])->getTimestamp();
         $here    = realpath(dirname($set));
         $newest  = [];
         foreach ([$settings->destination, $settings->extraSchedule === 'yes' ? $settings->extraDestination : ''] as $destination) {
@@ -33,11 +37,8 @@ class ABStatus {
                 continue;
             }
             foreach (scandir($real) ?: [] as $name) {
-                if (!preg_match(self::SET_PATTERN, $name, $n) || !empty($n[2]) || !is_file("$real/$name/backup.log")) {
-                    continue;
-                }
-                $time = \DateTime::createFromFormat('Ymd_His', $n[1])->getTimestamp();
-                if ($time <= $setTime) {
+                $time = self::setTime($name);
+                if ($time === null || str_ends_with($name, '-failed') || !is_file("$real/$name/backup.log") || $time <= $setTime) {
                     continue;
                 }
                 // The other schedule may compress differently, so containers are matched by name
