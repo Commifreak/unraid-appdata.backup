@@ -23,17 +23,17 @@ require_once dirname(__DIR__) . '/include/ABStatus.php';
 
 set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
-/**
- * Helper for later renaming of the backup folder to suffix -failed
- */
-$backupStarted = new DateTime();
-
 // From cron (see ABSettings::checkCron): 'scheduled' waits for a running job, 'extra' runs the extra schedule
 $runArgs = array_slice($argv, 1);
 
 if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
     exit;
 }
+
+/**
+ * Helper for later renaming of the backup folder to suffix -failed
+ */
+$backupStarted = new DateTime(); // after claimRun(): a scheduled run's wait is not part of its duration
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 $unraidVersion           = parse_ini_file('/etc/unraid-version');
