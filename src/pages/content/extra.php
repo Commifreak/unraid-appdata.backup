@@ -1,12 +1,12 @@
 <?php
 
+use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
 /** @var $abSettings ABSettings set by settings.php, which also saves this form (ABSettings::storeForm) */
 
-$extraGroups     = array_keys($abSettings->getContainerGroups());
-$extraContainers = array_column((new DockerClient())->getDockerContainers() ?: [], 'Name');
-natcasesort($extraContainers);
+$extraAll = (new DockerClient())->getDockerContainers() ?: [];
+$extraIcon = fn($container) => empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
 $weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 'st', 'nd', 'rd'][$day % 10] ?? 'th'));
 ?>
@@ -68,22 +68,6 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 </dl>
 
 <dl>
-    <dt><b>Extra schedule containers</b></dt>
-    <dd><select id="extraContainers" name="extraContainers[]" multiple size="8">
-<?php foreach ($extraGroups as $group): ?>
-            <option value="<?= htmlspecialchars('__grp__' . $group) ?>"<?= in_array('__grp__' . $group, $abSettings->extraContainers, true) ? ' selected' : '' ?>>Group: <?= htmlspecialchars($group) ?></option>
-<?php endforeach; ?>
-<?php foreach ($extraContainers as $name): ?>
-            <option value="<?= htmlspecialchars($name) ?>"<?= in_array($name, $abSettings->extraContainers, true) ? ' selected' : '' ?>><?= htmlspecialchars($name) ?></option>
-<?php endforeach; ?>
-        </select>
-    </dd>
-</dl>
-<blockquote class='inline_help'>
-    <p>Ctrl or Cmd + click to pick several. A group backs up all its containers, stopped and started as one unit. Each container's own settings apply, so a container set to skip is skipped here too.</p>
-</blockquote>
-
-<dl>
     <dt><b>Extra schedule destination</b></dt>
     <dd><input type='text' class='ftAttach' id="extraDestination" name="extraDestination"
                value="<?= htmlspecialchars($abSettings->extraDestination) ?>"
@@ -112,6 +96,37 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
     <p>Works like <b>Keep at least this many backups</b>, for the extra destination only.</p>
 </blockquote>
 
+<!-- Mirrors the Docker section of settings.php, with the same classes -->
+<div class="ab-docker-cols">
+    <div>
+        <div class="title"><span class="left"><i class="fa fa-docker title"></i>Containers in the extra schedule. <b>Click on container name to open</b></span></div>
+<?php
+require_once __DIR__ . '/container.php';
+// $containerHelp comes from settings.php; each '' option here means the container's value on the Settings tab
+$extraHelp = $containerHelp;
+foreach (['extVolumes', 'update', 'skipBackup', 'verify', 'ignoreErrors', 'dontStop'] as $key) {
+    $extraHelp[$key] = preg_replace('/ ?<b>Use standard<\/b> follows.*$/s', '', $containerHelp[$key]) . ' <b>Same as Settings tab</b> uses this container\'s setting on the Settings tab.';
+}
+$extraHelp['group']   = 'Groups are set on the Settings tab: a group\'s containers are stopped, backed up and started as one unit.';
+$extraHelp['exclude'] = '<b>Same as Settings tab</b> uses this container\'s exclusions there (shown greyed out). <b>Own list</b> uses only the lines here, so an empty own list excludes nothing. ' . $containerHelp['exclude'];
+foreach ($extraAll as $container) {
+    abContainerPanel($container, $abSettings, $extraHelp, true);
+}
+?>
+    </div>
+    <div class="ab-start-order">
+        <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
+        <p>The extra schedule's own start sequence; containers are stopped in reverse order. A group keeps its order from the Settings tab.</p>
+        <input type="hidden" id="extraContainerOrder" name="extraContainerOrder"/>
+        <ul class="sortable" id="extraOrderSortable">
+<?php foreach (ABHelper::sortContainers($extraAll, $abSettings->extraContainerOrder ?: $abSettings->containerOrder, false, false) as $container): ?>
+<?php $id = $container['isGroup'] ? '__grp__' . $container['Name'] : $container['Name']; ?>
+            <li id="extraContainerOrder_<?= htmlspecialchars($id) ?>"><span class="ab-drag"><i class="fa fa-sort"></i> <?= $container['isGroup'] ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . htmlspecialchars($extraIcon($container)) . '" height="16" />' ?> <?= htmlspecialchars($container['Name']) ?></span></li>
+<?php endforeach; ?>
+        </ul>
+    </div>
+</div>
+
 <dl>
     <dt>Done?</dt>
     <dd><span><input type="submit" value="Save"/> <input type="reset" value="Discard"/>
@@ -123,6 +138,11 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <script>
     $(function () {
         checkBackupFrequency('extraFrequency'); // settings.php
+
+        // As settings.php sends containerOrder; storeForm() parses it
+        $('#abExtraForm').on('submit', function () {
+            $('#extraContainerOrder').val($('#extraOrderSortable').sortable('serialize', {expression: /(.+?)_(.+)/}));
+        });
 
         $('#extraBackup').on('click', function () {
             swal({

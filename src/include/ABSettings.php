@@ -18,7 +18,10 @@ class ABSettings {
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
     /** The settings the Extra schedule tab saves; the Settings tab's form keeps them (see storeForm) */
-    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups'];
+    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraContainerOrder', 'extraContainerSettings', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups'];
+
+    /** Per-container settings the Extra schedule tab can set for itself ('' = same as the Settings tab) */
+    const EXTRA_CONTAINER_KEYS = ['backupExtVolumes', 'updateContainer', 'skipBackup', 'verifyBackup', 'ignoreBackupErrors', 'dontStop'];
 
     public static $tempFolder = '/tmp/appdata.backup';
 
@@ -79,6 +82,9 @@ class ABSettings {
     public string|int $extraFrequencyMinute = '0';
     public string $extraFrequencyCustom = '';
     public array $extraContainers = [];
+    public array $extraContainerOrder = [];
+    /** Per container, like containerSettings; '' = same as the Settings tab, exclude only counts with excludeOwn = yes */
+    public array $extraContainerSettings = [];
     public string $extraDestination = '';
     public string|int $extraDeleteBackupsOlderThan = '7';
     public string|int $extraKeepMinBackups = '3';
@@ -135,11 +141,12 @@ class ABSettings {
                                 $this::$settingsVersion = $value;
                                 break;
                             case 'containerSettings':
+                            case 'extraContainerSettings':
                                 /**
                                  * Container specific patches
                                  */
                                 foreach ($value as $containerName => $containerSettings) {
-                                    $paths    = preg_split('/\r?\n|\r/', $containerSettings['exclude']);
+                                    $paths    = preg_split('/\r?\n|\r/', (string)($containerSettings['exclude'] ?? ''));
                                     $newPaths = [];
                                     foreach ($paths as $pathKey => $path) {
                                         if (empty(trim($path))) {
@@ -261,8 +268,12 @@ class ABSettings {
         if (!is_array($saved)) {
             return false; // storing only the extra fields would wipe every other setting
         }
-        // An empty multi-select posts nothing, so no key means no containers
-        self::store(array_diff_key($saved, $extra) + array_intersect_key($post, $extra) + ['extraContainers' => []]);
+        // Include? per container (name => yes/no), and the start order as a jQuery sortable string, as settings.php gets containerOrder
+        $fields                    = array_intersect_key($post, $extra);
+        $fields['extraContainers'] = array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes'));
+        parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
+        $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
+        self::store(array_diff_key($saved, $extra) + $fields);
         return true;
     }
 
@@ -317,7 +328,7 @@ class ABSettings {
         return $groups;
     }
 
-    /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination and retention, and backs up containers only */
+    /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination, retention, start order and per-container settings, and backs up containers only */
     public function forSchedule($schedule) {
         if ($schedule !== 'extra') {
             return $this;
@@ -330,43 +341,37 @@ class ABSettings {
         $settings->destination            = $this->extraDestination;
         $settings->deleteBackupsOlderThan = $this->extraDeleteBackupsOlderThan;
         $settings->keepMinBackups         = $this->extraKeepMinBackups;
+        $settings->containerOrder         = $this->extraContainerOrder ?: $this->containerOrder;
+        $settings->containerSettings      = [];
+        foreach (array_unique(array_merge(array_keys($this->containerSettings), $this->extraContainers)) as $name) {
+            $own = $this->extraContainerSettings[$name] ?? [];
+            $set = array_filter(array_intersect_key($own, array_flip(self::EXTRA_CONTAINER_KEYS)), fn($value) => $value !== '');
+            if (($own['excludeOwn'] ?? '') === 'yes') {
+                $set['exclude'] = (array)($own['exclude'] ?? []); // an empty own list means no exclusions
+            }
+            $set['skip'] = in_array($name, $this->extraContainers, true) ? 'no' : 'yes'; // Include?, not the Settings tab's Skip?
+            $settings->containerSettings[$name] = array_merge($this->containerSettings[$name] ?? [], $set);
+        }
         $settings->flashBackup            = 'no';
         $settings->backupVMMeta           = 'no';
         $settings->includeFiles           = [];
         return $settings;
     }
 
-    /** The DockerClient containers this schedule backs up: all of them, or the extra schedule's choice, where `__grp__<name>` stands for that group's members */
+    /** The DockerClient containers this schedule backs up: all of them, or the ones the extra schedule includes */
     public function scheduleContainers($containers) {
         if ($this->schedule !== 'extra') {
             return $containers;
         }
-        $groups = $this->getContainerGroups();
-        $chosen = [];
-        foreach ($this->extraContainers as $name) {
-            $chosen = array_merge($chosen, str_starts_with($name, '__grp__') ? ($groups[substr($name, 7)] ?? []) : [$name]);
-        }
-        return array_values(array_filter($containers ?: [], fn($container) => in_array($container['Name'], $chosen, true)));
+        return array_values(array_filter($containers ?: [], fn($container) => in_array($container['Name'], $this->extraContainers, true)));
     }
 
-    /** What the extra schedule chose that is gone, e.g. renamed: containers DockerClient does not list, and groups without members; [] for the main schedule */
+    /** Containers the extra schedule includes that DockerClient no longer lists, e.g. renamed; [] for the main schedule */
     public function scheduleMissing($containers) {
         if ($this->schedule !== 'extra') {
             return [];
         }
-        $groups  = $this->getContainerGroups();
-        $present = array_column($containers ?: [], 'Name');
-        $missing = [];
-        foreach ($this->extraContainers as $name) {
-            if (str_starts_with($name, '__grp__')) {
-                if (!isset($groups[substr($name, 7)])) {
-                    $missing[] = 'group ' . substr($name, 7);
-                }
-            } elseif (!in_array($name, $present, true)) {
-                $missing[] = $name;
-            }
-        }
-        return $missing;
+        return array_values(array_diff($this->extraContainers, array_column($containers ?: [], 'Name')));
     }
 
     /** The cron time fields for the schedule whose settings start with $prefix, or '' when it is off */
