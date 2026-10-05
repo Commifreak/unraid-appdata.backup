@@ -71,7 +71,12 @@ if (in_array('extra', $runArgs, true)) {
         ABHelper::backupLog("The extra schedule needs its own destination, not the main one, so its retention cannot delete full backups!", ABHelper::LOGLEVEL_ERR);
         goto end;
     }
+    $extraSummary = $abSettings->scheduleSummary();
+    ABHelper::backupLog($extraSummary['line']);
+    ABHelper::backupLog(ABHelper::dump('Extra schedule settings', $extraSummary['settings']), ABHelper::LOGLEVEL_DEBUG);
+    ABHelper::backupLog(ABHelper::dump("Extra schedule's own container settings", $extraSummary['overrides']), ABHelper::LOGLEVEL_DEBUG);
     $abSettings = $abSettings->forSchedule('extra');
+    ABHelper::$targetLogLevel = $abSettings->notification; // set from the Settings tab's value when the settings loaded
 }
 
 if (empty($abSettings->destination)) {

@@ -7,6 +7,21 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 $extraAll = (new DockerClient())->getDockerContainers() ?: [];
 $extraIcon = fn($container) => empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+// A select for a run-wide setting: '' = the Settings tab's value, named in the first option (see ABSettings::EXTRA_SAME_AS)
+$sameAs = function (string $name, string $label, array $options, string $mainKey, string $help) use ($abSettings) {
+    $main = $options[(string)$abSettings->$mainKey] ?? (string)$abSettings->$mainKey;
+    $html = "<dl>\n    <dt><b>$label</b></dt>\n    <dd><select id='$name' name='$name' data-setting='" . htmlspecialchars((string)$abSettings->$name) . "'>\n"
+        . "        <option value=''>Same as Settings tab (" . htmlspecialchars($main) . ")</option>\n";
+    foreach ($options as $value => $text) {
+        $html .= "        <option value='" . htmlspecialchars((string)$value) . "'>" . htmlspecialchars($text) . "</option>\n";
+    }
+    return $html . "    </select></dd>\n</dl>\n<blockquote class='inline_help'><p>$help</p></blockquote>\n";
+};
+$yesNo = ['yes' => 'Yes', 'no' => 'No'];
+$cores = ['0' => 'All cores'];
+for ($i = 1; $i < (int)trim((string)shell_exec('nproc')); $i++) {
+    $cores[(string)$i] = (string)$i;
+}
 $weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 'st', 'nd', 'rd'][$day % 10] ?? 'th'));
 ?>
@@ -18,6 +33,7 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <?php endif; ?>
 
 <form id="abExtraForm" method="post">
+<input type="hidden" name="csrf_token" value="<?= _var($var, 'csrf_token') ?>"/>
 <input type="hidden" name="extraScheduleForm" value="1"/>
 <dl>
     <dt><b>Extra schedule frequency</b></dt>
@@ -96,6 +112,25 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
     <p>Works like <b>Keep at least this many backups</b>, for the extra destination only.</p>
 </blockquote>
 
+<div class="title"><span class="left"><i class="fa fa-cog title"></i>Backup options</span></div>
+<?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], 'backupMethod', 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab.') ?>
+<?= $sameAs('extraSnapshotMode', 'Use snapshots', ['no' => 'No', 'yes' => 'Yes, on ZFS and btrfs'], 'snapshotMode', 'Snapshots for this schedule; see <b>Use snapshots</b> on the Settings tab.') ?>
+<?= $sameAs('extraCompression', 'Use Compression?', ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'], 'compression', 'Compression for this schedule\'s archives.') ?>
+<?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, 'compressionCpuLimit', 'Only used with <b>Yes, multicore</b>.') ?>
+<?= $sameAs('extraFlashBackup', 'Backup the flash drive?', $yesNo, 'flashBackup', 'No by default, so a frequent run doesn\'t repeat the flash zip the main schedule makes.') ?>
+<dl>
+    <dt><b>Copy the flash backup to a custom destination</b></dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraFlashBackupCopy" name="extraFlashBackupCopy"
+               value="<?= htmlspecialchars($abSettings->extraFlashBackupCopy) ?>" data-pickroot="/mnt/" data-pickfolders/></dd>
+</dl>
+<blockquote class='inline_help'><p>Only used when this schedule's <b>Backup the flash drive?</b> is Yes. Leave empty to skip the copy.</p></blockquote>
+<?= $sameAs('extraBackupVMMeta', 'Backup VM meta?', $yesNo, 'backupVMMeta', 'No by default, like the flash backup.') ?>
+
+<div class="title"><span class="left"><i class="fa fa-bell title"></i>Notifications</span></div>
+<?= $sameAs('extraNotification', 'Notification Settings:', [ABHelper::LOGLEVEL_ERR => 'Errors only', ABHelper::LOGLEVEL_WARN => 'Warnings and errors', 'disabled' => 'Disabled'], 'notification', 'Which problems in this schedule\'s runs send a notification.') ?>
+<?= $sameAs('extraSuccessLogWanted', 'Create success notification:', ['no' => 'No', 'yes' => 'Yes'], 'successLogWanted', 'A notification after each successful run of this schedule.') ?>
+<?= $sameAs('extraUpdateLogWanted', 'Send notification if containers were updated:', ['no' => 'No', 'yes' => 'Yes'], 'updateLogWanted', 'A notification when this schedule\'s run updated containers.') ?>
+
 <!-- Mirrors the Docker section of settings.php, with the same classes -->
 <div class="ab-docker-cols">
     <div>
@@ -127,6 +162,70 @@ foreach ($extraAll as $container) {
     </div>
 </div>
 
+<div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts</span></div>
+<dl>
+    <dt><b>Scripts</b></dt>
+    <dd><select id="extraScripts" name="extraScripts" data-setting="<?= htmlspecialchars($abSettings->extraScripts) ?>" onchange="abExtraToggle();">
+            <option value="">Same as Settings tab</option>
+            <option value="own">Own scripts</option>
+        </select></dd>
+</dl>
+<blockquote class='inline_help'><p><b>Same as Settings tab</b> runs the Settings tab's scripts in this schedule's runs too. <b>Own scripts</b> uses only the fields below; an empty one runs nothing. Scripts must return 0 for success, or 2 (pre-container) to skip that container, and can't live on <code>/boot</code>.</p></blockquote>
+<div id="extraScriptsOwn">
+<dl>
+    <dt>Pre-run script</dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraPreRunScript" name="extraPreRunScript"
+               value="<?= htmlspecialchars($abSettings->extraPreRunScript) ?>" data-pickroot="/mnt/"/></dd>
+</dl>
+<blockquote class='inline_help'><p>Runs BEFORE ANYTHING is done. Sent arguments: <code>pre-run</code>, <code>destination path</code></p></blockquote>
+<dl>
+    <dt>Pre-backup script</dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraPreBackupScript" name="extraPreBackupScript"
+               value="<?= htmlspecialchars($abSettings->extraPreBackupScript) ?>" data-pickroot="/mnt/"/></dd>
+</dl>
+<blockquote class='inline_help'><p>Runs BEFORE the backup starts. Sent arguments: <code>pre-backup</code>, <code>destination path</code></p></blockquote>
+<dl>
+    <dt>Pre-container-backup script</dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraPreContainerBackupScript" name="extraPreContainerBackupScript"
+               value="<?= htmlspecialchars($abSettings->extraPreContainerBackupScript) ?>" data-pickroot="/mnt/"/></dd>
+</dl>
+<blockquote class='inline_help'><p>Runs before each container's backup; exit code 2 skips it. Sent arguments: <code>pre-container</code>, <code>container name</code></p></blockquote>
+<dl>
+    <dt>Post-container-backup script</dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraPostContainerBackupScript" name="extraPostContainerBackupScript"
+               value="<?= htmlspecialchars($abSettings->extraPostContainerBackupScript) ?>" data-pickroot="/mnt/"/></dd>
+</dl>
+<blockquote class='inline_help'><p>Runs after each container's backup. Sent arguments: <code>post-container</code>, <code>container name</code></p></blockquote>
+<dl>
+    <dt>Post-backup script</dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraPostBackupScript" name="extraPostBackupScript"
+               value="<?= htmlspecialchars($abSettings->extraPostBackupScript) ?>" data-pickroot="/mnt/"/></dd>
+</dl>
+<blockquote class='inline_help'><p>Runs AFTER the backup. Sent arguments: <code>post-backup</code>, <code>destination path</code></p></blockquote>
+<dl>
+    <dt>Post-run script</dt>
+    <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraPostRunScript" name="extraPostRunScript"
+               value="<?= htmlspecialchars($abSettings->extraPostRunScript) ?>" data-pickroot="/mnt/"/></dd>
+</dl>
+<blockquote class='inline_help'><p>Runs at the very end. Sent arguments: <code>post-run</code>, <code>destination path</code>, <code>true/false</code> (success)</p></blockquote>
+</div>
+
+<div class="title"><span class="left"><i class="fa fa-plus-square title"></i>Some extra options</span></div>
+<dl>
+    <dt>Include extra files/folders</dt>
+    <dd><div style="display: table; width: 300px;"><textarea id="extraIncludeFiles" name="extraIncludeFiles" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;"><?= htmlspecialchars(implode("\r\n", $abSettings->extraIncludeFiles)) ?></textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
+</dl>
+<blockquote class='inline_help'><p>Files or folders this schedule also backs up, into an <code>extra_files</code> archive in its set. Empty by default: the main schedule's list isn't used here.</p></blockquote>
+<dl>
+    <dt>Global exclusion list</dt>
+    <dd><select id="extraGlobalExclusionsOwn" name="extraGlobalExclusionsOwn" data-setting="<?= htmlspecialchars($abSettings->extraGlobalExclusionsOwn) ?>" onchange="abExtraToggle();">
+            <option value="">Same as Settings tab</option>
+            <option value="yes">Own list</option>
+        </select>
+        <div id="extraGlobalExclusionsBox" style="display: table; width: 300px;"><textarea id="extraGlobalExclusions" name="extraGlobalExclusions" style="resize: vertical; width: 400px;"><?= htmlspecialchars(implode("\r\n", $abSettings->extraGlobalExclusions)) ?></textarea></div></dd>
+</dl>
+<blockquote class='inline_help'><p><b>Same as Settings tab</b> uses its global exclusion list. <b>Own list</b> uses only these lines, one pattern per line, such as <code>*.log</code> or <code>logs</code>.</p></blockquote>
+
 <dl>
     <dt>Done?</dt>
     <dd><span><input type="submit" value="Save"/> <input type="reset" value="Discard"/>
@@ -136,8 +235,15 @@ foreach ($extraAll as $container) {
 </form>
 
 <script>
+    /** Shows the script fields and the exclusion list only when this schedule uses its own */
+    function abExtraToggle() {
+        $('#extraScriptsOwn').toggle($('#extraScripts').val() === 'own');
+        $('#extraGlobalExclusionsBox').toggle($('#extraGlobalExclusionsOwn').val() === 'yes');
+    }
+
     $(function () {
         checkBackupFrequency('extraFrequency'); // settings.php
+        abExtraToggle();
 
         // As settings.php sends containerOrder; storeForm() parses it
         $('#abExtraForm').on('submit', function () {

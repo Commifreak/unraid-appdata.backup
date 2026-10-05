@@ -18,7 +18,15 @@ class ABSettings {
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
     /** The settings the Extra schedule tab saves; the Settings tab's form keeps them (see storeForm) */
-    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraContainerOrder', 'extraContainerSettings', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups'];
+    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraContainerOrder', 'extraContainerSettings', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups',
+        'extraBackupMethod', 'extraSnapshotMode', 'extraCompression', 'extraCompressionCpuLimit', 'extraFlashBackup', 'extraFlashBackupCopy', 'extraBackupVMMeta', 'extraNotification', 'extraSuccessLogWanted', 'extraUpdateLogWanted',
+        'extraScripts', 'extraPreRunScript', 'extraPreBackupScript', 'extraPreContainerBackupScript', 'extraPostContainerBackupScript', 'extraPostBackupScript', 'extraPostRunScript', 'extraIncludeFiles', 'extraGlobalExclusionsOwn', 'extraGlobalExclusions'];
+
+    /** Run-wide settings the Extra schedule tab can set for itself: main => extra, where the extra value '' means the Settings tab's */
+    const EXTRA_SAME_AS = ['backupMethod' => 'extraBackupMethod', 'snapshotMode' => 'extraSnapshotMode', 'compression' => 'extraCompression', 'compressionCpuLimit' => 'extraCompressionCpuLimit', 'flashBackup' => 'extraFlashBackup', 'backupVMMeta' => 'extraBackupVMMeta', 'notification' => 'extraNotification', 'successLogWanted' => 'extraSuccessLogWanted', 'updateLogWanted' => 'extraUpdateLogWanted'];
+
+    /** The six script hooks, which the extra schedule replaces together (extraScripts = own; an empty one means no script) */
+    const SCRIPTS = ['preRunScript', 'preBackupScript', 'preContainerBackupScript', 'postContainerBackupScript', 'postBackupScript', 'postRunScript'];
 
     /** Per-container settings the Extra schedule tab can set for itself ('' = same as the Settings tab) */
     const EXTRA_CONTAINER_KEYS = ['backupExtVolumes', 'updateContainer', 'skipBackup', 'verifyBackup', 'ignoreBackupErrors', 'dontStop'];
@@ -85,6 +93,26 @@ class ABSettings {
     public array $extraContainerOrder = [];
     /** Per container, like containerSettings; '' = same as the Settings tab, exclude only counts with excludeOwn = yes */
     public array $extraContainerSettings = [];
+    public string $extraBackupMethod = '';
+    public string $extraSnapshotMode = '';
+    public string $extraCompression = '';
+    public string|int $extraCompressionCpuLimit = '';
+    public string $extraFlashBackup = 'no';
+    public string $extraFlashBackupCopy = '';
+    public string $extraBackupVMMeta = 'no';
+    public string $extraNotification = '';
+    public string $extraSuccessLogWanted = '';
+    public string $extraUpdateLogWanted = '';
+    public string $extraScripts = '';
+    public string $extraPreRunScript = '';
+    public string $extraPreBackupScript = '';
+    public string $extraPreContainerBackupScript = '';
+    public string $extraPostContainerBackupScript = '';
+    public string $extraPostBackupScript = '';
+    public string $extraPostRunScript = '';
+    public array $extraIncludeFiles = [];
+    public string $extraGlobalExclusionsOwn = '';
+    public array $extraGlobalExclusions = [];
     public string $extraDestination = '';
     public string|int $extraDeleteBackupsOlderThan = '7';
     public string|int $extraKeepMinBackups = '3';
@@ -123,6 +151,8 @@ class ABSettings {
                             case 'allowedSources':
                             case 'includeFiles':
                             case 'globalExclusions':
+                            case 'extraIncludeFiles':
+                            case 'extraGlobalExclusions':
                                 $paths    = preg_split('/\r?\n|\r/', $value);
                                 $newPaths = [];
                                 foreach ($paths as $pathKey => $path) {
@@ -328,7 +358,7 @@ class ABSettings {
         return $groups;
     }
 
-    /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination, retention, start order and per-container settings, and backs up containers only */
+    /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination, retention, start order, per-container and run-wide settings */
     public function forSchedule($schedule) {
         if ($schedule !== 'extra') {
             return $this;
@@ -352,10 +382,69 @@ class ABSettings {
             $set['skip'] = in_array($name, $this->extraContainers, true) ? 'no' : 'yes'; // Include?, not the Settings tab's Skip?
             $settings->containerSettings[$name] = array_merge($this->containerSettings[$name] ?? [], $set);
         }
-        $settings->flashBackup            = 'no';
-        $settings->backupVMMeta           = 'no';
-        $settings->includeFiles           = [];
+        foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {
+            if ($this->$extraKey !== '') {
+                $settings->$mainKey = $this->$extraKey;
+            }
+        }
+        if ($this->extraFlashBackup === 'yes') {
+            $settings->flashBackupCopy = $this->extraFlashBackupCopy;
+        }
+        if ($this->extraScripts === 'own') {
+            foreach (self::SCRIPTS as $script) {
+                $settings->$script = $this->{'extra' . ucfirst($script)};
+            }
+        }
+        $settings->includeFiles = $this->extraIncludeFiles;
+        if ($this->extraGlobalExclusionsOwn === 'yes') {
+            $settings->globalExclusions = $this->extraGlobalExclusions;
+        }
         return $settings;
+    }
+
+    /** For the extra run's logs: a one-line summary, each run-wide setting with where it came from, and each included container's own overrides */
+    public function scheduleSummary() {
+        $names = [
+            'backupMethod' => ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'],
+            'compression'  => ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'],
+            'notification' => [ABHelper::LOGLEVEL_ERR => 'Errors only', ABHelper::LOGLEVEL_WARN => 'Warnings and errors', 'disabled' => 'Disabled'],
+            'compressionCpuLimit' => ['0' => 'All cores'],
+        ];
+        $labels = ['backupMethod' => 'Backup type', 'snapshotMode' => 'Snapshots', 'compression' => 'Compression', 'compressionCpuLimit' => 'Cores', 'flashBackup' => 'Flash backup', 'backupVMMeta' => 'VM meta', 'notification' => 'Notifications', 'successLogWanted' => 'Success notification', 'updateLogWanted' => 'Update notification'];
+        $run      = $this->forSchedule('extra');
+        $source   = fn($own) => $own ? ' (own)' : ' (Settings tab)';
+        $settings = [
+            'Destination' => $run->destination,
+            'Retention'   => ($run->deleteBackupsOlderThan === '' ? 'no age limit' : 'older than ' . $run->deleteBackupsOlderThan . ($run->deleteBackupsOlderThan == 1 ? ' day' : ' days')) . ', keep at least ' . ($run->keepMinBackups === '' ? 'none' : $run->keepMinBackups),
+            'Containers'  => $this->extraContainers ? implode(', ', $this->extraContainers) : 'none',
+            'Start order' => ($this->extraContainerOrder ? 'own' : 'Settings tab'),
+        ];
+        foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {
+            $value                     = (string)$run->$mainKey;
+            $settings[$labels[$mainKey]] = ($names[$mainKey][$value] ?? ['yes' => 'Yes', 'no' => 'No'][$value] ?? $value) . $source($this->$extraKey !== '');
+        }
+        $settings['Flash copy']       = $run->flashBackup === 'yes' ? ($run->flashBackupCopy ?: 'none') : '-';
+        $hooks                        = array_combine(self::SCRIPTS, ['Pre-run', 'Pre-backup', 'Pre-container', 'Post-container', 'Post-backup', 'Post-run']);
+        $settings['Scripts']          = (implode(', ', array_filter(array_map(fn($script) => $run->$script ? "{$hooks[$script]}: {$run->$script}" : '', self::SCRIPTS))) ?: 'none') . $source($this->extraScripts === 'own');
+        $settings['Extra files']      = implode(', ', $run->includeFiles) ?: 'none';
+        $settings['Global exclusions'] = (implode(', ', $run->globalExclusions) ?: 'none') . $source($this->extraGlobalExclusionsOwn === 'yes');
+
+        $containerLabels = array_combine(self::EXTRA_CONTAINER_KEYS, ['External volumes', 'Update after backup', 'Skip backup', 'Verify', 'Ignore errors', 'Skip stopping']);
+        $overrides       = [];
+        foreach ($this->extraContainers as $name) {
+            $own = $this->extraContainerSettings[$name] ?? [];
+            $set = [];
+            foreach (array_filter(array_intersect_key($own, $containerLabels), fn($value) => $value !== '') as $key => $value) {
+                $set[$containerLabels[$key]] = $value;
+            }
+            if (($own['excludeOwn'] ?? '') === 'yes') {
+                $set['Exclusions'] = implode(', ', (array)($own['exclude'] ?? [])) ?: 'none';
+            }
+            $overrides[$name] = $set ?: 'none, all from the Settings tab';
+        }
+
+        $line = 'Extra schedule: ' . count($this->extraContainers) . (count($this->extraContainers) == 1 ? ' container' : ' containers') . ' into ' . $run->destination . ', ' . $settings['Retention'] . ', ' . $settings['Backup type'] . ', snapshots ' . $settings['Snapshots'];
+        return ['line' => $line, 'settings' => $settings, 'overrides' => $overrides];
     }
 
     /** The DockerClient containers this schedule backs up: all of them, or the ones the extra schedule includes */
