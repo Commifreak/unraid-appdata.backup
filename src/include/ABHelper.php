@@ -32,6 +32,9 @@ class ABHelper {
 
     public static $targetLogLevel = '';
 
+    /** @var resource|null The run lock from claimRun(): the kernel drops it when this process ends, however it ends */
+    private static $runLock = null;
+
     /**
      * Logs a message to the system log
      * @param $string
@@ -657,6 +660,27 @@ class ABHelper {
                 self::backupLog("Copying the flash backup to '{$abSettings->flashBackupCopy}' FAILED!", self::LOGLEVEL_ERR);
             }
         }
+        return true;
+    }
+
+    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, when the lock file cannot be opened or another backup, restore or check holds the lock */
+    public static function claimRun() {
+        $lockFile = ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock;
+        $lock     = @fopen($lockFile, 'ce'); // 'e': commands this run starts must not inherit the lock
+        if ($lock === false) {
+            self::notify("[AppdataBackup] Error!", "Cannot start", "Could not open the run lock '$lockFile'.", 'alert');
+            return false;
+        }
+        if (!flock($lock, LOCK_EX | LOCK_NB)) {
+            self::notify("Appdata Backup", "Still running", "There is something running already.");
+            return false;
+        }
+        self::$runLock = $lock;
+        if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
+            unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
+        }
+        exec("rm -f " . escapeshellarg(ABSettings::$tempFolder) . "/*.log");
+        file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
         return true;
     }
 

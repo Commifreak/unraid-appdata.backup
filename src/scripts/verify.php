@@ -12,16 +12,9 @@ if (PHP_SAPI !== 'cli') {
 
 require_once __DIR__ . '/../include/ABHelper.php';
 
-if (ABHelper::scriptRunning()) {
-    ABHelper::notify("Appdata Backup", "Still running", "There is something running already.");
+if (!ABHelper::claimRun()) {
     exit;
 }
-
-if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
-    unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
-}
-exec("rm -f " . escapeshellarg(ABSettings::$tempFolder) . "/*.log");
-file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP (checking a backup)!! :D");
 $ok = ABIntegrity::verifySet($argv[1] ?? '');
