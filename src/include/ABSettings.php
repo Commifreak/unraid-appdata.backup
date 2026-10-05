@@ -68,6 +68,18 @@ class ABSettings {
     public string|int $backupFrequencyHour = '0';
     public string|int $backupFrequencyMinute = '0';
     public string $backupFrequencyCustom = '';
+    public string $extraFrequency = 'disabled';
+    public string|int $extraFrequencyWeekday = '1';
+    public string|int $extraFrequencyDayOfMonth = '1';
+    public string|int $extraFrequencyHour = '0';
+    public string|int $extraFrequencyMinute = '0';
+    public string $extraFrequencyCustom = '';
+    public array $extraContainers = [];
+    public string $extraDestination = '';
+    public string|int $extraDeleteBackupsOlderThan = '7';
+    public string|int $extraKeepMinBackups = '3';
+    /** '' for the main schedule, 'extra' once forSchedule() made these the extra schedule's settings */
+    public string $schedule = '';
     public array $containerSettings = [];
     public array $containerOrder = [];
     public array $containerGroupOrder = [];
@@ -280,31 +292,66 @@ class ABSettings {
         return $groups;
     }
 
+    /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination and retention, and backs up containers only */
+    public function forSchedule($schedule) {
+        if ($schedule !== 'extra') {
+            return $this;
+        }
+        $settings           = clone $this;
+        $settings->schedule = 'extra';
+        foreach (['', 'Weekday', 'DayOfMonth', 'Hour', 'Minute', 'Custom'] as $field) {
+            $settings->{'backupFrequency' . $field} = $this->{'extraFrequency' . $field};
+        }
+        $settings->destination            = $this->extraDestination;
+        $settings->deleteBackupsOlderThan = $this->extraDeleteBackupsOlderThan;
+        $settings->keepMinBackups         = $this->extraKeepMinBackups;
+        $settings->flashBackup            = 'no';
+        $settings->backupVMMeta           = 'no';
+        $settings->includeFiles           = [];
+        return $settings;
+    }
+
+    /** The DockerClient containers this schedule backs up: all of them, or the extra schedule's choice, where `__grp__<name>` stands for that group's members */
+    public function scheduleContainers($containers) {
+        if ($this->schedule !== 'extra') {
+            return $containers;
+        }
+        $groups = $this->getContainerGroups();
+        $chosen = [];
+        foreach ($this->extraContainers as $name) {
+            $chosen = array_merge($chosen, str_starts_with($name, '__grp__') ? ($groups[substr($name, 7)] ?? []) : [$name]);
+        }
+        return array_values(array_filter($containers ?: [], fn($container) => in_array($container['Name'], $chosen, true)));
+    }
+
+    /** The cron time fields for the schedule whose settings start with $prefix, or '' when it is off */
+    private function cronTime($prefix) {
+        $minute = $this->{$prefix . 'Minute'};
+        $hour   = $this->{$prefix . 'Hour'};
+        return match ($this->$prefix) {
+            'custom' => trim($this->{$prefix . 'Custom'}),
+            'daily' => "$minute $hour * * *",
+            'weekly' => "$minute $hour * * " . $this->{$prefix . 'Weekday'},
+            'monthly' => "$minute $hour " . $this->{$prefix . 'DayOfMonth'} . " * *",
+            default => '',
+        };
+    }
+
     /**
      * @return array
      */
     public function checkCron() {
-        $cronSettings = '# Appdata.Backup cron settings' . PHP_EOL;
-        switch ($this->backupFrequency) {
-            case 'custom':
-                $cronSettings .= $this->backupFrequencyCustom;
-                break;
-            case 'daily':
-                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * *";
-                break;
-            case 'weekly':
-                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * " . $this->backupFrequencyWeekday;
-                break;
-            case 'monthly':
-                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " " . $this->backupFrequencyDayOfMonth . " * *";
-                break;
-            default:
-                $cronSettings = '';
+        $lines = [];
+        // 'scheduled' makes a run wait for a running job instead of being refused
+        foreach (['backupFrequency' => 'scheduled', 'extraFrequency' => 'scheduled extra'] as $prefix => $args) {
+            $time = $this->cronTime($prefix);
+            if ($time !== '') {
+                $lines[] = $time . ' php ' . dirname(__DIR__) . '/scripts/backup.php ' . $args . ' > /dev/null 2>&1';
+            }
         }
 
-        if (!empty($cronSettings)) {
-            $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null 2>&1';
-            file_put_contents(ABSettings::$pluginDir . '/' . ABSettings::$cronFile, $cronSettings . PHP_EOL);
+        if ($lines) {
+            file_put_contents(ABSettings::$pluginDir . '/' . ABSettings::$cronFile, '# Appdata.Backup cron settings' . PHP_EOL . implode(PHP_EOL, $lines) . PHP_EOL);
         } elseif (file_exists(ABSettings::$pluginDir . '/' . ABSettings::$cronFile)) {
             unlink(ABSettings::$pluginDir . '/' . ABSettings::$cronFile);
         }

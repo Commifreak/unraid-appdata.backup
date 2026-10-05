@@ -11,6 +11,7 @@ class ABStatus {
 
     /** Written to the flash at the end of each run, so opening the page never reads the backup disks */
     const CACHE = 'status.json';
+    const CACHE_EXTRA = 'status-extra.json';
 
     /** Days without a successful backup before the page warns, by schedule */
     const STALE_DAYS = ['daily' => 2, 'weekly' => 9, 'monthly' => 35];
@@ -83,13 +84,18 @@ class ABStatus {
         return null;
     }
 
+    /** Each schedule keeps its own summary, so an extra run leaves the main one alone */
+    private static function cachePath(ABSettings $settings) {
+        return ABSettings::$pluginDir . '/' . ($settings->schedule === 'extra' ? self::CACHE_EXTRA : self::CACHE);
+    }
+
     /** Records the sets and the run's duration for summary(); runs at the end of a backup, while the backup disks are awake anyway */
     public static function saveSummary(ABSettings $settings, $duration) {
         // A failed listing keeps the last summary rather than recording "no sets"
         if (empty($settings->destination) || ($sets = self::sets($settings->destination)) === false) {
             return;
         }
-        file_put_contents(ABSettings::$pluginDir . '/' . self::CACHE, json_encode([
+        file_put_contents(self::cachePath($settings), json_encode([
             'recorded'    => time(),
             'destination' => $settings->destination,
             'duration'    => $duration,
@@ -101,7 +107,7 @@ class ABStatus {
     /** Everything the Status / Log page shows: the sets as recorded by the last run, free space and the next run live */
     public static function summary(ABSettings $settings) {
         $now     = new \DateTime();
-        $cache   = json_decode((string)@file_get_contents(ABSettings::$pluginDir . '/' . self::CACHE), true);
+        $cache   = json_decode((string)@file_get_contents(self::cachePath($settings)), true);
         $cache   = is_array($cache) && isset($cache['recorded'], $cache['sets']) && ($cache['destination'] ?? null) === $settings->destination ? $cache : null;
         $sets    = array_map(fn($set) => ['date' => \DateTime::createFromFormat('Ymd_His', (string)$set['date'])] + $set, $cache['sets'] ?? []);
         $ok      = array_values(array_filter($sets, fn($set) => $set['state'] === 'ok'));

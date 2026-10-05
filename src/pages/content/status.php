@@ -28,11 +28,19 @@ if ($summary['recorded']) {
         . ' &middot; as of the last backup run';
 }
 $rows['Next scheduled run'] = $summary['next'] ? $summary['next']->format('D d.m.Y H:i') : ($abSettings->backupFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->backupFrequencyCustom) : 'Not scheduled');
+if ($abSettings->extraFrequency !== 'disabled') {
+    $extraSummary = ABStatus::summary($abSettings->forSchedule('extra'));
+    $rows['Extra schedule'] = ($extraSummary['next'] ? 'Next ' . $extraSummary['next']->format('D d.m.Y H:i') : 'Custom: ' . htmlspecialchars($abSettings->extraFrequencyCustom))
+        . ' &middot; ' . ($extraSummary['recorded'] ? count($extraSummary['ok']) . ' good' . ($extraSummary['ok'] ? ', newest ' . $date($extraSummary['ok'][0]) : '') : 'sets shown after its first run');
+}
 $rows['Free space'] = $summary['free'] === false ? 'Unknown' : ABHelper::bytes($summary['free']) . ' free' . ($summary['ok'] ? ' &middot; newest backup ' . ABHelper::bytes($summary['ok'][0]['size']) : '');
 
 $warnings = [];
 if ($summary['stale'] !== false) {
     $warnings[] = $summary['stale'] === null ? 'No successful backup yet.' : 'No successful backup for ' . $summary['stale'] . ' days (schedule: ' . $abSettings->backupFrequency . ').';
+}
+if (isset($extraSummary) && $extraSummary['stale'] !== false) {
+    $warnings[] = $extraSummary['stale'] === null ? 'No successful extra schedule backup yet.' : 'No successful extra schedule backup for ' . $extraSummary['stale'] . ' days (schedule: ' . $abSettings->extraFrequency . ').';
 }
 if ($summary['lowSpace']) {
     $warnings[] = 'Free space (' . ABHelper::bytes($summary['free']) . ') is less than the newest backup (' . ABHelper::bytes($summary['ok'][0]['size']) . ').';

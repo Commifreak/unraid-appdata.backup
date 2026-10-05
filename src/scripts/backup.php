@@ -28,8 +28,10 @@ set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
  */
 $backupStarted = new DateTime();
 
+// From cron (see ABSettings::checkCron): 'scheduled' waits for a running job, 'extra' runs the extra schedule
+$runArgs = array_slice($argv, 1);
 
-if (!ABHelper::claimRun()) {
+if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
     exit;
 }
 
@@ -54,6 +56,16 @@ if (!file_exists(ABSettings::getConfigPath())) {
 }
 
 $abSettings = new ABSettings();
+
+if (in_array('extra', $runArgs, true)) {
+    ABHelper::backupLog("Running the extra schedule: only its chosen containers, into its own destination.");
+    $extraReal = $abSettings->extraDestination === '' ? false : realpath($abSettings->extraDestination); // realpath('') is the working directory
+    if (rtrim($abSettings->extraDestination, '/') === rtrim($abSettings->destination, '/') || ($extraReal !== false && $extraReal === realpath($abSettings->destination))) {
+        ABHelper::backupLog("The extra schedule needs its own destination, not the main one, so its retention cannot delete full backups!", ABHelper::LOGLEVEL_ERR);
+        goto end;
+    }
+    $abSettings = $abSettings->forSchedule('extra');
+}
 
 if (empty($abSettings->destination)) {
     ABHelper::backupLog("Destination is not set!", ABHelper::LOGLEVEL_ERR);
@@ -91,22 +103,23 @@ if (ABHelper::abortRequested()) {
 
 
 $dockerClient     = new DockerClient();
-$dockerContainers = $dockerClient->getDockerContainers();
+$dockerContainers = $abSettings->scheduleContainers($dockerClient->getDockerContainers());
 
 ABHelper::backupLog(ABHelper::dump('Containers', array_column($dockerContainers ?: [], null, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
 
-if (empty($dockerContainers)) {
-    ABHelper::backupLog("There are no docker containers to back up!", ABHelper::LOGLEVEL_WARN);
-    goto continuationForAll;
-}
-
 // Sort containers
-$sortedStartContainers = ABHelper::sortContainers($dockerContainers, $abSettings->containerOrder);
-$sortedStopContainers  = ABHelper::sortContainers($dockerContainers, $abSettings->containerOrder, true);
+$sortedStartContainers = ABHelper::sortContainers($dockerContainers ?: [], $abSettings->containerOrder);
+$sortedStopContainers  = ABHelper::sortContainers($dockerContainers ?: [], $abSettings->containerOrder, true);
 
 if (empty($sortedStopContainers)) {
-    ABHelper::backupLog("There are no docker containers (after sorting) to back up!", ABHelper::LOGLEVEL_WARN);
+    if ($abSettings->schedule === 'extra') {
+        // An empty set would count as a good one, and retention would delete the real extra backups
+        ABHelper::backupLog("None of the extra schedule's containers can be backed up: they are gone or set to skip!", ABHelper::LOGLEVEL_ERR);
+        ABHelper::$errorOccured = true;
+        goto end;
+    }
+    ABHelper::backupLog(empty($dockerContainers) ? "There are no docker containers to back up!" : "There are no docker containers (after sorting) to back up!", ABHelper::LOGLEVEL_WARN);
     goto continuationForAll;
 }
 

@@ -579,6 +579,8 @@ if (($code ?? 0) != 0) {
                    placeholder="Setting this will disable the other options"/></dd>
     </dl>
 
+    <?php include __DIR__ . '/schedule.php'; ?>
+
 
     <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
@@ -920,7 +922,8 @@ HTML;
     <dl>
         <dt>Done?</dt>
         <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button></span>
+            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button>
+            <button id="extraBackup" class="ab-job" style="margin-left: 15px;" title="Backs up the extra schedule's containers now, with the saved settings."<?= empty($abSettings->extraDestination) || empty($abSettings->extraContainers) ? ' data-blocked="Save an extra schedule destination and containers first"' : '' ?>>Run extra backup</button></span>
         </dd>
     </dl>
 </form>
@@ -992,6 +995,20 @@ HTML;
             return false;
         });
 
+        $('#extraBackup').on('click', function () {
+            swal({
+                title: "Proceed?",
+                text: "Back up the extra schedule's containers now?",
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonText: "Yep",
+                cancelButtonText: "Nah"
+            }, function () {
+                abStartJob({action: 'extraBackup'});
+            });
+            return false;
+        });
+
 
         //if (typeof caPluginUpdateCheck === "function") {
         //    caPluginUpdateCheck("appdata.backup<?= $beta ?>.plg", {name: "Appdata Backup"});
@@ -999,6 +1016,7 @@ HTML;
 
 
         checkBackupFrequency();
+        checkBackupFrequency('extraFrequency');
         checkFlashBackupCopy();
         checkMultiCoreCpuCount();
         checkVolumesForDuplicates();
@@ -1073,25 +1091,12 @@ HTML;
         }
     }
 
-    function checkBackupFrequency() {
-        $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
-        switch ($('#backupFrequency').val()) {
-            case 'disabled':
-                $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
-                break;
-            case 'daily':
-                $('#backupFrequencyHour, #backupFrequencyMinute').prop('disabled', false);
-                break;
-            case 'weekly':
-                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDay').prop('disabled', false);
-                break;
-            case 'monthly':
-                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDayOfMonth').prop('disabled', false);
-                break;
-            default:
-                $('#backupFrequencyCustom').prop('disabled', false);
-                break;
-        }
+    /** Enables only the fields the chosen frequency uses; prefix = the frequency select's id (backupFrequency or extraFrequency) */
+    function checkBackupFrequency(prefix = 'backupFrequency') {
+        const used = {disabled: [], daily: ['Hour', 'Minute'], weekly: ['Hour', 'Minute', 'Day'], monthly: ['Hour', 'Minute', 'DayOfMonth']}[$('#' + prefix).val()] ?? ['Custom'];
+        ['Day', 'DayOfMonth', 'Hour', 'Minute', 'Custom'].forEach(function (field) {
+            $('#' + prefix + field).prop('disabled', !used.includes(field));
+        });
     }
 
     function checkFlashBackupCopy() {

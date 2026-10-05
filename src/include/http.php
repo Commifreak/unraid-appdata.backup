@@ -7,7 +7,7 @@ use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
 
-$writeActions = ['manualBackup', 'abort', 'startRestore', 'verifySet', 'copyConfigFromProd'];
+$writeActions = ['manualBackup', 'extraBackup', 'abort', 'startRestore', 'verifySet', 'copyConfigFromProd'];
 $isPost       = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
 $action       = $isPost ? ($_POST['action'] ?? null) : ($_GET['action'] ?? null);
 
@@ -57,6 +57,9 @@ if (isset($action)) {
             break;
         case 'manualBackup':
             exec('php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null &');
+            break;
+        case 'extraBackup':
+            exec('php ' . dirname(__DIR__) . '/scripts/backup.php extra > /dev/null &');
             break;
         case 'abort':
             touch(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
