@@ -8,8 +8,8 @@ use unraid\plugins\AppdataBackup\ABSettings;
 $extraAll = (new DockerClient())->getDockerContainers() ?: [];
 $extraIcon = fn($container) => empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
 // A select for a run-wide setting: '' = the Settings tab's value, named in the first option (see ABSettings::EXTRA_SAME_AS)
-$sameAs = function (string $name, string $label, array $options, string $mainKey, string $help) use ($abSettings) {
-    $main = $options[(string)$abSettings->$mainKey] ?? (string)$abSettings->$mainKey;
+$sameAs = function (string $name, string $label, array $options, $mainValue, string $help) use ($abSettings) {
+    $main = $options[(string)$mainValue] ?? (string)$mainValue;
     $html = "<dl>\n    <dt><b>$label</b></dt>\n    <dd><select id='$name' name='$name' data-setting='" . htmlspecialchars((string)$abSettings->$name) . "'>\n"
         . "        <option value=''>Same as Settings tab (" . htmlspecialchars($main) . ")</option>\n";
     foreach ($options as $value => $text) {
@@ -120,11 +120,11 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 </blockquote>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Backup options</span></div>
-<?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], 'backupMethod', 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab.') ?>
-<?= $sameAs('extraSnapshotMode', 'Use snapshots', ['no' => 'No', 'yes' => 'Yes, on ZFS and btrfs'], 'snapshotMode', 'Snapshots for this schedule; see <b>Use snapshots</b> on the Settings tab.') ?>
-<?= $sameAs('extraCompression', 'Use Compression?', ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'], 'compression', 'Compression for this schedule\'s archives.') ?>
-<div id="extraCompressionCpuLimit_dl"><?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, 'compressionCpuLimit', 'Only used with <b>Yes, multicore</b>.') ?></div>
-<?= $sameAs('extraFlashBackup', 'Backup the flash drive?', $yesNo, 'flashBackup', 'No by default, so a frequent run doesn\'t repeat the flash zip the main schedule makes.') ?>
+<?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], $abSettings->backupMethod, 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab.') ?>
+<?= $sameAs('extraSnapshotMode', 'Use snapshots', ['no' => 'No', 'yes' => 'Yes, on ZFS and btrfs'], $abSettings->snapshotMode, 'Snapshots for this schedule; see <b>Use snapshots</b> on the Settings tab.') ?>
+<?= $sameAs('extraCompression', 'Use Compression?', ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'], $abSettings->compression, 'Compression for this schedule\'s archives.') ?>
+<div id="extraCompressionCpuLimit_dl"><?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, $abSettings->compressionCpuLimit, 'Only used with <b>Yes, multicore</b>.') ?></div>
+<?= $sameAs('extraFlashBackup', 'Backup the flash drive?', $yesNo, $abSettings->flashBackup, 'No by default, so a frequent run doesn\'t repeat the flash zip the main schedule makes.') ?>
 <div id="extraFlashBackupCopy_dl">
 <dl>
     <dt><b>Copy the flash backup to a custom destination</b></dt>
@@ -133,12 +133,18 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 </dl>
 <blockquote class='inline_help'><p>This schedule's own copy of the flash zip, for example a folder another machine backs up. Leave empty to skip the copy.</p></blockquote>
 </div>
-<?= $sameAs('extraBackupVMMeta', 'Backup VM meta?', $yesNo, 'backupVMMeta', 'No by default, like the flash backup.') ?>
+<?= $sameAs('extraBackupVMMeta', 'Backup VM meta?', $yesNo, $abSettings->backupVMMeta, 'No by default, like the flash backup.') ?>
 
 <div class="title"><span class="left"><i class="fa fa-bell title"></i>Notifications</span></div>
-<?= $sameAs('extraNotification', 'Notification Settings:', [ABHelper::LOGLEVEL_ERR => 'Errors only', ABHelper::LOGLEVEL_WARN => 'Warnings and errors', 'disabled' => 'Disabled'], 'notification', 'Which problems in this schedule\'s runs send a notification.') ?>
-<?= $sameAs('extraSuccessLogWanted', 'Create success notification:', ['no' => 'No', 'yes' => 'Yes'], 'successLogWanted', 'A notification after each successful run of this schedule.') ?>
-<?= $sameAs('extraUpdateLogWanted', 'Send notification if containers were updated:', ['no' => 'No', 'yes' => 'Yes'], 'updateLogWanted', 'A notification when this schedule\'s run updated containers.') ?>
+<?= $sameAs('extraNotification', 'Notification Settings:', [ABHelper::LOGLEVEL_ERR => 'Errors only', ABHelper::LOGLEVEL_WARN => 'Warnings and errors', 'disabled' => 'Disabled'], $abSettings->notification, 'Which problems in this schedule\'s runs send a notification.') ?>
+<?= $sameAs('extraSuccessLogWanted', 'Create success notification:', ['no' => 'No', 'yes' => 'Yes'], $abSettings->successLogWanted, 'A notification after each successful run of this schedule.') ?>
+<?= $sameAs('extraUpdateLogWanted', 'Send notification if containers were updated:', ['no' => 'No', 'yes' => 'Yes'], $abSettings->updateLogWanted, 'A notification when this schedule\'s run updated containers.') ?>
+
+<div class="title"><span class="left"><i class="fa fa-sliders title"></i>Container defaults</span></div>
+<?= $sameAs('extraDefaultUpdateContainer', 'Update containers after backup?', $yesNo, $abSettings->defaults['updateContainer'], 'Default for this schedule\'s containers. <b>Same as Settings tab</b> uses each container\'s setting there (shown: its default); a container\'s own setting below still wins.') ?>
+<?= $sameAs('extraDefaultDontStop', 'Skip stopping of containers?', ['no' => 'No', 'yes' => 'Yes'], $abSettings->defaults['dontStop'], 'Yes backs up this schedule\'s containers while they keep running; risky for databases. Same order as above: a container\'s own setting below, then this, then the Settings tab.') ?>
+<?= $sameAs('extraDefaultVerifyBackup', 'Verify Backup?', $yesNo, $abSettings->defaults['verifyBackup'], 'Checks each archive of this schedule against the source after it is written.') ?>
+<?= $sameAs('extraDefaultIgnoreBackupErrors', 'Ignore errors during backup?', ['no' => 'No', 'yes' => 'Yes'], $abSettings->defaults['ignoreBackupErrors'], 'Yes logs a tar error as info and doesn\'t fail the run.') ?>
 
 <!-- Mirrors the Docker section of settings.php, with the same classes -->
 <div class="ab-docker-cols">
@@ -148,9 +154,14 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 require_once __DIR__ . '/container.php';
 // $containerHelp comes from settings.php; each '' option here means the container's value on the Settings tab
 $extraHelp = $containerHelp;
-foreach (['extVolumes', 'update', 'skipBackup', 'verify', 'ignoreErrors', 'dontStop'] as $key) {
-    $extraHelp[$key] = preg_replace('/ ?<b>Use standard<\/b> follows.*$/s', '', $containerHelp[$key]) . ' <b>Same as Settings tab</b> uses this container\'s setting on the Settings tab.';
+foreach (['extVolumes', 'skipBackup'] as $key) {
+    $extraHelp[$key] = $containerHelp[$key] . ' <b>Same as Settings tab</b> uses this container\'s setting on the Settings tab.';
 }
+// Use standard: this tab's Container defaults, which are 'Same as Settings tab' unless set (ABSettings::EXTRA_DEFAULTS)
+$extraHelp['update']       = 'If an update is available, installs it right after this container\'s backup in this schedule. <b>Use standard</b> follows this tab\'s <b>Update containers after backup?</b>';
+$extraHelp['verify']       = 'Overrides this tab\'s <b>Verify Backup?</b> for this container.';
+$extraHelp['ignoreErrors'] = 'Overrides this tab\'s <b>Ignore errors during backup?</b> for this container.';
+$extraHelp['dontStop']     = 'Leaves this container running while this schedule backs it up; risky for databases. <b>Use standard</b> follows this tab\'s <b>Skip stopping of containers?</b>';
 $extraHelp['group']   = 'Groups are set on the Settings tab: a group\'s containers are stopped, backed up and started as one unit.';
 $extraHelp['exclude'] = '<b>Same as Settings tab</b> uses this container\'s exclusions there (shown greyed out). <b>Own list</b> uses only the lines here, so an empty own list excludes nothing. ' . $containerHelp['exclude'];
 foreach ($extraAll as $container) {

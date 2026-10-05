@@ -20,13 +20,17 @@ class ABSettings {
     /** The settings the Extra schedule tab saves; the Settings tab's form keeps them (see storeForm) */
     const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraContainerOrder', 'extraContainerSettings', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups',
         'extraBackupMethod', 'extraSnapshotMode', 'extraCompression', 'extraCompressionCpuLimit', 'extraFlashBackup', 'extraFlashBackupCopy', 'extraBackupVMMeta', 'extraNotification', 'extraSuccessLogWanted', 'extraUpdateLogWanted',
-        'extraScripts', 'extraPreRunScript', 'extraPreBackupScript', 'extraPreContainerBackupScript', 'extraPostContainerBackupScript', 'extraPostBackupScript', 'extraPostRunScript', 'extraIncludeFiles', 'extraGlobalExclusionsOwn', 'extraGlobalExclusions'];
+        'extraScripts', 'extraPreRunScript', 'extraPreBackupScript', 'extraPreContainerBackupScript', 'extraPostContainerBackupScript', 'extraPostBackupScript', 'extraPostRunScript', 'extraIncludeFiles', 'extraGlobalExclusionsOwn', 'extraGlobalExclusions',
+        'extraDefaultUpdateContainer', 'extraDefaultDontStop', 'extraDefaultVerifyBackup', 'extraDefaultIgnoreBackupErrors'];
 
     /** Run-wide settings the Extra schedule tab can set for itself: main => extra, where the extra value '' means the Settings tab's */
     const EXTRA_SAME_AS = ['backupMethod' => 'extraBackupMethod', 'snapshotMode' => 'extraSnapshotMode', 'compression' => 'extraCompression', 'compressionCpuLimit' => 'extraCompressionCpuLimit', 'flashBackup' => 'extraFlashBackup', 'backupVMMeta' => 'extraBackupVMMeta', 'notification' => 'extraNotification', 'successLogWanted' => 'extraSuccessLogWanted', 'updateLogWanted' => 'extraUpdateLogWanted'];
 
     /** The six script hooks, which the extra schedule replaces together (extraScripts = own; an empty one means no script) */
     const SCRIPTS = ['preRunScript', 'preBackupScript', 'preContainerBackupScript', 'postContainerBackupScript', 'postBackupScript', 'postRunScript'];
+
+    /** The extra schedule's own container defaults: setting => field ('' = the Settings tab's per-container value, then its default) */
+    const EXTRA_DEFAULTS = ['updateContainer' => 'extraDefaultUpdateContainer', 'dontStop' => 'extraDefaultDontStop', 'verifyBackup' => 'extraDefaultVerifyBackup', 'ignoreBackupErrors' => 'extraDefaultIgnoreBackupErrors'];
 
     /** Per-container settings the Extra schedule tab can set for itself ('' = same as the Settings tab) */
     const EXTRA_CONTAINER_KEYS = ['backupExtVolumes', 'updateContainer', 'skipBackup', 'verifyBackup', 'ignoreBackupErrors', 'dontStop'];
@@ -113,6 +117,10 @@ class ABSettings {
     public array $extraIncludeFiles = [];
     public string $extraGlobalExclusionsOwn = '';
     public array $extraGlobalExclusions = [];
+    public string $extraDefaultUpdateContainer = '';
+    public string $extraDefaultDontStop = '';
+    public string $extraDefaultVerifyBackup = '';
+    public string $extraDefaultIgnoreBackupErrors = '';
     public string $extraDestination = '';
     public string|int $extraDeleteBackupsOlderThan = '7';
     public string|int $extraKeepMinBackups = '3';
@@ -388,6 +396,11 @@ class ABSettings {
             if (($own['excludeOwn'] ?? '') === 'yes') {
                 $set['exclude'] = (array)($own['exclude'] ?? []); // an empty own list means no exclusions
             }
+            foreach (self::EXTRA_DEFAULTS as $key => $field) {
+                if ($this->$field !== '' && !isset($set[$key])) {
+                    $set[$key] = $this->$field; // this tab's default beats the Settings tab's value for this container
+                }
+            }
             $set['skip'] = in_array($name, $this->extraContainers, true) ? 'no' : 'yes'; // Include?, not the Settings tab's Skip?
             $settings->containerSettings[$name] = array_merge($this->containerSettings[$name] ?? [], $set);
         }
@@ -437,6 +450,10 @@ class ABSettings {
         $settings['Scripts']          = (implode(', ', array_filter(array_map(fn($script) => $run->$script ? "{$hooks[$script]}: {$run->$script}" : '', self::SCRIPTS))) ?: 'none') . $source($this->extraScripts === 'own');
         $settings['Extra files']      = implode(', ', $run->includeFiles) ?: 'none';
         $settings['Global exclusions'] = (implode(', ', $run->globalExclusions) ?: 'none') . $source($this->extraGlobalExclusionsOwn === 'yes');
+        $defaultLabels = ['updateContainer' => 'Default: update after backup', 'dontStop' => 'Default: skip stopping', 'verifyBackup' => 'Default: verify', 'ignoreBackupErrors' => 'Default: ignore errors'];
+        foreach (self::EXTRA_DEFAULTS as $key => $field) {
+            $settings[$defaultLabels[$key]] = ($this->$field !== '' ? $this->$field . ' (own)' : 'per container, else ' . $this->defaults[$key] . ' (Settings tab)');
+        }
 
         $containerLabels = array_combine(self::EXTRA_CONTAINER_KEYS, ['External volumes', 'Update after backup', 'Skip backup', 'Verify', 'Ignore errors', 'Skip stopping']);
         $overrides       = [];

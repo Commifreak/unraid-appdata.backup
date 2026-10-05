@@ -10,7 +10,7 @@ use unraid\plugins\AppdataBackup\ABSettings;
 function abContainerPanel(array $container, ABSettings $abSettings, array $containerHelp, bool $extra = false) {
     $field         = $extra ? 'extraContainerSettings' : 'containerSettings';
     $idPrefix      = $extra ? 'extra_' : '';
-    $useStandard   = $extra ? 'Same as Settings tab' : 'Use standard';
+    $useStandard   = 'Use standard'; // on the extra tab: its Container defaults (ABSettings::EXTRA_DEFAULTS)
     $inheritOption = $extra ? "<option value=''>Same as Settings tab</option>\n" : '';
     $volumeTarget  = $extra ? 'data-exclude="extra_' . $container['Name'] . '_exclude"' : 'data-container="' . $container['Name'] . '"';
     $main          = $abSettings->getContainerSpecificSettings($container['Name'], false);
