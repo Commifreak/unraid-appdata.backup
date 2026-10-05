@@ -244,8 +244,10 @@ if (!ABHelper::isArrayOnline()) {
         }).get();
         var text = 'From the backup of ' + abEscape(set) + (abRestoreInfo.setAge != null ? ' (' + abAge(abRestoreInfo.setAge) + ')' : '') + '.';
         if (containers.length) {
-            text += '<br><br>' + containers.length + (containers.length === 1 ? ' container ' : ' containers ')
-                + (custom && custom !== '/' ? 'into ' + abEscape(custom) + '.' : 'to their original folders. Running ones are stopped for their restore and started again.');
+            var one = containers.length === 1;
+            text += '<br><br>' + containers.length + (one ? ' container ' : ' containers ')
+                + (custom && custom !== '/' ? 'into ' + abEscape(custom) + '.'
+                    : (one ? 'to its original folder. If it runs, it is stopped for its restore and started again.' : 'to their original folders. Running ones are stopped for their restore and started again.'));
         }
         var newer = containers.filter(function (name) {
             return abRestoreInfo.newer && abRestoreInfo.newer[name] != null;
