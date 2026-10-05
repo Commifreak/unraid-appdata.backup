@@ -663,10 +663,15 @@ class ABHelper {
         return true;
     }
 
-    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, while another backup, restore or check holds the lock */
+    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, when the lock file cannot be opened or another backup, restore or check holds the lock */
     public static function claimRun() {
-        $lock = @fopen(ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock, 'c');
-        if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+        $lockFile = ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock;
+        $lock     = @fopen($lockFile, 'ce'); // 'e': commands this run starts must not inherit the lock
+        if ($lock === false) {
+            self::notify("[AppdataBackup] Error!", "Cannot start", "Could not open the run lock '$lockFile'.", 'alert');
+            return false;
+        }
+        if (!flock($lock, LOCK_EX | LOCK_NB)) {
             self::notify("Appdata Backup", "Still running", "There is something running already.");
             return false;
         }
