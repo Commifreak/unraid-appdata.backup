@@ -183,7 +183,8 @@ foreach ($extraAll as $container) {
         <ul class="sortable" id="extraOrderSortable">
 <?php foreach (ABHelper::sortContainers($extraAll, $abSettings->extraContainerOrder ?: $abSettings->containerOrder, false, false) as $container): ?>
 <?php $id = $container['isGroup'] ? '__grp__' . $container['Name'] : $container['Name']; ?>
-            <li id="extraContainerOrder_<?= htmlspecialchars($id) ?>"><span class="ab-drag"><i class="fa fa-sort"></i> <?= $container['isGroup'] ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . htmlspecialchars($extraIcon($container)) . '" height="16" />' ?> <?= htmlspecialchars($container['Name']) ?></span></li>
+<?php $members = $container['isGroup'] ? array_values($abSettings->getContainerGroups()[$container['Name']] ?? []) : [$container['Name']]; ?>
+            <li id="extraContainerOrder_<?= htmlspecialchars($id) ?>" data-members="<?= htmlspecialchars(json_encode($members), ENT_QUOTES) ?>"><span class="ab-drag"><i class="fa fa-sort"></i> <?= $container['isGroup'] ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . htmlspecialchars($extraIcon($container)) . '" height="16" />' ?> <?= htmlspecialchars($container['Name']) ?></span></li>
 <?php endforeach; ?>
         </ul>
     </div>
@@ -283,6 +284,10 @@ foreach ($extraAll as $container) {
         checkBackupFrequency('extraFrequency'); // settings.php
         abExtraToggle();
         $('#extraFlashBackup, #extraCompression').on('change', abExtraToggle);
+        const abExcluded = name => $('select[name="extraContainers[' + name + ']"]').val() !== 'yes';
+        const abGreyExtra = () => abGreyOrder('#extraOrderSortable', abExcluded, 'Not in the extra schedule: Include? is No'); // settings.php
+        abGreyExtra();
+        $(document).on('change', 'select[name^="extraContainers["]', abGreyExtra);
         $(document).on('change', 'select[id^="extra_"][id$="_excludeOwn"]', function () {
             abExtraExcludeOwn(this);
         });

@@ -58,6 +58,11 @@
     min-width: 0;
 }
 
+/* a start-order entry outside the schedule (abGreyOrder in settings.php) */
+.sortable li.ab-off {
+    opacity: 0.45;
+}
+
 .ab-docker-cols > .ab-start-order {
     max-width: 35%;
 }
