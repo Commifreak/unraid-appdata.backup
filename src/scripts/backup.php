@@ -23,15 +23,17 @@ require_once dirname(__DIR__) . '/include/ABStatus.php';
 
 set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
+// From cron (see ABSettings::checkCron): 'scheduled' waits for a running job, 'extra' runs the extra schedule
+$runArgs = array_slice($argv, 1);
+
+if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
+    exit;
+}
+
 /**
  * Helper for later renaming of the backup folder to suffix -failed
  */
-$backupStarted = new DateTime();
-
-
-if (!ABHelper::claimRun()) {
-    exit;
-}
+$backupStarted = new DateTime(); // after claimRun(): a scheduled run's wait is not part of its duration
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 $unraidVersion           = parse_ini_file('/etc/unraid-version');
@@ -54,6 +56,23 @@ if (!file_exists(ABSettings::getConfigPath())) {
 }
 
 $abSettings = new ABSettings();
+
+// Retention never deletes either schedule's destination, even one picked inside the other and named like a set
+$abDestinations = array_filter(array_map(fn($path) => $path === '' ? false : realpath($path), [$abSettings->destination, $abSettings->extraDestination]));
+
+if (in_array('extra', $runArgs, true)) {
+    ABHelper::backupLog("Running the extra schedule: only its chosen containers, into its own destination.");
+    if ($abSettings->extraSchedule !== 'yes') {
+        ABHelper::backupLog("The extra schedule is turned off (Settings, Use an extra schedule?).", ABHelper::LOGLEVEL_ERR);
+        goto end;
+    }
+    $extraReal = $abSettings->extraDestination === '' ? false : realpath($abSettings->extraDestination); // realpath('') is the working directory
+    if (rtrim($abSettings->extraDestination, '/') === rtrim($abSettings->destination, '/') || ($extraReal !== false && $extraReal === realpath($abSettings->destination))) {
+        ABHelper::backupLog("The extra schedule needs its own destination, not the main one, so its retention cannot delete full backups!", ABHelper::LOGLEVEL_ERR);
+        goto end;
+    }
+    $abSettings = $abSettings->forSchedule('extra');
+}
 
 if (empty($abSettings->destination)) {
     ABHelper::backupLog("Destination is not set!", ABHelper::LOGLEVEL_ERR);
@@ -91,22 +110,28 @@ if (ABHelper::abortRequested()) {
 
 
 $dockerClient     = new DockerClient();
-$dockerContainers = $dockerClient->getDockerContainers();
+$allContainers    = $dockerClient->getDockerContainers();
+$dockerContainers = $abSettings->scheduleContainers($allContainers);
+$missing          = $abSettings->scheduleMissing($allContainers);
+if ($missing) {
+    ABHelper::backupLog("Chosen for the extra schedule but not found (renamed or removed?): " . implode(', ', $missing), ABHelper::LOGLEVEL_WARN);
+}
 
 ABHelper::backupLog(ABHelper::dump('Containers', array_column($dockerContainers ?: [], null, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
 
-if (empty($dockerContainers)) {
-    ABHelper::backupLog("There are no docker containers to back up!", ABHelper::LOGLEVEL_WARN);
-    goto continuationForAll;
-}
-
 // Sort containers
-$sortedStartContainers = ABHelper::sortContainers($dockerContainers, $abSettings->containerOrder);
-$sortedStopContainers  = ABHelper::sortContainers($dockerContainers, $abSettings->containerOrder, true);
+$sortedStartContainers = ABHelper::sortContainers($dockerContainers ?: [], $abSettings->containerOrder);
+$sortedStopContainers  = ABHelper::sortContainers($dockerContainers ?: [], $abSettings->containerOrder, true);
 
 if (empty($sortedStopContainers)) {
-    ABHelper::backupLog("There are no docker containers (after sorting) to back up!", ABHelper::LOGLEVEL_WARN);
+    if ($abSettings->schedule === 'extra') {
+        // An empty set would count as a good one, and retention would delete the real extra backups
+        ABHelper::backupLog("None of the extra schedule's containers can be backed up: they are gone or set to skip!", ABHelper::LOGLEVEL_ERR);
+        ABHelper::$errorOccured = true;
+        goto end;
+    }
+    ABHelper::backupLog(empty($dockerContainers) ? "There are no docker containers to back up!" : "There are no docker containers (after sorting) to back up!", ABHelper::LOGLEVEL_WARN);
     goto continuationForAll;
 }
 
@@ -323,7 +348,8 @@ if (ABHelper::$errorOccured) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
     } else { // Retention enabled
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
-        $curBackupsState   = array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*'));// glob return sorted by name. Without naming, thats the oldest first, newest at the end
+        // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
+        $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem)) && !in_array(realpath($backupItem), $abDestinations, true)));
 
         // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));

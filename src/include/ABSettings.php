@@ -17,6 +17,9 @@ class ABSettings {
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
+    /** The settings the Extra schedule tab saves; the Settings tab's form keeps them (see storeForm) */
+    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups'];
+
     public static $tempFolder = '/tmp/appdata.backup';
 
     public static $logfile = 'ab.log';
@@ -68,6 +71,19 @@ class ABSettings {
     public string|int $backupFrequencyHour = '0';
     public string|int $backupFrequencyMinute = '0';
     public string $backupFrequencyCustom = '';
+    public string $extraSchedule = 'no';
+    public string $extraFrequency = 'disabled';
+    public string|int $extraFrequencyWeekday = '1';
+    public string|int $extraFrequencyDayOfMonth = '1';
+    public string|int $extraFrequencyHour = '0';
+    public string|int $extraFrequencyMinute = '0';
+    public string $extraFrequencyCustom = '';
+    public array $extraContainers = [];
+    public string $extraDestination = '';
+    public string|int $extraDeleteBackupsOlderThan = '7';
+    public string|int $extraKeepMinBackups = '3';
+    /** '' for the main schedule, 'extra' once forSchedule() made these the extra schedule's settings */
+    public string $schedule = '';
     public array $containerSettings = [];
     public array $containerOrder = [];
     public array $containerGroupOrder = [];
@@ -229,6 +245,23 @@ class ABSettings {
         file_put_contents(ABSettings::getConfigPath(), json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
+    /** Stores a posted form: the Settings tab's replaces all but EXTRA_FIELDS, the Extra schedule tab's (extraScheduleForm) only those; false if the saved config cannot be read to keep the rest */
+    public static function storeForm(array $post) {
+        $raw   = @file_get_contents(self::getConfigPath());
+        $saved = $raw === false ? [] : json_decode($raw, true);
+        $extra = array_flip(self::EXTRA_FIELDS);
+        if (!isset($post['extraScheduleForm'])) {
+            self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
+            return true;
+        }
+        if (!is_array($saved)) {
+            return false; // storing only the extra fields would wipe every other setting
+        }
+        // An empty multi-select posts nothing, so no key means no containers
+        self::store(array_diff_key($saved, $extra) + array_intersect_key($post, $extra) + ['extraContainers' => []]);
+        return true;
+    }
+
     /**
      * Calculates container specific settings
      * @param $name string container name
@@ -280,31 +313,86 @@ class ABSettings {
         return $groups;
     }
 
+    /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination and retention, and backs up containers only */
+    public function forSchedule($schedule) {
+        if ($schedule !== 'extra') {
+            return $this;
+        }
+        $settings           = clone $this;
+        $settings->schedule = 'extra';
+        foreach (['', 'Weekday', 'DayOfMonth', 'Hour', 'Minute', 'Custom'] as $field) {
+            $settings->{'backupFrequency' . $field} = $this->{'extraFrequency' . $field};
+        }
+        $settings->destination            = $this->extraDestination;
+        $settings->deleteBackupsOlderThan = $this->extraDeleteBackupsOlderThan;
+        $settings->keepMinBackups         = $this->extraKeepMinBackups;
+        $settings->flashBackup            = 'no';
+        $settings->backupVMMeta           = 'no';
+        $settings->includeFiles           = [];
+        return $settings;
+    }
+
+    /** The DockerClient containers this schedule backs up: all of them, or the extra schedule's choice, where `__grp__<name>` stands for that group's members */
+    public function scheduleContainers($containers) {
+        if ($this->schedule !== 'extra') {
+            return $containers;
+        }
+        $groups = $this->getContainerGroups();
+        $chosen = [];
+        foreach ($this->extraContainers as $name) {
+            $chosen = array_merge($chosen, str_starts_with($name, '__grp__') ? ($groups[substr($name, 7)] ?? []) : [$name]);
+        }
+        return array_values(array_filter($containers ?: [], fn($container) => in_array($container['Name'], $chosen, true)));
+    }
+
+    /** What the extra schedule chose that is gone, e.g. renamed: containers DockerClient does not list, and groups without members; [] for the main schedule */
+    public function scheduleMissing($containers) {
+        if ($this->schedule !== 'extra') {
+            return [];
+        }
+        $groups  = $this->getContainerGroups();
+        $present = array_column($containers ?: [], 'Name');
+        $missing = [];
+        foreach ($this->extraContainers as $name) {
+            if (str_starts_with($name, '__grp__')) {
+                if (!isset($groups[substr($name, 7)])) {
+                    $missing[] = 'group ' . substr($name, 7);
+                }
+            } elseif (!in_array($name, $present, true)) {
+                $missing[] = $name;
+            }
+        }
+        return $missing;
+    }
+
+    /** The cron time fields for the schedule whose settings start with $prefix, or '' when it is off */
+    private function cronTime($prefix) {
+        $minute = $this->{$prefix . 'Minute'};
+        $hour   = $this->{$prefix . 'Hour'};
+        return match ($this->$prefix) {
+            'custom' => trim($this->{$prefix . 'Custom'}),
+            'daily' => "$minute $hour * * *",
+            'weekly' => "$minute $hour * * " . $this->{$prefix . 'Weekday'},
+            'monthly' => "$minute $hour " . $this->{$prefix . 'DayOfMonth'} . " * *",
+            default => '',
+        };
+    }
+
     /**
      * @return array
      */
     public function checkCron() {
-        $cronSettings = '# Appdata.Backup cron settings' . PHP_EOL;
-        switch ($this->backupFrequency) {
-            case 'custom':
-                $cronSettings .= $this->backupFrequencyCustom;
-                break;
-            case 'daily':
-                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * *";
-                break;
-            case 'weekly':
-                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " * * " . $this->backupFrequencyWeekday;
-                break;
-            case 'monthly':
-                $cronSettings .= $this->backupFrequencyMinute . " " . $this->backupFrequencyHour . " " . $this->backupFrequencyDayOfMonth . " * *";
-                break;
-            default:
-                $cronSettings = '';
+        $lines = [];
+        // 'scheduled' makes a run wait for a running job instead of being refused
+        foreach (['backupFrequency' => 'scheduled', 'extraFrequency' => 'scheduled extra'] as $prefix => $args) {
+            $time = $prefix === 'extraFrequency' && $this->extraSchedule !== 'yes' ? '' : $this->cronTime($prefix);
+            if ($time !== '') {
+                $lines[] = $time . ' php ' . dirname(__DIR__) . '/scripts/backup.php ' . $args . ' > /dev/null 2>&1';
+            }
         }
 
-        if (!empty($cronSettings)) {
-            $cronSettings .= ' php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null 2>&1';
-            file_put_contents(ABSettings::$pluginDir . '/' . ABSettings::$cronFile, $cronSettings . PHP_EOL);
+        if ($lines) {
+            file_put_contents(ABSettings::$pluginDir . '/' . ABSettings::$cronFile, '# Appdata.Backup cron settings' . PHP_EOL . implode(PHP_EOL, $lines) . PHP_EOL);
         } elseif (file_exists(ABSettings::$pluginDir . '/' . ABSettings::$cronFile)) {
             unlink(ABSettings::$pluginDir . '/' . ABSettings::$cronFile);
         }

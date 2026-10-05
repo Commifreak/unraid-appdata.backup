@@ -329,10 +329,15 @@ class ABHelper {
             $groups          = $abSettings->getContainerGroups();
             $appendinggroups = [];
             foreach ($groups as $groupName => $members) {
+                $inRun = false;
                 foreach ($members as $member) {
                     if (isset($_containers[$member])) {
                         unset($_containers[$member]);
+                        $inRun = true;
                     }
+                }
+                if (!$inRun) {
+                    continue; // e.g. the extra schedule chose none of its containers
                 }
                 $appendinggroups['__grp__' . $groupName] = [
                     'isGroup' => true,
@@ -344,20 +349,22 @@ class ABHelper {
 
         $sortedContainers = [];
         foreach ($order as $name) {
-            if (!str_starts_with($name, '__grp__')) {
-                $containerSettings = $abSettings->getContainerSpecificSettings($name, $removeSkipped);
-                if ($containerSettings['skip'] == 'yes' && $removeSkipped) {
-                    self::backupLog("Not adding $name to sorted containers: should be ignored", self::LOGLEVEL_DEBUG);
-                    unset($_containers[$name]);
-                    continue;
-                }
-            }
             if (isset($_containers[$name])) {
                 $sortedContainers[] = $_containers[$name];
                 unset($_containers[$name]);
             }
         }
         $sortedContainers = array_merge($sortedContainers, $_containers);
+        if ($removeSkipped) {
+            // Every container, not only the ordered ones: one missing from the saved order is still skipped
+            $sortedContainers = array_values(array_filter($sortedContainers, function ($container) use ($abSettings) {
+                if ($container['isGroup'] || $abSettings->getContainerSpecificSettings($container['Name'])['skip'] != 'yes') {
+                    return true;
+                }
+                self::backupLog("Not adding {$container['Name']} to sorted containers: should be ignored", self::LOGLEVEL_DEBUG);
+                return false;
+            }));
+        }
         return $reverse ? array_reverse($sortedContainers) : $sortedContainers;
     }
 
@@ -663,17 +670,21 @@ class ABHelper {
         return true;
     }
 
-    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, when the lock file cannot be opened or another backup, restore or check holds the lock */
-    public static function claimRun() {
+    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, when the lock file cannot be opened or another backup, restore or check holds the lock ($wait: for up to 12 hours) */
+    public static function claimRun($wait = false) {
         $lockFile = ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock;
         $lock     = @fopen($lockFile, 'ce'); // 'e': commands this run starts must not inherit the lock
         if ($lock === false) {
             self::notify("[AppdataBackup] Error!", "Cannot start", "Could not open the run lock '$lockFile'.", 'alert');
             return false;
         }
-        if (!flock($lock, LOCK_EX | LOCK_NB)) {
-            self::notify("Appdata Backup", "Still running", "There is something running already.");
-            return false;
+        $giveUp = time() + 12 * 3600;
+        while (!flock($lock, LOCK_EX | LOCK_NB)) {
+            if (!$wait || time() >= $giveUp) {
+                self::notify("Appdata Backup", "Still running", "There is something running already.");
+                return false;
+            }
+            sleep(30);
         }
         self::$runLock = $lock;
         if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
@@ -707,7 +718,11 @@ class ABHelper {
 
     /** What the job holding the lock is doing, from its script name, for the buttons it blocks */
     public static function runningJob($pid) {
-        $script = current(array_filter(explode("\0", (string)@file_get_contents("/proc/$pid/cmdline")), fn($arg) => str_ends_with($arg, '.php')));
+        $args   = explode("\0", (string)@file_get_contents("/proc/$pid/cmdline"));
+        $script = current(array_filter($args, fn($arg) => str_ends_with($arg, '.php')));
+        if (basename((string)$script) === 'backup.php' && in_array('extra', $args, true)) {
+            return 'Extra schedule backup in progress';
+        }
         return ['backup.php' => 'Backup in progress', 'restore.php' => 'Restore in progress', 'verify.php' => 'Checksum check in progress'][basename((string)$script)] ?? 'Another job is running';
     }
 

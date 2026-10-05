@@ -20,7 +20,9 @@ if (!ABHelper::isArrayOnline()) {
 /**
  * POST Handling
  */
-if ($_POST) {
+if (isset($_POST['extraScheduleForm'])) {
+    $abExtraSaved = ABSettings::storeForm($_POST); // read by extra.php
+} elseif ($_POST) {
     if (isset($_POST['debugForm'])) {
         echo "<pre>" . print_r($_POST, true) . "</pre>";
         exit;
@@ -136,7 +138,7 @@ window.setTimeout(function() {
         }
     }
 
-    ABSettings::store($_POST);
+    ABSettings::storeForm($_POST);
 }
 
 $abSettings = new ABSettings();
@@ -578,6 +580,18 @@ if (($code ?? 0) != 0) {
                    value="<?= $abSettings->backupFrequencyCustom ?>"
                    placeholder="Setting this will disable the other options"/></dd>
     </dl>
+
+    <dl>
+        <dt><b>Use an extra schedule?</b></dt>
+        <dd><select id='extraSchedule' name="extraSchedule" data-setting="<?= htmlspecialchars($abSettings->extraSchedule) ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Backs up chosen containers more often than the rest, for example daily, into their own folder. Yes shows the <b>Extra schedule</b> tab after Save.</p>
+    </blockquote>
 
 
     <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
@@ -1073,25 +1087,12 @@ HTML;
         }
     }
 
-    function checkBackupFrequency() {
-        $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
-        switch ($('#backupFrequency').val()) {
-            case 'disabled':
-                $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
-                break;
-            case 'daily':
-                $('#backupFrequencyHour, #backupFrequencyMinute').prop('disabled', false);
-                break;
-            case 'weekly':
-                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDay').prop('disabled', false);
-                break;
-            case 'monthly':
-                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDayOfMonth').prop('disabled', false);
-                break;
-            default:
-                $('#backupFrequencyCustom').prop('disabled', false);
-                break;
-        }
+    /** Enables only the fields the chosen frequency uses; prefix = the frequency select's id (backupFrequency or extraFrequency) */
+    function checkBackupFrequency(prefix = 'backupFrequency') {
+        const used = {disabled: [], daily: ['Hour', 'Minute'], weekly: ['Hour', 'Minute', 'Day'], monthly: ['Hour', 'Minute', 'DayOfMonth']}[$('#' + prefix).val()] ?? ['Custom'];
+        ['Day', 'DayOfMonth', 'Hour', 'Minute', 'Custom'].forEach(function (field) {
+            $('#' + prefix + field).prop('disabled', !used.includes(field));
+        });
     }
 
     function checkFlashBackupCopy() {
