@@ -349,20 +349,22 @@ class ABHelper {
 
         $sortedContainers = [];
         foreach ($order as $name) {
-            if (!str_starts_with($name, '__grp__')) {
-                $containerSettings = $abSettings->getContainerSpecificSettings($name, $removeSkipped);
-                if ($containerSettings['skip'] == 'yes' && $removeSkipped) {
-                    self::backupLog("Not adding $name to sorted containers: should be ignored", self::LOGLEVEL_DEBUG);
-                    unset($_containers[$name]);
-                    continue;
-                }
-            }
             if (isset($_containers[$name])) {
                 $sortedContainers[] = $_containers[$name];
                 unset($_containers[$name]);
             }
         }
         $sortedContainers = array_merge($sortedContainers, $_containers);
+        if ($removeSkipped) {
+            // Every container, not only the ordered ones: one missing from the saved order is still skipped
+            $sortedContainers = array_values(array_filter($sortedContainers, function ($container) use ($abSettings) {
+                if ($container['isGroup'] || $abSettings->getContainerSpecificSettings($container['Name'])['skip'] != 'yes') {
+                    return true;
+                }
+                self::backupLog("Not adding {$container['Name']} to sorted containers: should be ignored", self::LOGLEVEL_DEBUG);
+                return false;
+            }));
+        }
         return $reverse ? array_reverse($sortedContainers) : $sortedContainers;
     }
 
