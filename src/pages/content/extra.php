@@ -18,6 +18,9 @@ $sameAs = function (string $name, string $label, array $options, $mainValue, str
     return $html . "    </select></dd>\n</dl>\n<blockquote class='inline_help'><p>$help</p></blockquote>\n";
 };
 $yesNo = ['yes' => 'Yes', 'no' => 'No'];
+// No/Yes with No for an unset value: the extra schedule never takes these from the Settings tab (ABSettings::EXTRA_OWN_YES)
+$ownYes = fn(string $name, string $label, string $help) => "<dl>\n    <dt><b>$label</b></dt>\n    <dd><select id='$name' name='$name' data-setting='" . ($abSettings->$name === 'yes' ? 'yes' : 'no') . "'>\n"
+    . "        <option value='no'>No</option>\n        <option value='yes'>Yes</option>\n    </select></dd>\n</dl>\n<blockquote class='inline_help'><p>$help</p></blockquote>\n";
 $cores = ['0' => 'All cores'];
 for ($i = 1; $i < (int)trim((string)shell_exec('nproc')); $i++) {
     $cores[(string)$i] = (string)$i;
@@ -124,7 +127,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 <?= $sameAs('extraSnapshotMode', 'Use snapshots', ['no' => 'No', 'yes' => 'Yes, on ZFS and btrfs'], $abSettings->snapshotMode, 'Snapshots for this schedule; see <b>Use snapshots</b> on the Settings tab.') ?>
 <?= $sameAs('extraCompression', 'Use Compression?', ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'], $abSettings->compression, 'Compression for this schedule\'s archives.') ?>
 <div id="extraCompressionCpuLimit_dl"><?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, $abSettings->compressionCpuLimit, 'Only used with <b>Yes, multicore</b>.') ?></div>
-<?= $sameAs('extraFlashBackup', 'Backup the flash drive?', $yesNo, $abSettings->flashBackup, 'No by default, so a frequent run doesn\'t repeat the flash zip the main schedule makes.') ?>
+<?= $ownYes('extraFlashBackup', 'Backup the flash drive?', 'No by default, so a frequent run doesn\'t repeat the flash zip the main schedule makes.') ?>
 <div id="extraFlashBackupCopy_dl">
 <dl>
     <dt><b>Copy the flash backup to a custom destination</b></dt>
@@ -133,7 +136,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 </dl>
 <blockquote class='inline_help'><p>This schedule's own copy of the flash zip, for example a folder another machine backs up. Leave empty to skip the copy.</p></blockquote>
 </div>
-<?= $sameAs('extraBackupVMMeta', 'Backup VM meta?', $yesNo, $abSettings->backupVMMeta, 'No by default, like the flash backup.') ?>
+<?= $ownYes('extraBackupVMMeta', 'Backup VM meta?', 'No by default, like the flash backup.') ?>
 
 <div class="title"><span class="left"><i class="fa fa-bell title"></i>Notifications</span></div>
 <?= $sameAs('extraNotification', 'Notification Settings:', [ABHelper::LOGLEVEL_ERR => 'Errors only', ABHelper::LOGLEVEL_WARN => 'Warnings and errors', 'disabled' => 'Disabled'], $abSettings->notification, 'Which problems in this schedule\'s runs send a notification.') ?>
