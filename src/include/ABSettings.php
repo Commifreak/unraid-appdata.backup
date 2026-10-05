@@ -324,6 +324,26 @@ class ABSettings {
         return array_values(array_filter($containers ?: [], fn($container) => in_array($container['Name'], $chosen, true)));
     }
 
+    /** What the extra schedule chose that is gone, e.g. renamed: containers DockerClient does not list, and groups without members; [] for the main schedule */
+    public function scheduleMissing($containers) {
+        if ($this->schedule !== 'extra') {
+            return [];
+        }
+        $groups  = $this->getContainerGroups();
+        $present = array_column($containers ?: [], 'Name');
+        $missing = [];
+        foreach ($this->extraContainers as $name) {
+            if (str_starts_with($name, '__grp__')) {
+                if (!isset($groups[substr($name, 7)])) {
+                    $missing[] = 'group ' . substr($name, 7);
+                }
+            } elseif (!in_array($name, $present, true)) {
+                $missing[] = $name;
+            }
+        }
+        return $missing;
+    }
+
     /** The cron time fields for the schedule whose settings start with $prefix, or '' when it is off */
     private function cronTime($prefix) {
         $minute = $this->{$prefix . 'Minute'};

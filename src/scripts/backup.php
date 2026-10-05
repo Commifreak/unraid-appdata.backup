@@ -103,7 +103,12 @@ if (ABHelper::abortRequested()) {
 
 
 $dockerClient     = new DockerClient();
-$dockerContainers = $abSettings->scheduleContainers($dockerClient->getDockerContainers());
+$allContainers    = $dockerClient->getDockerContainers();
+$dockerContainers = $abSettings->scheduleContainers($allContainers);
+$missing          = $abSettings->scheduleMissing($allContainers);
+if ($missing) {
+    ABHelper::backupLog("Chosen for the extra schedule but not found (renamed or removed?): " . implode(', ', $missing), ABHelper::LOGLEVEL_WARN);
+}
 
 ABHelper::backupLog(ABHelper::dump('Containers', array_column($dockerContainers ?: [], null, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
