@@ -25,6 +25,9 @@ set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
 // From cron (see ABSettings::checkCron): 'scheduled' waits for a running job, 'extra' runs the extra schedule
 $runArgs = array_slice($argv, 1);
+if (in_array('extra', $runArgs, true)) {
+    ABHelper::$runLabel = 'Extra schedule'; // names this run in every notification, "Still running" included
+}
 
 if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
     exit;
@@ -71,7 +74,12 @@ if (in_array('extra', $runArgs, true)) {
         ABHelper::backupLog("The extra schedule needs its own destination, not the main one, so its retention cannot delete full backups!", ABHelper::LOGLEVEL_ERR);
         goto end;
     }
+    $extraSummary = $abSettings->scheduleSummary();
+    ABHelper::backupLog($extraSummary['line']);
+    ABHelper::backupLog(ABHelper::dump('Extra schedule settings', $extraSummary['settings']), ABHelper::LOGLEVEL_DEBUG);
+    ABHelper::backupLog(ABHelper::dump("Extra schedule's own container settings", $extraSummary['overrides']), ABHelper::LOGLEVEL_DEBUG);
     $abSettings = $abSettings->forSchedule('extra');
+    ABHelper::$targetLogLevel = $abSettings->notification; // this run's own notification level; loading the settings set the Settings tab's
 }
 
 if (empty($abSettings->destination)) {
@@ -114,7 +122,7 @@ $allContainers    = $dockerClient->getDockerContainers();
 $dockerContainers = $abSettings->scheduleContainers($allContainers);
 $missing          = $abSettings->scheduleMissing($allContainers);
 if ($missing) {
-    ABHelper::backupLog("Chosen for the extra schedule but not found (renamed or removed?): " . implode(', ', $missing), ABHelper::LOGLEVEL_WARN);
+    ABHelper::backupLog("Included in the extra schedule but not found (renamed or removed?): " . implode(', ', $missing), ABHelper::LOGLEVEL_WARN);
 }
 
 ABHelper::backupLog(ABHelper::dump('Containers', array_column($dockerContainers ?: [], null, 'Name')), ABHelper::LOGLEVEL_DEBUG);

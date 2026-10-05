@@ -645,129 +645,9 @@ if (($code ?? 0) != 0) {
                 'dontStop' => 'Leaves this container running while it is backed up. Not recommended: files that change during the backup can leave a broken archive. <b>Use standard</b> follows Advanced settings.',
             ];
 
+            require_once __DIR__ . '/container.php';
             foreach ($allContainers as $container) {
-                $isPlex = str_contains(strtolower($container['Name']), 'plex');
-
-                $plexHint                = '';
-                $plexContainerNameSuffix = '';
-                if ($isPlex) {
-                    $plexContainerNameSuffix = ' - Plex detected! Open for more...';
-                    $plexHint                = <<<HTML
-<dt><b>PLEX detected!</b></dt>
-<dd><div style="display: table; font-weight: bold;">This container seems to be a plex container.<br />Please consider setting some exclusions.<br /><a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for a suggestion.</div></dd>
-HTML;
-
-                }
-
-                $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = ABHelper::getContainerVolumes($container, true);
-                $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
-                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
-
-                if (empty($volumes)) {
-                    $volumes = "<b>No volumes - container will NOT be backed up!</b>";
-                } else {
-                    foreach ($volumes as $index => $volume) {
-                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not be backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
-                        $internalVolume  = ABHelper::isVolumeWithinAppdata($volume);
-                        $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
-                    }
-                    $volumes = implode('<br />', $volumes);
-                }
-
-                $containerExcludes = implode("\r\n", $containerSetting['exclude']);
-
-                echo <<<HTML
-<div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
-        <dl class="ab-container-row">
-        <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">Skip?</label>
-        <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
-    </select>
-    </dd>
-        </dl>
-
-<blockquote class='inline_help ab-box'>
-<dl>
-$plexHint
-<dt>Configured volumes</dt>
-<dd><div style="display: table">$volumes</div></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['volumes']}</p></blockquote>
-<dl>
-<dt>Member of group</dt>
-<dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$container['Name']}_group' name="containerSettings[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['group']}</p></blockquote>
-<dl>
-<dt>Save external volumes?</dt>
-<dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
-		<option value='no'>No</option>
-		<option value='yes'>Yes</option>
-	</select></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['extVolumes']}</p></blockquote>
-<dl>
-<dt>Update container after backup?</dt>
-<dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
-            <option value=''>Use standard</option>
-            <option value='yes'>Yes</option>
-            <option value='no'>No</option>
-        </select>
-    </dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['update']}</p></blockquote>
-<dl>
-<dt>Excluded folders/files</dt>
-<dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['exclude']}</p></blockquote>
-<div class="ab-advanced-toggle" onclick="$(this).next().toggle();"><a>Show advanced options</a></div>
-<div style="display: none;">
-<dl>
-<dt>Skip backup?</dt>
-<dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
-		<option value='no'>No, do backup as well</option>
-		<option value='yes'>Yes, skip backup and do stop/start only</option>
-	</select></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['skipBackup']}</p></blockquote>
-<dl>
-<dt>Verify Backup?</dt>
-<dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
-		<option value=''>Use standard</option>
-		<option value='yes'>Yes</option>
-		<option value='no'>No</option>
-	</select></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['verify']}</p></blockquote>
-<dl>
-<dt>Ignore errors during backup?</dt>
-<dd>
-    <select id='{$container['Name']}_ignoreBackupErrors' name="containerSettings[{$container['Name']}][ignoreBackupErrors]" data-setting="{$containerSetting['ignoreBackupErrors']}">
-        <option value=''>Use standard</option>
-        <option value='yes'>Yes</option>
-		<option value='no'>No</option>
-	</select>
-</dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['ignoreErrors']}</p></blockquote>
-<dl>
-<dt>Skip stopping of container?</dt>
-<dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
-            <option value=''>Use standard</option>
-            <option value='no'>No</option>
-            <option value='yes'>Yes</option>
-        </select></dd>
-</dl>
-<blockquote class='inline_help'><p>{$containerHelp['dontStop']}</p></blockquote>
-</div>
-</blockquote>
-HTML;
-
-
+                abContainerPanel($container, $abSettings, $containerHelp);
             }
             ?>
 
@@ -783,7 +663,7 @@ HTML;
                     $isGroup = $container['isGroup'];
                     $name         = $container['Name'] ?? key($container);
                     $internalName = $isGroup ? '__grp__' . $name : $name;
-                    $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);
+                    $image        = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                     $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
                     echo <<<HTML
 <li id="containerOrder_{$internalName}"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
@@ -805,7 +685,7 @@ HTML;
                     <?php
                     $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
                     foreach ($sortedContainers as $container) {
-                        $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                        $image = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                         echo <<<HTML
 <li id="containerGroupOrder[{$group}]={$container['Name']}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
 HTML;
@@ -974,14 +854,18 @@ HTML;
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
 <script>
     $(function () {
-        $('.fileTreeDiv').fileTree({
-            // root: $('#source').val(),
-            multiSelect: true,
-            //filter: "HIDE_FILES_FILTER",
-            //folderEvent: "nothing"
+        // Each tree lists folders from the server, so it is built when its box is first opened, not for every panel on load
+        $(document).on('focus', 'textarea', function () {
+            $(this).next('.ft').find('.fileTreeDiv:not(.ab-tree-ready)').addClass('ab-tree-ready').fileTree({multiSelect: true});
         });
 
         $('.ftAttach').fileTreeAttach();
+        // Unraid leaves the picker's top to the flow (over its own field in 7.2+'s flex dd) and drifts its left on a
+        // reopen, so place it under the field each time; runs after fileTreeAttach's own click handler
+        $('.ftAttach').on('click', function () {
+            const pos = $(this).position();
+            $(this).next('.fileTree').css({left: pos.left, top: pos.top + $(this).outerHeight()});
+        });
         $('.ftAttach').attr('placeholder', 'Please click to select');
         $('.sortable').sortable({handle: '.ab-drag'});
 
@@ -1052,6 +936,7 @@ HTML;
     function addSelectionToList(element) {
         $el = $(element).prev().find("input:checked");
         $textarea = $(element).parent().prev();
+        $('#' + $textarea.attr('id') + 'Own').not(function () { return this.value === 'yes'; }).val('yes').trigger('change'); // as in addVolumeToExclude
 
         console.debug($el, $textarea);
 
@@ -1077,7 +962,8 @@ HTML;
 
     function addVolumeToExclude(element) {
         $path = $(element).text();
-        $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
+        $excludeTextarea = $('#' + ($(element).data('exclude') || $(element).data('container') + '_exclude')); // data-exclude: the Extra schedule tab's panels
+        $('#' + $excludeTextarea.attr('id') + 'Own').not(function () { return this.value === 'yes'; }).val('yes').trigger('change'); // an extra panel's list only counts as Own list
 
         if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
             console.log("Not adding this volume to exclusion: already listed!")
