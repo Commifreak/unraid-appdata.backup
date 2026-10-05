@@ -16,6 +16,42 @@ class ABStatus {
     /** Days without a successful backup before the page warns, by schedule */
     const STALE_DAYS = ['daily' => 2, 'weekly' => 9, 'monthly' => 35];
 
+    /**
+     * For each archive of $set, the age in seconds of a newer successful set holding the same container in the other schedule's destination
+     * @return array archive name => age, only for archives that have one
+     */
+    public static function newerElsewhere(ABSettings $settings, $set, array $archives) {
+        if (!preg_match(self::SET_PATTERN, basename($set), $m)) {
+            return [];
+        }
+        $setTime = \DateTime::createFromFormat('Ymd_His', $m[1])->getTimestamp();
+        $here    = realpath(dirname($set));
+        $newest  = [];
+        foreach ([$settings->destination, $settings->extraSchedule === 'yes' ? $settings->extraDestination : ''] as $destination) {
+            $real = $destination === '' ? false : realpath($destination); // realpath('') is the working directory
+            if ($real === false || $real === $here) {
+                continue;
+            }
+            foreach (scandir($real) ?: [] as $name) {
+                if (!preg_match(self::SET_PATTERN, $name, $n) || !empty($n[2]) || !is_file("$real/$name/backup.log")) {
+                    continue;
+                }
+                $time = \DateTime::createFromFormat('Ymd_His', $n[1])->getTimestamp();
+                if ($time <= $setTime) {
+                    continue;
+                }
+                // The other schedule may compress differently, so containers are matched by name
+                $held = array_map(fn($file) => preg_replace(ABHelper::ARCHIVE_PATTERN, '', $file), preg_grep(ABHelper::ARCHIVE_PATTERN, scandir("$real/$name") ?: []));
+                foreach ($archives as $archive) {
+                    if (in_array(preg_replace(ABHelper::ARCHIVE_PATTERN, '', $archive), $held, true)) {
+                        $newest[$archive] = max($newest[$archive] ?? 0, $time);
+                    }
+                }
+            }
+        }
+        return array_map(fn($time) => time() - $time, $newest);
+    }
+
     /** Sets in $destination, newest first: path, date, state (ok, failed, incomplete) and size in bytes; false if a listing fails */
     public static function sets($destination) {
         $destination = rtrim($destination, '/');

@@ -6,6 +6,7 @@ require_once __DIR__ . '/ABHelper.php';
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
+use unraid\plugins\AppdataBackup\ABStatus;
 
 $writeActions = ['manualBackup', 'extraBackup', 'abort', 'startRestore', 'verifySet', 'copyConfigFromProd'];
 $isPost       = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
@@ -138,6 +139,10 @@ if (isset($action)) {
                     $config['containers'][] = $backupFile;
                 }
             }
+
+            require_once __DIR__ . '/ABStatus.php';
+            $config['setAge'] = preg_match(ABStatus::SET_PATTERN, basename($item), $m) ? time() - \DateTime::createFromFormat('Ymd_His', $m[1])->getTimestamp() : null;
+            $config['newer']  = ABStatus::newerElsewhere(new ABSettings(), $item, $config['containers'] ?: []) ?: new stdClass(); // {} in JSON, never []
 
             echo json_encode(['result' => $config]);
             break;

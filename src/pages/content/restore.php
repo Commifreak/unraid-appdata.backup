@@ -27,12 +27,8 @@ if (!ABHelper::isArrayOnline()) {
 <p>The restore process <b>is NOT able to</b>:</p>
 <ul>
     <li>Create your docker containers</li>
-    <li>Take care of stopping containers prior to the restore
-        <ul>
-            <li>Please stop all potentially affected containers yourself prior to the restore!</li>
-        </ul>
-    </li>
 </ul>
+<p>Containers restored to their original folders are stopped for their restore if they run, and started again afterwards.</p>
 
 <form id="restoreForm">
 
@@ -120,7 +116,7 @@ if (!ABHelper::isArrayOnline()) {
             </div>
             <div class="ab-restore-list">
                 <dl class="ab-restore-list-head"><dt><b>Restore containers</b></dt><dd><span class="ab-pick"><a href="#" data-target="restoreContainersDD" data-checked="1">All</a> / <a href="#" data-target="restoreContainersDD" data-checked="0">None</a></span></dd></dl>
-                <blockquote class='inline_help'><p>Extracts each container's data back where it came from, or into the custom destination. Existing files are overwritten, so stop the containers first.</p></blockquote>
+                <blockquote class='inline_help'><p>Extracts each container's data back where it came from, or into the custom destination. Files in the backup replace the existing ones; other files are left as they are. A running container is stopped for its restore and started again, unless a custom destination is set.</p></blockquote>
                 <div class="ab-checklist" id="restoreContainersDD"></div>
             </div>
         </div>
@@ -160,14 +156,17 @@ if (!ABHelper::isArrayOnline()) {
     // Names come from the backup folder: attr() and a text node keep them from being parsed as HTML
     function restoreCheck(kind, name) {
         return $('<label class="ab-check">').attr('title', name)
-            .append($('<input type="checkbox">').attr('name', 'restoreItem[' + kind + '][' + name + ']'), ' ', document.createTextNode(name));
+            .append($('<input type="checkbox">').attr('name', 'restoreItem[' + kind + '][' + name + ']').attr('data-name', name), ' ', document.createTextNode(name));
     }
+
+    var abRestoreInfo = {}; // checkRestoreItem's result for the chosen set
 
     function checkRestoreItem() {
         $.ajax(url, {
             data: {action: 'checkRestoreItem', item: $('#restoreBackupList option:selected').val()}
         }).done(function (data) {
             if (data.result) {
+                abRestoreInfo = data.result;
 
                 $('#restoreTemplatesDD, #restoreContainersDD').html('None available :(');
 
@@ -224,7 +223,48 @@ if (!ABHelper::isArrayOnline()) {
         $('#' + id).prop('disabled', !available).prop('checked', false).next('span').text(available ? 'Yes' : 'Not in this backup');
     }
 
+    function abAge(seconds) {
+        var hours = Math.floor(seconds / 3600);
+        if (hours < 1) {
+            return 'less than an hour old';
+        }
+        return hours < 48 ? hours + (hours === 1 ? ' hour old' : ' hours old') : Math.floor(hours / 24) + ' days old';
+    }
+
+    function abEscape(text) {
+        return $('<div>').text(text).html();
+    }
+
+    // Says which set, how old, and where it goes; warns about a newer copy in the other destination (ABStatus::newerElsewhere)
     function startRestore() {
-        abStartJob($('#restoreForm').serialize() + '&action=startRestore');
+        var set = $('#restoreBackupList option:selected').text();
+        var custom = $('#customRestoreDestination').val().trim();
+        var containers = $('#restoreContainersDD input:checked').map(function () {
+            return $(this).attr('data-name');
+        }).get();
+        var text = 'From the backup of ' + abEscape(set) + (abRestoreInfo.setAge != null ? ' (' + abAge(abRestoreInfo.setAge) + ')' : '') + '.';
+        if (containers.length) {
+            text += '<br><br>' + containers.length + (containers.length === 1 ? ' container ' : ' containers ')
+                + (custom && custom !== '/' ? 'into ' + abEscape(custom) + '.' : 'to their original folders. Running ones are stopped for their restore and started again.');
+        }
+        var newer = containers.filter(function (name) {
+            return abRestoreInfo.newer && abRestoreInfo.newer[name] != null;
+        });
+        if (newer.length) {
+            text += '<br><br><b>The other backup destination has a newer backup of:</b><br>' + newer.map(function (name) {
+                return abEscape(name) + ' (' + abAge(abRestoreInfo.newer[name]) + ')';
+            }).join('<br>');
+        }
+        swal({
+            title: "Restore?",
+            text: text,
+            type: 'warning',
+            html: true,
+            showCancelButton: true,
+            confirmButtonText: "Yep",
+            cancelButtonText: "Nah"
+        }, function () {
+            abStartJob($('#restoreForm').serialize() + '&action=startRestore');
+        });
     }
 </script>
