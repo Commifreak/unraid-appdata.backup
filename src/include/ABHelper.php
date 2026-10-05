@@ -889,6 +889,19 @@ class ABHelper {
         return true;
     }
 
+    /** Installs the update planned for $name, unless its backup just failed: then there would be no fresh backup to go back to */
+    private static function updateAfterBackup($name, $backedUp) {
+        global $dockerUpdateList;
+        if (!in_array($name, $dockerUpdateList)) {
+            return;
+        }
+        if (!$backedUp) {
+            self::backupLog("Not updating $name: its backup failed, so there would be no fresh backup to go back to.", self::LOGLEVEL_WARN);
+            return;
+        }
+        self::updateContainer($name);
+    }
+
     public static function updateContainer($name) {
         global $abSettings, $dockerClient;
         self::backupLog("Installing planned update for $name...");
@@ -928,7 +941,7 @@ class ABHelper {
     }
 
     public static function doBackupMethod($method, $containerListOverride = null) {
-        global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination, $dockerUpdateList;
+        global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination;
 
         self::backupLog(__METHOD__ . ': $containerListOverride: ' . implode(', ', array_column(($containerListOverride ?? []), 'Name')), self::LOGLEVEL_DEBUG);
 
@@ -1019,7 +1032,8 @@ class ABHelper {
                         }
                         ABSteps::detail($container['Name'] . ', ' . ++$done . ' of ' . $queued);
 
-                        if (!self::backupContainer($container, $abDestination, array_key_exists($container['Name'], $plans) ? $plans[$container['Name']] : false)) {
+                        $backedUp = self::backupContainer($container, $abDestination, array_key_exists($container['Name'], $plans) ? $plans[$container['Name']] : false);
+                        if (!$backedUp) {
                             self::$errorOccured = true;
                         }
 
@@ -1029,9 +1043,7 @@ class ABHelper {
                             return false;
                         }
 
-                        if (in_array($container['Name'], $dockerUpdateList)) {
-                            self::updateContainer($container['Name']);
-                        }
+                        self::updateAfterBackup($container['Name'], $backedUp);
                     }
                     self::setCurrentContainerName($_container, true);
                 }
@@ -1107,7 +1119,8 @@ class ABHelper {
                         self::startContainer($container);
                     }
 
-                    if (!self::backupContainer($container, $abDestination, $plan)) {
+                    $backedUp = self::backupContainer($container, $abDestination, $plan);
+                    if (!$backedUp) {
                         self::$errorOccured = true;
                     }
 
@@ -1118,9 +1131,7 @@ class ABHelper {
                         return false;
                     }
 
-                    if (in_array($container['Name'], $dockerUpdateList)) {
-                        self::updateContainer($container['Name']);
-                    }
+                    self::updateAfterBackup($container['Name'], $backedUp);
 
                     if (self::abortRequested()) {
                         return false;
