@@ -138,6 +138,8 @@ window.setTimeout(function() {
         }
     }
 
+    // Unraid draws the tabs before this runs, so the Extra schedule tab only follows the toggle on the next load
+    $abTabsChanged = (json_decode((string)@file_get_contents(ABSettings::getConfigPath()), true)['extraSchedule'] ?? 'no') !== ($_POST['extraSchedule'] ?? 'no');
     ABSettings::storeForm($_POST);
 }
 
@@ -250,6 +252,8 @@ HTML;
 
 if (($code ?? 0) != 0) {
     echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
+} elseif (!empty($abTabsChanged)) {
+    echo "<script>location.replace(location.href);</script>"; // a GET, not a resubmit
 }
 ?>
 
