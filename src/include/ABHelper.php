@@ -50,6 +50,11 @@ class ABHelper {
         shell_exec("logger -t 'Appdata Backup' " . escapeshellarg($string));
     }
 
+    /** A backup destination a run can write to; the plugin never creates one */
+    public static function destinationUsable($path) {
+        return $path !== '' && file_exists($path) && is_writable($path);
+    }
+
     /**
      * Checks, if the Array is online
      * @return bool

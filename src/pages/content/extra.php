@@ -41,6 +41,10 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 ?>
 <p class="ab-warn">Scheduled runs of this schedule will fail until it has <?= implode(' and ', array_keys($extraGaps)) ?>.</p>
 <?php endif; ?>
+<?php $extraNoFolder = $abSettings->extraDestination !== '' && !ABHelper::destinationUsable($abSettings->extraDestination); ?>
+<?php if ($extraNoFolder): ?>
+<p class="ab-warn">The destination <?= htmlspecialchars($abSettings->extraDestination) ?> does not exist or cannot be written to. Create the folder first: runs of this schedule fail until it exists.</p>
+<?php endif; ?>
 
 <form id="abExtraForm" method="post">
 <input type="hidden" name="csrf_token" value="<?= _var($var, 'csrf_token') ?>"/>
@@ -252,7 +256,7 @@ foreach ($extraAll as $container) {
 <dl>
     <dt>Done?</dt>
     <dd><span><input type="submit" value="Save"/> <input type="reset" value="Discard"/>
-        <button id="extraBackup" class="ab-job" style="margin-left: 15px;" title="Backs up the extra schedule's containers now, with the saved settings, so save any changes first."<?= empty($abSettings->extraDestination) || empty($abSettings->extraContainers) ? ' data-blocked="Save a destination and containers first"' : '' ?>>Run extra backup</button></span>
+        <button id="extraBackup" class="ab-job" style="margin-left: 15px;" title="Backs up the extra schedule's containers now, with the saved settings, so save any changes first."<?= empty($abSettings->extraDestination) || empty($abSettings->extraContainers) ? ' data-blocked="Save a destination and containers first"' : ($extraNoFolder ? ' data-blocked="Create the destination folder first"' : '') ?>>Run extra backup</button></span>
     </dd>
 </dl>
 </form>
