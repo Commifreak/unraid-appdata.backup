@@ -24,7 +24,10 @@ class ABSettings {
         'extraDefaultUpdateContainer', 'extraDefaultDontStop', 'extraDefaultVerifyBackup', 'extraDefaultIgnoreBackupErrors'];
 
     /** Run-wide settings the Extra schedule tab can set for itself: main => extra, where the extra value '' means the Settings tab's */
-    const EXTRA_SAME_AS = ['backupMethod' => 'extraBackupMethod', 'snapshotMode' => 'extraSnapshotMode', 'compression' => 'extraCompression', 'compressionCpuLimit' => 'extraCompressionCpuLimit', 'flashBackup' => 'extraFlashBackup', 'backupVMMeta' => 'extraBackupVMMeta', 'notification' => 'extraNotification', 'successLogWanted' => 'extraSuccessLogWanted', 'updateLogWanted' => 'extraUpdateLogWanted'];
+    const EXTRA_SAME_AS = ['backupMethod' => 'extraBackupMethod', 'snapshotMode' => 'extraSnapshotMode', 'compression' => 'extraCompression', 'compressionCpuLimit' => 'extraCompressionCpuLimit', 'notification' => 'extraNotification', 'successLogWanted' => 'extraSuccessLogWanted', 'updateLogWanted' => 'extraUpdateLogWanted'];
+
+    /** Run-wide extras the extra schedule makes only with its own Yes, so a frequent run stays on its containers: main => extra */
+    const EXTRA_OWN_YES = ['flashBackup' => 'extraFlashBackup', 'backupVMMeta' => 'extraBackupVMMeta'];
 
     /** The six script hooks, which the extra schedule replaces together (extraScripts = own; an empty one means no script) */
     const SCRIPTS = ['preRunScript', 'preBackupScript', 'preContainerBackupScript', 'postContainerBackupScript', 'postBackupScript', 'postRunScript'];
@@ -313,6 +316,7 @@ class ABSettings {
         $fields                    = array_intersect_key($post, $extra);
         // array_keys() turns a numeric container name such as 1234 into an int; names compare strictly as strings
         $fields['extraContainers'] = array_map('strval', array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes')));
+        $fields['extraContainerSettings'] = self::ownExtraValues((array)($post['extraContainerSettings'] ?? []));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
         if (!isset($post['extraContainers'])) {
@@ -326,6 +330,21 @@ class ABSettings {
         }
         self::store(array_diff_key($saved, $extra) + $fields);
         return true;
+    }
+
+    /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */
+    private static function ownExtraValues(array $rows) {
+        $kept = [];
+        foreach ($rows as $name => $row) {
+            $row = (array)$row;
+            if (($row['excludeOwn'] ?? '') !== 'yes') {
+                unset($row['exclude']); // the box shows the Settings tab's list then
+            }
+            if ($row = array_filter($row, fn($value) => $value !== '' && $value !== [])) {
+                $kept[$name] = $row;
+            }
+        }
+        return $kept;
     }
 
     /**
@@ -414,6 +433,9 @@ class ABSettings {
                 $settings->$mainKey = $this->$extraKey;
             }
         }
+        foreach (self::EXTRA_OWN_YES as $mainKey => $extraKey) {
+            $settings->$mainKey = $this->$extraKey === 'yes' ? 'yes' : 'no';
+        }
         if ($this->extraFlashBackup === 'yes') {
             $settings->flashBackupCopy = $this->extraFlashBackupCopy;
         }
@@ -449,6 +471,9 @@ class ABSettings {
         foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {
             $value                     = (string)$run->$mainKey;
             $settings[$labels[$mainKey]] = ($names[$mainKey][$value] ?? ['yes' => 'Yes', 'no' => 'No'][$value] ?? $value) . $source($this->$extraKey !== '');
+        }
+        foreach (self::EXTRA_OWN_YES as $mainKey => $extraKey) {
+            $settings[$labels[$mainKey]] = ($run->$mainKey === 'yes' ? 'Yes' : 'No') . ' (own)';
         }
         $settings['Flash copy']       = $run->flashBackup === 'yes' ? ($run->flashBackupCopy ?: 'none') : '-';
         $hooks                        = array_combine(self::SCRIPTS, ['Pre-run', 'Pre-backup', 'Pre-container', 'Post-container', 'Post-backup', 'Post-run']);

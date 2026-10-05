@@ -94,7 +94,7 @@ $abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His")
 
 ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
-if (!file_exists($abSettings->destination) || !is_writable($abSettings->destination)) {
+if (!ABHelper::destinationUsable($abSettings->destination)) {
     ABHelper::backupLog("Destination is unavailable or not writeable! Did you create the destination folder?", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
@@ -151,8 +151,12 @@ ABHelper::backupLog("Selected containers: " . implode(', ', $alSortedContainers)
 ABHelper::backupLog("Sorted Stop : " . implode(", ", array_column($sortedStopContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("Sorted Start: " . implode(", ", array_column($sortedStartContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
-ABHelper::backupLog("Saving container XML files...");
+ABHelper::backupLog($abSettings->schedule === 'extra' ? "Saving the XML files of the extra schedule's containers..." : "Saving container XML files...");
 foreach (glob("/boot/config/plugins/dockerMan/templates-user/*") as $xmlFile) {
+    // A template names its container in <Name>; the file name does not always match it
+    if ($abSettings->schedule === 'extra' && !in_array((string)(@simplexml_load_file($xmlFile)->Name ?? ''), $abSettings->extraContainers, true)) {
+        continue;
+    }
     copy($xmlFile, $abDestination . '/' . basename($xmlFile));
 }
 

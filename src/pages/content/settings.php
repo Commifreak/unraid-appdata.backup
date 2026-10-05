@@ -665,8 +665,9 @@ if (($code ?? 0) != 0) {
                     $internalName = $isGroup ? '__grp__' . $name : $name;
                     $image        = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                     $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
+                    $members      = htmlspecialchars(json_encode($isGroup ? array_values($abSettings->getContainerGroups()[$name] ?? []) : [$name]), ENT_QUOTES);
                     echo <<<HTML
-<li id="containerOrder_{$internalName}"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
+<li id="containerOrder_{$internalName}" data-members="$members"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
 HTML;
 
                 }
@@ -685,9 +686,10 @@ HTML;
                     <?php
                     $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
                     foreach ($sortedContainers as $container) {
+                        $members = htmlspecialchars(json_encode([$container['Name']]), ENT_QUOTES);
                         $image = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                         echo <<<HTML
-<li id="containerGroupOrder[{$group}]={$container['Name']}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
+<li id="containerGroupOrder[{$group}]={$container['Name']}" data-members="{$members}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
 HTML;
 
                     }
@@ -853,6 +855,15 @@ HTML;
 
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
 <script>
+    // Greys a start-order entry when none of its containers (data-members) is in the schedule; it stays draggable
+    function abGreyOrder(lists, isOut, why) {
+        $(lists).children('li').each(function () {
+            const members = $(this).data('members') || [];
+            const out = members.length > 0 && members.every(isOut);
+            $(this).toggleClass('ab-off', out).attr('title', out ? why : null);
+        });
+    }
+
     $(function () {
         // Each tree lists folders from the server, so it is built when its box is first opened, not for every panel on load
         $(document).on('focus', 'textarea', function () {
@@ -877,6 +888,11 @@ HTML;
             console.debug($(this).attr('name'), $(this).data('setting'));
             $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
         });
+
+        const abSkipped = name => $('select[name="containerSettings[' + name + '][skip]"]').val() === 'yes';
+        const abGreyMain = () => abGreyOrder('#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]', abSkipped, 'Not in the backup: Skip? is Yes');
+        abGreyMain();
+        $(document).on('change', 'select[name^="containerSettings["][name$="[skip]"]', abGreyMain);
 
 
         $('#manualBackup').on('click', function () {
