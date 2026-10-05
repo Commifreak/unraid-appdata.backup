@@ -323,7 +323,8 @@ if (ABHelper::$errorOccured) {
         ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
     } else { // Retention enabled
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
-        $curBackupsState   = array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*'));// glob return sorted by name. Without naming, thats the oldest first, newest at the end
+        // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
+        $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem))));
 
         // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
