@@ -55,7 +55,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
     </dd>
 </dl>
 <blockquote class='inline_help'>
-    <p>Backs up only the containers chosen below, for example daily for apps whose data changes every day, into its own destination with its own retention. It skips the flash drive, VM meta and extra files; scripts run as usual. <b>Disabled</b> runs it only from <b>Run extra backup</b>.</p>
+    <p>Backs up only the containers included below, for example daily for apps whose data changes every day, into its own destination with its own retention. Flash drive, VM meta, extra files and scripts follow this tab's options below (flash drive and VM meta are off by default). <b>Disabled</b> runs it only from <b>Run extra backup</b>.</p>
     <p>A scheduled run that starts while another job runs waits for it, up to 12 hours.</p>
 </blockquote>
 

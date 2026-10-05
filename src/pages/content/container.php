@@ -26,8 +26,8 @@ function abContainerPanel(array $container, ABSettings $abSettings, array $conta
         $included                    = in_array($container['Name'], $abSettings->extraContainers, true);
     } else {
         $containerSetting     = $main;
-        $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
-        $containerExcludes    = implode("\r\n", $containerSetting['exclude']);
+        $realContainerSetting = htmlspecialchars(print_r($abSettings->getContainerSpecificSettings($container['Name']), true));
+        $containerExcludes    = htmlspecialchars(implode("\r\n", $containerSetting['exclude']));
     }
 
     $isPlex = str_contains(strtolower($container['Name']), 'plex');
@@ -52,7 +52,7 @@ HTML;
         foreach ($volumes as $index => $volume) {
             $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not be backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
             $internalVolume  = ABHelper::isVolumeWithinAppdata($volume);
-            $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" ' . $volumeTarget . ' data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
+            $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" ' . $volumeTarget . ' data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . htmlspecialchars($volume) . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
         }
         $volumes = implode('<br />', $volumes);
     }
