@@ -175,6 +175,9 @@ class ABSettings {
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
                                 $this->$key = is_array($value) ? $value : [];
                                 break;
+                            case 'extraContainers':
+                                $this->$key = array_map('strval', (array)$value); // a config saved before the strval above may hold numbers
+                                break;
                             case 'settingsVersion':
                                 $this::$settingsVersion = $value;
                                 break;
@@ -308,7 +311,8 @@ class ABSettings {
         }
         // Include? per container (name => yes/no), and the start order as a jQuery sortable string, as settings.php gets containerOrder
         $fields                    = array_intersect_key($post, $extra);
-        $fields['extraContainers'] = array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes'));
+        // array_keys() turns a numeric container name such as 1234 into an int; names compare strictly as strings
+        $fields['extraContainers'] = array_map('strval', array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes')));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
         if (!isset($post['extraContainers'])) {
@@ -391,7 +395,8 @@ class ABSettings {
         $settings->containerOrder         = $this->extraContainerOrder ?: $this->containerOrder;
         $settings->containerSettings      = [];
         foreach (array_unique(array_merge(array_keys($this->containerSettings), $this->extraContainers)) as $name) {
-            $own = $this->extraContainerSettings[$name] ?? [];
+            $name = (string)$name; // array keys of numeric names are ints
+            $own  = $this->extraContainerSettings[$name] ?? [];
             $set = array_filter(array_intersect_key($own, array_flip(self::EXTRA_CONTAINER_KEYS)), fn($value) => $value !== '');
             if (($own['excludeOwn'] ?? '') === 'yes') {
                 $set['exclude'] = (array)($own['exclude'] ?? []); // an empty own list means no exclusions

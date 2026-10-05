@@ -79,7 +79,7 @@ if (in_array('extra', $runArgs, true)) {
     ABHelper::backupLog(ABHelper::dump('Extra schedule settings', $extraSummary['settings']), ABHelper::LOGLEVEL_DEBUG);
     ABHelper::backupLog(ABHelper::dump("Extra schedule's own container settings", $extraSummary['overrides']), ABHelper::LOGLEVEL_DEBUG);
     $abSettings = $abSettings->forSchedule('extra');
-    ABHelper::$targetLogLevel = $abSettings->notification; // set from the Settings tab's value when the settings loaded
+    ABHelper::$targetLogLevel = $abSettings->notification; // this run's own notification level; loading the settings set the Settings tab's
 }
 
 if (empty($abSettings->destination)) {
