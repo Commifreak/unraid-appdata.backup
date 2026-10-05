@@ -936,6 +936,7 @@ HTML;
     function addSelectionToList(element) {
         $el = $(element).prev().find("input:checked");
         $textarea = $(element).parent().prev();
+        $('#' + $textarea.attr('id') + 'Own').not(function () { return this.value === 'yes'; }).val('yes').trigger('change'); // as in addVolumeToExclude
 
         console.debug($el, $textarea);
 
@@ -962,6 +963,7 @@ HTML;
     function addVolumeToExclude(element) {
         $path = $(element).text();
         $excludeTextarea = $('#' + ($(element).data('exclude') || $(element).data('container') + '_exclude')); // data-exclude: the Extra schedule tab's panels
+        $('#' + $excludeTextarea.attr('id') + 'Own').not(function () { return this.value === 'yes'; }).val('yes').trigger('change'); // an extra panel's list only counts as Own list
 
         if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
             console.log("Not adding this volume to exclusion: already listed!")

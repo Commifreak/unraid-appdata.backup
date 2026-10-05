@@ -303,6 +303,15 @@ class ABSettings {
         $fields['extraContainers'] = array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes'));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
+        if (!isset($post['extraContainers'])) {
+            // No container rows were drawn (Docker down?); every drawn row posts Include?, so keep the saved choices
+            foreach (['extraContainers', 'extraContainerOrder', 'extraContainerSettings'] as $key) {
+                unset($fields[$key]);
+                if (isset($saved[$key])) {
+                    $fields[$key] = $saved[$key];
+                }
+            }
+        }
         self::store(array_diff_key($saved, $extra) + $fields);
         return true;
     }

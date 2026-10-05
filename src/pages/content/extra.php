@@ -32,6 +32,13 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <p class="ab-warn">Not saved: the existing settings could not be read, and saving only this tab would have wiped them.</p>
 <?php endif; ?>
 
+<?php
+$extraGaps = array_filter(['a destination' => $abSettings->extraDestination === '', 'containers set to Include? Yes' => !$abSettings->extraContainers]);
+if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
+?>
+<p class="ab-warn">Scheduled runs of this schedule will fail until it has <?= implode(' and ', array_keys($extraGaps)) ?>.</p>
+<?php endif; ?>
+
 <form id="abExtraForm" method="post">
 <input type="hidden" name="csrf_token" value="<?= _var($var, 'csrf_token') ?>"/>
 <input type="hidden" name="extraScheduleForm" value="1"/>
@@ -116,14 +123,16 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], 'backupMethod', 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab.') ?>
 <?= $sameAs('extraSnapshotMode', 'Use snapshots', ['no' => 'No', 'yes' => 'Yes, on ZFS and btrfs'], 'snapshotMode', 'Snapshots for this schedule; see <b>Use snapshots</b> on the Settings tab.') ?>
 <?= $sameAs('extraCompression', 'Use Compression?', ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'], 'compression', 'Compression for this schedule\'s archives.') ?>
-<?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, 'compressionCpuLimit', 'Only used with <b>Yes, multicore</b>.') ?>
+<div id="extraCompressionCpuLimit_dl"><?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, 'compressionCpuLimit', 'Only used with <b>Yes, multicore</b>.') ?></div>
 <?= $sameAs('extraFlashBackup', 'Backup the flash drive?', $yesNo, 'flashBackup', 'No by default, so a frequent run doesn\'t repeat the flash zip the main schedule makes.') ?>
+<div id="extraFlashBackupCopy_dl">
 <dl>
     <dt><b>Copy the flash backup to a custom destination</b></dt>
     <dd><input style="width: 500px;" type='text' class='ftAttach' id="extraFlashBackupCopy" name="extraFlashBackupCopy"
                value="<?= htmlspecialchars($abSettings->extraFlashBackupCopy) ?>" data-pickroot="/mnt/" data-pickfolders/></dd>
 </dl>
-<blockquote class='inline_help'><p>Only used when this schedule's <b>Backup the flash drive?</b> is Yes. Leave empty to skip the copy.</p></blockquote>
+<blockquote class='inline_help'><p>This schedule's own copy of the flash zip, for example a folder another machine backs up. Leave empty to skip the copy.</p></blockquote>
+</div>
 <?= $sameAs('extraBackupVMMeta', 'Backup VM meta?', $yesNo, 'backupVMMeta', 'No by default, like the flash backup.') ?>
 
 <div class="title"><span class="left"><i class="fa fa-bell title"></i>Notifications</span></div>
@@ -235,15 +244,30 @@ foreach ($extraAll as $container) {
 </form>
 
 <script>
+    /** A container's exclusion box is editable only as an Own list, which starts as a copy of the Settings tab's */
+    function abExtraExcludeOwn(select) {
+        const box = $('#' + select.id.replace(/Own$/, '')), own = select.value === 'yes';
+        if (own && box.val() === '') {
+            box.val($('#' + select.id.slice(6, -3)).val()); // extra_<name>_excludeOwn -> the Settings tab's <name>_exclude
+        }
+        box.prop('readonly', !own);
+    }
+
     /** Shows the script fields and the exclusion list only when this schedule uses its own */
     function abExtraToggle() {
         $('#extraScriptsOwn').toggle($('#extraScripts').val() === 'own');
+        $('#extraFlashBackupCopy_dl').toggle($('#extraFlashBackup').val() === 'yes'); // its copy only counts with its own Yes
+        $('#extraCompressionCpuLimit_dl').toggle(($('#extraCompression').val() || <?= json_encode($abSettings->compression) ?>) === 'yesMulticore');
         $('#extraGlobalExclusionsBox').toggle($('#extraGlobalExclusionsOwn').val() === 'yes');
     }
 
     $(function () {
         checkBackupFrequency('extraFrequency'); // settings.php
         abExtraToggle();
+        $('#extraFlashBackup, #extraCompression').on('change', abExtraToggle);
+        $(document).on('change', 'select[id^="extra_"][id$="_excludeOwn"]', function () {
+            abExtraExcludeOwn(this);
+        });
 
         // As settings.php sends containerOrder; storeForm() parses it
         $('#abExtraForm').on('submit', function () {

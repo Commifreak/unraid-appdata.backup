@@ -32,6 +32,9 @@ class ABHelper {
 
     public static $targetLogLevel = '';
 
+    /** Names the run in notifications, e.g. 'Extra schedule'; '' for the main schedule */
+    public static string $runLabel = '';
+
     /** @var resource|null The run lock from claimRun(): the kernel drops it when this process ends, however it ends */
     private static $runLock = null;
 
@@ -154,6 +157,9 @@ class ABHelper {
      * @return void
      */
     public static function notify($subject, $description, $message = "", $type = "normal") {
+        if (self::$runLabel !== '') {
+            $description = self::$runLabel . ': ' . $description;
+        }
         $command = '/usr/local/emhttp/webGui/scripts/notify -e ' . escapeshellarg('Appdata Backup') . ' -s ' . escapeshellarg($subject) . ' -d ' . escapeshellarg($description) . ' -m ' . escapeshellarg($message) . ' -i ' . escapeshellarg($type) . ' -l ' . escapeshellarg('/Settings/AB.Main');
         shell_exec($command);
     }
