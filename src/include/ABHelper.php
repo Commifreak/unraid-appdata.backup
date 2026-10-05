@@ -50,9 +50,9 @@ class ABHelper {
         shell_exec("logger -t 'Appdata Backup' " . escapeshellarg($string));
     }
 
-    /** A backup destination a run can write to; the plugin never creates one */
+    /** A backup destination a run can write to: an existing, writeable folder, which the plugin never creates */
     public static function destinationUsable($path) {
-        return $path !== '' && file_exists($path) && is_writable($path);
+        return $path !== '' && is_dir($path) && is_writable($path);
     }
 
     /**
