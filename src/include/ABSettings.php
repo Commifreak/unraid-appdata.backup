@@ -316,6 +316,7 @@ class ABSettings {
         $fields                    = array_intersect_key($post, $extra);
         // array_keys() turns a numeric container name such as 1234 into an int; names compare strictly as strings
         $fields['extraContainers'] = array_map('strval', array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes')));
+        $fields['extraContainerSettings'] = self::ownExtraValues((array)($post['extraContainerSettings'] ?? []));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
         if (!isset($post['extraContainers'])) {
@@ -329,6 +330,21 @@ class ABSettings {
         }
         self::store(array_diff_key($saved, $extra) + $fields);
         return true;
+    }
+
+    /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */
+    private static function ownExtraValues(array $rows) {
+        $kept = [];
+        foreach ($rows as $name => $row) {
+            $row = (array)$row;
+            if (($row['excludeOwn'] ?? '') !== 'yes') {
+                unset($row['exclude']); // the box shows the Settings tab's list then
+            }
+            if ($row = array_filter($row, fn($value) => $value !== '' && $value !== [])) {
+                $kept[$name] = $row;
+            }
+        }
+        return $kept;
     }
 
     /**
