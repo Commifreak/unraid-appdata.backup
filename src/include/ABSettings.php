@@ -251,6 +251,10 @@ class ABSettings {
         $saved = $raw === false ? [] : json_decode($raw, true);
         $extra = array_flip(self::EXTRA_FIELDS);
         if (!isset($post['extraScheduleForm'])) {
+            if (!isset($post['containerSettings']) && is_array($saved)) {
+                // No container panels were drawn (Docker down?): keep the saved ones instead of wiping them
+                $post = array_intersect_key($saved, array_flip(['containerSettings', 'containerOrder', 'containerGroupOrder'])) + $post;
+            }
             self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
             return true;
         }
