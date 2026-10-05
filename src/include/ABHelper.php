@@ -17,6 +17,9 @@ class ABHelper {
     const LOGLEVEL_WARN = 'warning';
     const LOGLEVEL_ERR = 'error';
 
+    /** A container archive's extension; the rest of the file name is the container's name */
+    const ARCHIVE_PATTERN = '/\.tar(\.gz|\.zst)?$/';
+
     /**
      * @var array Store some temporary data about containers, which should skipped during start routine
      */
@@ -197,25 +200,7 @@ class ABHelper {
                 return true;
             }
 
-            // DockerClient's stop waits up to DOCKER_TIMEOUT on a socket that PHP drops after default_socket_timeout
-            ini_set('default_socket_timeout', (string)max((int)ini_get('default_socket_timeout'), (int)($GLOBALS['dockercfg']['DOCKER_TIMEOUT'] ?? 10) + 30));
-            $stopTimer      = time();
-            $dockerStopCode = $dockerClient->stopContainer($container['Name']);
-            if ($dockerStopCode != 1) {
-                self::backupLog("Error while stopping container '" . $container['Name'] . "'! Code: " . $dockerStopCode . " - trying 'docker stop' method", self::LOGLEVEL_WARN, true, true);
-                $out = $code = null;
-                exec("docker stop " . escapeshellarg($container['Name']) . " -t 30", $out, $code);
-                if ($code == 0) {
-                    self::backupLog("That _seemed_ to work.");
-                } else {
-                    self::backupLog("docker stop variant was unsuccessful as well when stopping '" . $container['Name']. "'! Docker said: " . implode(', ', $out), self::LOGLEVEL_ERR);
-                }
-            } else {
-                self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
-            }
-
-            // Either stop method can report wrongly, so a fresh state read decides; an unreadable state counts as running
-            if (($dockerClient->getContainerDetails($container['Name'])['State']['Running'] ?? null) !== false) {
+            if (!self::stopRunning($container['Name'])) {
                 self::backupLog("'{$container['Name']}' did not stop (its state is running or unreadable), so it is not backed up!", self::LOGLEVEL_ERR);
                 self::$errorOccured = true;
                 return false;
@@ -229,6 +214,34 @@ class ABHelper {
             self::backupLog("No stopping needed for {$container['Name']}: $state");
         }
         return true;
+    }
+
+    /**
+     * Stops a running container, with 'docker stop' as the fallback; also used by the restore
+     * @return bool true once a fresh state read says it is stopped
+     */
+    public static function stopRunning($name) {
+        global $dockerClient;
+
+        // DockerClient's stop waits up to DOCKER_TIMEOUT on a socket that PHP drops after default_socket_timeout
+        ini_set('default_socket_timeout', (string)max((int)ini_get('default_socket_timeout'), (int)($GLOBALS['dockercfg']['DOCKER_TIMEOUT'] ?? 10) + 30));
+        $stopTimer      = time();
+        $dockerStopCode = $dockerClient->stopContainer($name);
+        if ($dockerStopCode != 1) {
+            self::backupLog("Error while stopping container '" . $name . "'! Code: " . $dockerStopCode . " - trying 'docker stop' method", self::LOGLEVEL_WARN, true, true);
+            $out = $code = null;
+            exec("docker stop " . escapeshellarg($name) . " -t 30", $out, $code);
+            if ($code == 0) {
+                self::backupLog("That _seemed_ to work.");
+            } else {
+                self::backupLog("docker stop variant was unsuccessful as well when stopping '" . $name. "'! Docker said: " . implode(', ', $out), self::LOGLEVEL_ERR);
+            }
+        } else {
+            self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
+        }
+
+        // Either stop method can report wrongly, so a fresh state read decides; an unreadable state counts as running
+        return ($dockerClient->getContainerDetails($name)['State']['Running'] ?? null) === false;
     }
 
     /**
