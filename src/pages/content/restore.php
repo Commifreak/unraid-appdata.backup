@@ -42,7 +42,7 @@ if (!ABHelper::isArrayOnline()) {
         <dd><input type='text' required class='ftAttach' id="restoreSource" name="restoreSource"
                    value="<?= empty($abSettings->destination) ? '' : $abSettings->destination ?>"
                    data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true">
-<?php if (!empty($abSettings->extraDestination)): ?>
+<?php if ($abSettings->extraSchedule === 'yes' && !empty($abSettings->extraDestination)): ?>
             <br/><small>Use: <a href="#" onclick="$('#restoreSource').val(<?= htmlspecialchars(json_encode($abSettings->destination), ENT_QUOTES) ?>); return false;">main destination</a>
                 &middot; <a href="#" onclick="$('#restoreSource').val(<?= htmlspecialchars(json_encode($abSettings->extraDestination), ENT_QUOTES) ?>); return false;">extra schedule destination</a></small>
 <?php endif; ?>

@@ -17,6 +17,9 @@ class ABSettings {
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
+    /** The settings the Extra schedule tab saves; the Settings tab's form keeps them (see storeForm) */
+    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups'];
+
     public static $tempFolder = '/tmp/appdata.backup';
 
     public static $logfile = 'ab.log';
@@ -68,6 +71,7 @@ class ABSettings {
     public string|int $backupFrequencyHour = '0';
     public string|int $backupFrequencyMinute = '0';
     public string $backupFrequencyCustom = '';
+    public string $extraSchedule = 'no';
     public string $extraFrequency = 'disabled';
     public string|int $extraFrequencyWeekday = '1';
     public string|int $extraFrequencyDayOfMonth = '1';
@@ -241,6 +245,23 @@ class ABSettings {
         file_put_contents(ABSettings::getConfigPath(), json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
+    /** Stores a posted form: the Settings tab's replaces all but EXTRA_FIELDS, the Extra schedule tab's (extraScheduleForm) only those; false if the saved config cannot be read to keep the rest */
+    public static function storeForm(array $post) {
+        $raw   = @file_get_contents(self::getConfigPath());
+        $saved = $raw === false ? [] : json_decode($raw, true);
+        $extra = array_flip(self::EXTRA_FIELDS);
+        if (!isset($post['extraScheduleForm'])) {
+            self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
+            return true;
+        }
+        if (!is_array($saved)) {
+            return false; // storing only the extra fields would wipe every other setting
+        }
+        // An empty multi-select posts nothing, so no key means no containers
+        self::store(array_diff_key($saved, $extra) + array_intersect_key($post, $extra) + ['extraContainers' => []]);
+        return true;
+    }
+
     /**
      * Calculates container specific settings
      * @param $name string container name
@@ -364,7 +385,7 @@ class ABSettings {
         $lines = [];
         // 'scheduled' makes a run wait for a running job instead of being refused
         foreach (['backupFrequency' => 'scheduled', 'extraFrequency' => 'scheduled extra'] as $prefix => $args) {
-            $time = $this->cronTime($prefix);
+            $time = $prefix === 'extraFrequency' && $this->extraSchedule !== 'yes' ? '' : $this->cronTime($prefix);
             if ($time !== '') {
                 $lines[] = $time . ' php ' . dirname(__DIR__) . '/scripts/backup.php ' . $args . ' > /dev/null 2>&1';
             }

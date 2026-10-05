@@ -20,7 +20,9 @@ if (!ABHelper::isArrayOnline()) {
 /**
  * POST Handling
  */
-if ($_POST) {
+if (isset($_POST['extraScheduleForm'])) {
+    $abExtraSaved = ABSettings::storeForm($_POST); // read by extra.php
+} elseif ($_POST) {
     if (isset($_POST['debugForm'])) {
         echo "<pre>" . print_r($_POST, true) . "</pre>";
         exit;
@@ -136,7 +138,7 @@ window.setTimeout(function() {
         }
     }
 
-    ABSettings::store($_POST);
+    ABSettings::storeForm($_POST);
 }
 
 $abSettings = new ABSettings();
@@ -579,7 +581,17 @@ if (($code ?? 0) != 0) {
                    placeholder="Setting this will disable the other options"/></dd>
     </dl>
 
-    <?php include __DIR__ . '/schedule.php'; ?>
+    <dl>
+        <dt><b>Use an extra schedule?</b></dt>
+        <dd><select id='extraSchedule' name="extraSchedule" data-setting="<?= htmlspecialchars($abSettings->extraSchedule) ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Backs up chosen containers more often than the rest, for example daily, into their own folder. Yes shows the <b>Extra schedule</b> tab after Save.</p>
+    </blockquote>
 
 
     <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
@@ -922,8 +934,7 @@ HTML;
     <dl>
         <dt>Done?</dt>
         <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button>
-            <button id="extraBackup" class="ab-job" style="margin-left: 15px;" title="Backs up the extra schedule's containers now, with the saved settings."<?= empty($abSettings->extraDestination) || empty($abSettings->extraContainers) ? ' data-blocked="Save an extra schedule destination and containers first"' : '' ?>>Run extra backup</button></span>
+            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button></span>
         </dd>
     </dl>
 </form>
@@ -995,20 +1006,6 @@ HTML;
             return false;
         });
 
-        $('#extraBackup').on('click', function () {
-            swal({
-                title: "Proceed?",
-                text: "Back up the extra schedule's containers now?",
-                type: 'warning',
-                showCancelButton: true,
-                confirmButtonText: "Yep",
-                cancelButtonText: "Nah"
-            }, function () {
-                abStartJob({action: 'extraBackup'});
-            });
-            return false;
-        });
-
 
         //if (typeof caPluginUpdateCheck === "function") {
         //    caPluginUpdateCheck("appdata.backup<?= $beta ?>.plg", {name: "Appdata Backup"});
@@ -1016,7 +1013,6 @@ HTML;
 
 
         checkBackupFrequency();
-        checkBackupFrequency('extraFrequency');
         checkFlashBackupCopy();
         checkMultiCoreCpuCount();
         checkVolumesForDuplicates();

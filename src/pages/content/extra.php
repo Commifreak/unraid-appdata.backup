@@ -1,5 +1,8 @@
 <?php
-// Included by settings.php inside its form: the extra schedule (ABSettings::forSchedule('extra'))
+
+use unraid\plugins\AppdataBackup\ABSettings;
+
+/** @var $abSettings ABSettings set by settings.php, which also saves this form (ABSettings::storeForm) */
 
 $extraGroups     = array_keys($abSettings->getContainerGroups());
 $extraContainers = array_column((new DockerClient())->getDockerContainers() ?: [], 'Name');
@@ -7,8 +10,17 @@ natcasesort($extraContainers);
 $weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 'st', 'nd', 'rd'][$day % 10] ?? 'th'));
 ?>
+<?php include_once __DIR__ . '/head.php'; ?>
+
+<div class="title"><span class="left"><i class="fa fa-clock-o title"></i>Extra schedule</span></div>
+<?php if (($abExtraSaved ?? null) === false): ?>
+<p class="ab-warn">Not saved: the existing settings could not be read, and saving only this tab would have wiped them.</p>
+<?php endif; ?>
+
+<form id="abExtraForm" method="post">
+<input type="hidden" name="extraScheduleForm" value="1"/>
 <dl>
-    <dt><b>Extra schedule</b></dt>
+    <dt><b>Extra schedule frequency</b></dt>
     <dd><select id='extraFrequency' name="extraFrequency" onchange="checkBackupFrequency('extraFrequency');"
                 data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequency) ?>">
             <option value='disabled'>Disabled</option>
@@ -20,7 +32,7 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
     </dd>
 </dl>
 <blockquote class='inline_help'>
-    <p>A second schedule that backs up only the containers chosen below, for example daily for apps whose data changes every day. It writes to its own destination with its own retention and skips the flash drive, VM meta and extra files. Scripts run as usual.</p>
+    <p>Backs up only the containers chosen below, for example daily for apps whose data changes every day, into its own destination with its own retention. It skips the flash drive, VM meta and extra files; scripts run as usual. <b>Disabled</b> runs it only from <b>Run extra backup</b>.</p>
     <p>A scheduled run that starts while another job runs waits for it, up to 12 hours.</p>
 </blockquote>
 
@@ -99,3 +111,31 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <blockquote class='inline_help'>
     <p>Works like <b>Keep at least this many backups</b>, for the extra destination only.</p>
 </blockquote>
+
+<dl>
+    <dt>Done?</dt>
+    <dd><span><input type="submit" value="Save"/> <input type="reset" value="Discard"/>
+        <button id="extraBackup" class="ab-job" style="margin-left: 15px;" title="Backs up the extra schedule's containers now, with the saved settings, so save any changes first."<?= empty($abSettings->extraDestination) || empty($abSettings->extraContainers) ? ' data-blocked="Save a destination and containers first"' : '' ?>>Run extra backup</button></span>
+    </dd>
+</dl>
+</form>
+
+<script>
+    $(function () {
+        checkBackupFrequency('extraFrequency'); // settings.php
+
+        $('#extraBackup').on('click', function () {
+            swal({
+                title: "Proceed?",
+                text: "Back up the extra schedule's containers now?",
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonText: "Yep",
+                cancelButtonText: "Nah"
+            }, function () {
+                abStartJob({action: 'extraBackup'}); // log.php
+            });
+            return false;
+        });
+    });
+</script>

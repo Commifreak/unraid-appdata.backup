@@ -59,6 +59,10 @@ $abSettings = new ABSettings();
 
 if (in_array('extra', $runArgs, true)) {
     ABHelper::backupLog("Running the extra schedule: only its chosen containers, into its own destination.");
+    if ($abSettings->extraSchedule !== 'yes') {
+        ABHelper::backupLog("The extra schedule is turned off (Settings, Use an extra schedule?).", ABHelper::LOGLEVEL_ERR);
+        goto end;
+    }
     $extraReal = $abSettings->extraDestination === '' ? false : realpath($abSettings->extraDestination); // realpath('') is the working directory
     if (rtrim($abSettings->extraDestination, '/') === rtrim($abSettings->destination, '/') || ($extraReal !== false && $extraReal === realpath($abSettings->destination))) {
         ABHelper::backupLog("The extra schedule needs its own destination, not the main one, so its retention cannot delete full backups!", ABHelper::LOGLEVEL_ERR);
