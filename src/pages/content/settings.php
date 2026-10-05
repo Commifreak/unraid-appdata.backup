@@ -980,6 +980,12 @@ HTML;
         });
 
         $('.ftAttach').fileTreeAttach();
+        // Unraid leaves the picker's top to the flow (over its own field in 7.2+'s flex dd) and drifts its left on a
+        // reopen, so place it under the field each time; runs after fileTreeAttach's own click handler
+        $('.ftAttach').on('click', function () {
+            const pos = $(this).position();
+            $(this).next('.fileTree').css({left: pos.left, top: pos.top + $(this).outerHeight()});
+        });
         $('.ftAttach').attr('placeholder', 'Please click to select');
         $('.sortable').sortable({handle: '.ab-drag'});
 
