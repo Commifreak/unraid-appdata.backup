@@ -44,6 +44,7 @@ if (!file_exists($tarDestination)) {
 }
 
 $restoreSource = $config['restoreBackupList'];
+$restoreFailed = false;
 
 
 if (!isset($config['restoreItem']['config'])) {
@@ -57,6 +58,7 @@ if (!isset($config['restoreItem']['config'])) {
         ABHelper::backupLog("Settings restored!");
     } else {
         ABHelper::backupLog("Something went wrong while restoring settings!", ABHelper::LOGLEVEL_ERR);
+        $restoreFailed = true;
     }
 }
 
@@ -71,12 +73,14 @@ if (!isset($config['restoreItem']['templates'])) {
     $xmlDir = "/boot/config/plugins/dockerMan/templates-user";
     if (!file_exists($xmlDir)) {
         ABHelper::backupLog("Template dir (" . $xmlDir . ") does not exist!", ABHelper::LOGLEVEL_ERR);
+        $restoreFailed = true;
     } else {
         foreach ($config['restoreItem']['templates'] as $template => $on) {
             if (copy($restoreSource . '/' . $template, $xmlDir . '/' . $template)) {
                 ABHelper::backupLog("Template '$template' restored!");
             } else {
                 ABHelper::backupLog("Something went wrong while restoring template '$template'!", ABHelper::LOGLEVEL_ERR);
+                $restoreFailed = true;
             }
         }
     }
@@ -89,37 +93,61 @@ if (ABHelper::abortRequested()) {
 if (!isset($config['restoreItem']['containers'])) {
     ABHelper::backupLog("Not restoring containers: not wanted");
 } else {
-        foreach ($config['restoreItem']['containers'] as $container => $on) {
-            ABHelper::backupLog("Restoring $container");
+    // Only a restore to the original folders touches live data, so only then are running containers stopped
+    $installed = [];
+    if ($tarDestination === '/') {
+        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
+        $dockerClient = new DockerClient();
+        $installed    = array_column($dockerClient->getDockerContainers() ?: [], null, 'Name');
+    }
+    foreach ($config['restoreItem']['containers'] as $container => $on) {
+        $name       = preg_replace(ABHelper::ARCHIVE_PATTERN, '', $container);
+        $wasRunning = !empty($installed[$name]['Running']);
+        ABHelper::backupLog("Restoring $container");
 
-            $tarOptions = [
-                '-C ' . escapeshellarg($tarDestination),
-                '-x',
-                '-f ' . escapeshellarg($restoreSource . '/' . $container)
-            ];
-
-            if (str_ends_with($container, 'zst')) {
-                $tarOptions[] = '-I zstd';
-            } elseif (str_ends_with($container, 'gz')) {
-                $tarOptions[] = '-z';
-            }
-
-            $finalTarCommand = 'tar ' . implode(' ', $tarOptions);
-            ABHelper::backupLog("Final tar command: " . $finalTarCommand, ABHelper::LOGLEVEL_DEBUG);
-
-            $output = $resultcode = null;
-            exec($finalTarCommand . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
-            ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
-            if ($resultcode > 0) {
-                ABHelper::backupLog("restore failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
-            } else {
-                ABHelper::backupLog("restore succeeded!");
-            }
-
-            if (ABHelper::abortRequested()) {
-                goto abort;
+        if ($wasRunning) {
+            ABHelper::backupLog("Stopping $name for its restore... ", ABHelper::LOGLEVEL_INFO, false);
+            if (!ABHelper::stopRunning($name)) {
+                ABHelper::backupLog("'$name' did not stop (its state is running or unreadable), so it is not restored!", ABHelper::LOGLEVEL_ERR);
+                $restoreFailed = true;
+                continue;
             }
         }
+
+        $tarOptions = [
+            '-C ' . escapeshellarg($tarDestination),
+            '-x',
+            '-f ' . escapeshellarg($restoreSource . '/' . $container)
+        ];
+
+        if (str_ends_with($container, 'zst')) {
+            $tarOptions[] = '-I zstd';
+        } elseif (str_ends_with($container, 'gz')) {
+            $tarOptions[] = '-z';
+        }
+
+        $finalTarCommand = 'tar ' . implode(' ', $tarOptions);
+        ABHelper::backupLog("Final tar command: " . $finalTarCommand, ABHelper::LOGLEVEL_DEBUG);
+
+        $output = $resultcode = null;
+        exec($finalTarCommand . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
+        ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
+        if ($resultcode > 0) {
+            ABHelper::backupLog("restore failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+            $restoreFailed = true;
+        } else {
+            ABHelper::backupLog("restore succeeded!");
+        }
+
+        // Started again even after a failed or aborted extract: it was running before the restore
+        if ($wasRunning) {
+            ABHelper::startContainer(['Name' => $name]);
+        }
+
+        if (ABHelper::abortRequested()) {
+            goto abort;
+        }
+    }
 }
 
 
@@ -161,6 +189,7 @@ if (!isset($config['restoreItem']['extraFiles'])) {
     ABHelper::backupLog("Tar out: " . implode('; ', $output), ABHelper::LOGLEVEL_DEBUG);
     if ($resultcode > 0) {
         ABHelper::backupLog("restore failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+        $restoreFailed = true;
     } else {
         ABHelper::backupLog("restore succeeded!");
     }
@@ -178,12 +207,14 @@ if (!isset($config['restoreItem']['vmMeta'])) {
 
     if (!file_exists(ABSettings::$qemuFolder)) {
         ABHelper::backupLog("VM manager is NOT enabled! Cannot restore VM meta", ABHelper::LOGLEVEL_ERR);
+        $restoreFailed = true;
     } else {
         $output = $resultcode = null;
         exec('tar -C ' . escapeshellarg($tarDestination) . ' -xzf ' . escapeshellarg($restoreSource . '/vm_meta.tgz') . " 2>&1 " . ABSettings::$externalCmdPidCapture, $output, $resultcode);
         ABHelper::backupLog(ABHelper::dump("tar return: $resultcode, output", $output), ABHelper::LOGLEVEL_DEBUG);
         if ($resultcode != 0) {
             ABHelper::backupLog("Restoring VM meta failed! Tar said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+            $restoreFailed = true;
         } else {
             ABHelper::backupLog("restoring vm meta succeeded!");
         }
@@ -193,6 +224,6 @@ if (!isset($config['restoreItem']['vmMeta'])) {
 
 abort:
 
-ABHelper::backupLog("Restore complete!");
+ABHelper::backupLog($restoreFailed ? "Restore finished with errors, see above." : "Restore complete!", $restoreFailed ? ABHelper::LOGLEVEL_ERR : ABHelper::LOGLEVEL_INFO);
 
 unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning);
