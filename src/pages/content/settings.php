@@ -974,11 +974,9 @@ HTML;
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
 <script>
     $(function () {
-        $('.fileTreeDiv').fileTree({
-            // root: $('#source').val(),
-            multiSelect: true,
-            //filter: "HIDE_FILES_FILTER",
-            //folderEvent: "nothing"
+        // Each tree lists folders from the server, so it is built when its box is first opened, not for every panel on load
+        $(document).on('focus', 'textarea', function () {
+            $(this).next('.ft').find('.fileTreeDiv:not(.ab-tree-ready)').addClass('ab-tree-ready').fileTree({multiSelect: true});
         });
 
         $('.ftAttach').fileTreeAttach();
