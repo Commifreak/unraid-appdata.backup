@@ -2,12 +2,12 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.10.06.4">
-        <!ENTITY sha256    "76a615709445ec874cfcd59bbcc790defd09214c378aece4bfab1f13d13a4b17">
+        <!ENTITY version   "2026.03.13">
+        <!ENTITY sha256    "6482aacddc1f006759695afcc123c7537e9003d3a2cfa3e198b88c4dedb05fb3">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
-        <!ENTITY github    "chodeus/unraid-appdata.backup">
-        <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/testing/&name;.plg">
+        <!ENTITY github    "Commifreak/unraid-appdata.backup">
+        <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/&name;.plg">
         ]>
 
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="shield"
@@ -16,18 +16,6 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
-
-###2026.10.02.6 (test build, chodeus/unraid-appdata.backup)
-- ➕ Snapshot mode for ZFS and btrfs: containers start again as soon as their data is snapshotted
-- 🩹 A failed flash backup marks the run as failed, so retention keeps the older backup sets
-- 🩹 Escape notification text before it reaches the shell
-- 🩹 Back up the flash drive on Unraid 7.4, whose flash backup script now streams the zip
-- 🩹 Read exclusion and path lists with any line endings [PR 74](https://github.com/Commifreak/unraid-appdata.backup/pull/74)
-- 🩹 Don't retry starting a container that no longer exists [PR 82](https://github.com/Commifreak/unraid-appdata.backup/pull/82)
-- 🔧 Backup, abort, restore and config-copy requests must be POST
-- 🔧 The backup, restore and cron scripts only run from the command line
-- 🩹 A failed auto-update is reported as an error, without the 'updated' notification
-- 🔧 Wording fixes [PR 80](https://github.com/Commifreak/unraid-appdata.backup/pull/80)
 
 ###2026.03.13
 - 🩹 Fix UI alignment for container backup settings. [Issue 68](https://github.com/Commifreak/unraid-appdata.backup/issues/68)
