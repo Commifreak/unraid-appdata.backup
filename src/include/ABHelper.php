@@ -44,7 +44,7 @@ class ABHelper {
     /** @var resource|null The run lock from claimRun(): the kernel drops it when this process ends, however it ends */
     private static $runLock = null;
 
-    /** Containers this run stopped and has not started again, as name => true, for reportCrash() */
+    /** Containers this run stopped (an unreadable state counts) and has not started again, as name => true, for reportCrash() */
     private static array $stoppedByRun = [];
 
     /**
@@ -181,7 +181,7 @@ class ABHelper {
     /**
      * Stops a container
      * @param $container array
-     * @return bool false if the container is still running after the stop attempts
+     * @return bool false if it is not backed up; it then decides whether it gets started again
      */
     public static function stopContainer($container) {
         global $dockerClient, $abSettings;
@@ -193,6 +193,7 @@ class ABHelper {
         $container = $dockerClient->getContainerDetails($name);
         if (!is_bool($container['State']['Running'] ?? null)) {
             self::backupLog("The state of '$name' cannot be read, so it is not backed up!", self::LOGLEVEL_ERR);
+            self::$skipStartContainers[] = $name;
             self::$errorOccured = true;
             return false;
         }
@@ -211,8 +212,15 @@ class ABHelper {
                 return true;
             }
 
-            if (!self::stopRunning($container['Name'])) {
-                self::backupLog("'{$container['Name']}' did not stop (its state is running or unreadable), so it is not backed up!", self::LOGLEVEL_ERR);
+            $stopped = self::stopRunning($container['Name']);
+            if ($stopped === null) {
+                self::backupLog("The state of '{$container['Name']}' cannot be read after the stop, so it is not backed up! It will be started again.", self::LOGLEVEL_ERR);
+                self::$errorOccured = true;
+                return false;
+            }
+            if (!$stopped) {
+                self::backupLog("'{$container['Name']}' did not stop, so it is not backed up!", self::LOGLEVEL_ERR);
+                self::$skipStartContainers[] = $container['Name'];
                 self::$errorOccured = true;
                 return false;
             }
@@ -229,7 +237,7 @@ class ABHelper {
 
     /**
      * Stops a running container, with 'docker stop' as the fallback; also used by the restore
-     * @return bool true once a fresh state read says it is stopped
+     * @return bool|null true once a fresh state read says it is stopped, false while it still runs, null when that read fails
      */
     public static function stopRunning($name) {
         global $dockerClient;
@@ -251,12 +259,12 @@ class ABHelper {
             self::backupLog("done! (took " . (time() - $stopTimer) . " seconds)", self::LOGLEVEL_INFO, true, true);
         }
 
-        // Either stop method can report wrongly, so a fresh state read decides; an unreadable state counts as running
-        $stopped = ($dockerClient->getContainerDetails($name)['State']['Running'] ?? null) === false;
-        if ($stopped) {
+        // Either stop method can report wrongly, so a fresh state read decides
+        $running = $dockerClient->getContainerDetails($name)['State']['Running'] ?? null;
+        if ($running !== true) {
             self::$stoppedByRun[$name] = true;
         }
-        return $stopped;
+        return is_bool($running) ? !$running : null;
     }
 
     /**
@@ -1016,8 +1024,7 @@ class ABHelper {
                             continue;
                         }
                         if (!self::stopContainer($container)) {
-                            $skipped[]                   = $container['Name'];
-                            self::$skipStartContainers[] = $container['Name']; // still running
+                            $skipped[] = $container['Name'];
                             self::setCurrentContainerName($container, true);
                             continue;
                         }
@@ -1146,6 +1153,7 @@ class ABHelper {
                     }
 
                     if (!self::stopContainer($container)) {
+                        self::startContainer($container); // starts only one whose state was unreadable after the stop; stopContainer() marked the rest
                         self::setCurrentContainerName($container, true);
                         continue;
                     }

@@ -107,8 +107,15 @@ if (!isset($config['restoreItem']['containers'])) {
 
         if ($wasRunning) {
             ABHelper::backupLog("Stopping $name for its restore... ", ABHelper::LOGLEVEL_INFO, false);
-            if (!ABHelper::stopRunning($name)) {
-                ABHelper::backupLog("'$name' did not stop (its state is running or unreadable), so it is not restored!", ABHelper::LOGLEVEL_ERR);
+            $stopped = ABHelper::stopRunning($name);
+            if ($stopped === null) {
+                ABHelper::backupLog("The state of '$name' cannot be read after the stop, so it is not restored! It will be started again.", ABHelper::LOGLEVEL_ERR);
+                $restoreFailed = true;
+                ABHelper::startContainer(['Name' => $name]);
+                continue;
+            }
+            if (!$stopped) {
+                ABHelper::backupLog("'$name' did not stop, so it is not restored!", ABHelper::LOGLEVEL_ERR);
                 $restoreFailed = true;
                 continue;
             }
