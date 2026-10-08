@@ -20,6 +20,9 @@ class ABHelper {
     /** A container archive's extension; the rest of the file name is the container's name */
     const ARCHIVE_PATTERN = '/\.tar(\.gz|\.zst)?$/';
 
+    /** The levels that end the script; @ cannot silence them */
+    const FATAL_ERRORS = E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR;
+
     /**
      * @var array Store some temporary data about containers, which should skipped during start routine
      */
@@ -40,6 +43,9 @@ class ABHelper {
 
     /** @var resource|null The run lock from claimRun(): the kernel drops it when this process ends, however it ends */
     private static $runLock = null;
+
+    /** Containers this run stopped and has not started again, as name => true, for reportCrash() */
+    private static array $stoppedByRun = [];
 
     /**
      * Logs a message to the system log
@@ -246,7 +252,11 @@ class ABHelper {
         }
 
         // Either stop method can report wrongly, so a fresh state read decides; an unreadable state counts as running
-        return ($dockerClient->getContainerDetails($name)['State']['Running'] ?? null) === false;
+        $stopped = ($dockerClient->getContainerDetails($name)['State']['Running'] ?? null) === false;
+        if ($stopped) {
+            self::$stoppedByRun[$name] = true;
+        }
+        return $stopped;
     }
 
     /**
@@ -320,6 +330,9 @@ class ABHelper {
                 $dockerContainerStarted = true;
             }
         } while (!$dockerContainerStarted);
+        if ($dockerContainerStarted) {
+            unset(self::$stoppedByRun[$container['Name']]); // before the delay, so a crash in it does not list a started container
+        }
         if ($delay) {
             self::backupLog("The container has a delay set, waiting $delay seconds before carrying on");
             sleep($delay);
@@ -711,6 +724,7 @@ class ABHelper {
             sleep(30);
         }
         self::$runLock = $lock;
+        register_shutdown_function([self::class, 'reportCrash']);
         if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
             unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
         }
@@ -752,7 +766,6 @@ class ABHelper {
 
     /**
      * @return bool
-     * @todo: register_shutdown_function? in beiden Scripts? Damit kill und goto :end?
      */
     public static function abortRequested() {
         return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
@@ -897,7 +910,7 @@ class ABHelper {
 
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         // @ leaves only fatal levels in error_reporting(). Unraid's php.ini leaves out E_WARNING, so never test $errno against it.
-        if ((error_reporting() & ~(E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR)) === 0) {
+        if ((error_reporting() & ~self::FATAL_ERRORS) === 0) {
             return false;
         }
         $errStr = "got PHP error: $errno / $errstr $errfile:$errline with context: " . json_encode($errcontext);
@@ -905,6 +918,17 @@ class ABHelper {
         self::backupLog("PHP-ERROR occurred! $errno / $errstr $errfile:$errline", self::LOGLEVEL_DEBUG);
 
         return true;
+    }
+
+    /** Shutdown function from claimRun(): a fatal error skips the scripts' own ending, so the run reports it here */
+    public static function reportCrash() {
+        $error = error_get_last();
+        if (!$error || !($error['type'] & self::FATAL_ERRORS)) {
+            return; // error_get_last() also holds a warning left by @
+        }
+        $stopped = self::$stoppedByRun ? ' Still stopped by this run: ' . implode(', ', array_keys(self::$stoppedByRun)) . '.' : '';
+        self::backupLog("The run crashed with a PHP error: " . strtok($error['message'], "\n") . '.' . $stopped, self::LOGLEVEL_ERR);
+        self::backupLog(self::dump('PHP error', $error), self::LOGLEVEL_DEBUG);
     }
 
     /** Installs the update planned for $name, unless its backup just failed: then there would be no fresh backup to go back to */
