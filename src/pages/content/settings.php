@@ -20,7 +20,9 @@ if (!ABHelper::isArrayOnline()) {
 /**
  * POST Handling
  */
-if ($_POST) {
+if (isset($_POST['extraScheduleForm'])) {
+    $abExtraSaved = ABSettings::storeForm($_POST); // read by extra.php
+} elseif ($_POST) {
     if (isset($_POST['debugForm'])) {
         echo "<pre>" . print_r($_POST, true) . "</pre>";
         exit;
@@ -46,12 +48,10 @@ if ($_POST) {
 
         $abSettings['allowedSources'] = ['/mnt/user/appdata', '/mnt/cache/appdata'];
 
-        if (!empty($oldConfig['source'])) {
-            if (!in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
-                $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
-            }
-            $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅
+        if (!empty($oldConfig['source']) && !in_array(rtrim($oldConfig['source'], '/'), $abSettings['allowedSources'])) {
+            $abSettings['allowedSources'][] = rtrim($oldConfig['source'], '/');
         }
+        $abSettings['allowedSources'] = implode("\r\n", $abSettings['allowedSources']); // Hackety hack! 😅 ABSettings parses this setting as text
 
         if (!empty($oldConfig['compression'])) {
             $abSettings['compression'] = $oldConfig['compression'] == 'yes' ? 'yes' : 'no';
@@ -102,7 +102,12 @@ if ($_POST) {
         }
 
         ABSettings::store($abSettings);
-
+        // This branch exits, so the checkCron() call after a normal save never runs for it
+        [$code, $out] = (new ABSettings())->checkCron();
+        if ($code != 0) {
+            echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
+            exit; // no success message or reload, so the error stays on screen
+        }
 
         echo "<h1 style='color: green'>Settings were migrated!</h1><p>Please wait...</p><hr />";
         echo "<script>
@@ -133,7 +138,9 @@ window.setTimeout(function() {
         }
     }
 
-    ABSettings::store($_POST);
+    // Unraid draws the tabs before this runs, so the Extra schedule tab only follows the toggle on the next load
+    $abTabsChanged = (json_decode((string)@file_get_contents(ABSettings::getConfigPath()), true)['extraSchedule'] ?? 'no') !== ($_POST['extraSchedule'] ?? 'no');
+    ABSettings::storeForm($_POST);
 }
 
 $abSettings = new ABSettings();
@@ -155,6 +162,7 @@ if (strstr('white,azure', $display['theme'])) {
 
 ?>
 <link type="text/css" rel="stylesheet" href="<?php autov('/webGui/styles/jquery.filetree.css') ?>">
+<?php include_once __DIR__ . '/head.php'; ?>
 <style>
     .fileTree {
         background: <?=$bgcolor?>;
@@ -192,8 +200,11 @@ if (strstr('white,azure', $display['theme'])) {
     }
 
     .sortable li {
-        cursor: n-resize;
         margin: 0 15px 15px 15px;
+    }
+
+    .sortable .ab-drag {
+        cursor: n-resize;
     }
 
     .caBackupMigrationDiv {
@@ -209,15 +220,15 @@ if (strstr('white,azure', $display['theme'])) {
 <p>Welcome to the appdata backup plugin!</p>
 <p>This plugin allows you to back up and restore all your appdata content! It takes care of everything (stop/start
     docker containers) including some extras (update docker containers)</p>
-<p><b>For first time setup</b>, you need to know how this plugin is working! The main options are the <code>Appdata
-        sources</code> and the <code>Backup destination</code>. The latter should be self explaining.<br/>The plugin
-    does not simply copy the contents of <code>appdata</code> anymore (like the previous did). It reads all docker
+<p><b>For first time setup</b>, you need to know how this plugin works! The main options are the <code>Appdata
+        sources</code> and the <code>Backup destination</code>. The latter should be self-explanatory.<br/>The plugin
+    does not simply copy the contents of <code>appdata</code> anymore (like the previous plugin did). It reads all docker
     containers' mapped volumes. And this file/folder list will be the list we work with.</p>
-<p>It also differs between internal and external volumes/mappings. And here the <code>Appdata sources</code> comes to
-    play. Every volume mapping within those paths are considered "internal". Like "for the container to work"-internal
-    (configs, logs etc.).<br/>Any mapping outside those paths are "external". Like storage or something (cloud, plex,
+<p>It also distinguishes between internal and external volumes/mappings. And here the <code>Appdata sources</code> come into
+    play. Every volume mapping within those paths is considered "internal". Like "for the container to work"-internal
+    (configs, logs etc.).<br/>Any mapping outside those paths is "external". Like storage or something (cloud, plex,
     ...).</p>
-<p>In the default configuration, the plugin is just backing up any internal mapping and will skip external ones. You can
+<p>In the default configuration, the plugin only backs up internal mappings and skips external ones. You can
     adjust that for every container.</p>
 <p>Please also read the help block for <b>Appdata sources</b> by clicking the title of the option!</p>
 
@@ -240,7 +251,9 @@ HTML;
 }
 
 if (($code ?? 0) != 0) {
-    echo "<h1>Cron error!</h1><p>" . implode('; ', $out) . "</p>";
+    echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
+} elseif (!empty($abTabsChanged)) {
+    echo "<script>location.replace(location.href);</script>"; // a GET, not a resubmit
 }
 ?>
 
@@ -260,7 +273,18 @@ if (($code ?? 0) != 0) {
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>The plugin takes note of not started containers before backup and leaves them stopped afterwards.</p>
+        <p>Without snapshots, <b>Stop all</b> keeps every container down for the whole backup, while <b>For each container</b> stops, backs up and starts them one at a time (a group counts as one), so each is down only for its own backup. Containers that were already stopped stay stopped.</p>
+    </blockquote>
+
+    <dl>
+        <dt><b>Use snapshots</b></dt>
+        <dd><select id="snapshotMode" name="snapshotMode" data-setting="<?= $abSettings->snapshotMode ?>">
+                <option value="no">No</option>
+                <option value="yes">Yes, on ZFS and btrfs</option>
+            </select></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Stops the containers, snapshots their data and starts them again, then backs up from the snapshot, so they're only down while they stop and start. Works on ZFS and btrfs (a /mnt/user share must be exclusive) when nothing else is mounted inside the volume; otherwise that container stays stopped for its backup, or with <b>Stop all</b> the whole run does. When the snapshot works, post-container and post-backup scripts run with the containers already up.</p>
     </blockquote>
 
     <dl>
@@ -269,13 +293,22 @@ if (($code ?? 0) != 0) {
         <dd><input id='deleteBackupsOlderThan' name="deleteBackupsOlderThan" type='number'
                    value='<?= $abSettings->deleteBackupsOlderThan ?>'
                    placeholder='Leave empty to disable'/></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set.</p>
+    </blockquote>
 
+    <dl>
         <dt><b>Keep at least this many backups:</b></dt>
         <dd><input id='keepMinBackups' name="keepMinBackups" type='number' value='<?= $abSettings->keepMinBackups ?>'
                    placeholder='Leave empty to disable'/></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>The newest this-many good sets are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
+    </blockquote>
 
-
-        <dt><b>Appdata source(s)</b> Please note the infos inside help block!</dt>
+    <dl>
+        <dt><b>Appdata source(s)</b> Please read the info in the help block!</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
                                                                  onfocus="$(this).next('.ft').slideDown('fast');"
@@ -290,20 +323,20 @@ if (($code ?? 0) != 0) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Please set your appdata paths here. Appdata paths are paths, which holds your docker data. The
+        <p>Please set your appdata paths here. Appdata paths are paths that hold your docker data. The
             default path is <code>/mnt/user/appdata</code> or <code>/mnt/cache/appdata</code>.<br/>
             If you use any other path, put it in here. If you use multiple appdata paths, set every path via the file
-            browser or paste it here. <b>Everything within those set paths</b> will be considered as "internal" volume
+            browser or paste it here. <b>Everything within those set paths</b> will be considered "internal" volumes
             (see below).</p>
         <p><b>IMPORTANT:</b> This plugin differentiates between internal and external volume paths.<br/>
             <b>Internal</b> ones are volume mappings, which store the main appdata
-            (<code>/mnt/user/appdata/mariadb/</code> would be such a volume). These will be backed up always!<br/>
+            (<code>/mnt/user/appdata/mariadb/</code> would be such a volume). These will always be backed up!<br/>
             <b>External</b> ones are volume mappings, which can hold extra data,
-            (<code>/mnt/user/Downloads/jDownlaoder</code> would be such a volume). These will be backed up optionally
+            (<code>/mnt/user/Downloads/jDownloader</code> would be such a volume). These will be backed up optionally
             only.
         </p>
         <p>The plugin detects every volume mapping within your set "appdata source(s)" as internal ones. Everything else
-            is being detected as external.</p>
+            is detected as external.</p>
         <p>The list of volume mappings is directly read from your container configuration!</p>
     </blockquote>
 
@@ -313,7 +346,12 @@ if (($code ?? 0) != 0) {
         <dd><input type='text' required class='ftAttach' id="destination" name="destination"
                    value="<?= $abSettings->destination ?>"
                    data-pickfilter="HIDE_FILES_FILTER" data-pickfolders="true"></dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Each run creates a dated <code>ab_YYYYMMDD_HHMMSS</code> folder here. Pick disks other than the ones your appdata is on, such as a share on the array, so one failure can't take both.</p>
+    </blockquote>
 
+    <dl>
         <dt><b>Use Compression?</b></dt>
         <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>"
                     onchange="checkMultiCoreCpuCount();">
@@ -323,8 +361,12 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p><b>Yes, normal</b> compresses with gzip on one core. <b>Yes, multicore</b> uses zstd on several cores: much faster, but it can slow other services during the backup.</p>
+    </blockquote>
 
-    <dl id="compressionCpuLimit_dl">
+    <div id="compressionCpuLimit_dl">
+    <dl>
         <dt><b>How many cores should be used?</b></dt>
         <dd><select id='compressionCpuLimit' name="compressionCpuLimit"
                     data-setting="<?= $abSettings->compressionCpuLimit ?>">
@@ -339,13 +381,10 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
     </dl>
-
     <blockquote class='inline_help'>
-        <p><b>Yes, normal</b>: Uses normal gzip compression</p>
-        <p><b>Yes, multicore</b>: Uses <a href="https://facebook.github.io/zstd/" target="_blank">zstdmt</a> for
-            compression. Please
-            note, that this <i>could</i> decrease other system services during backup.</p>
+        <p>How many cores zstd may use with <b>Yes, multicore</b>. All cores is fastest; fewer leaves room for everything else running.</p>
     </blockquote>
+    </div>
 
     <dl>
         <dt><b>Backup the flash drive?</b></dt>
@@ -357,20 +396,21 @@ if (($code ?? 0) != 0) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>This puts a compressed copy of your flash drive inside the backup as well.</p>
+        <p>Puts a zip of your flash drive (Unraid's own flash backup) in each backup set and test-reads it. If the flash drive dies, the Unraid USB Creator can restore it from that zip.</p>
     </blockquote>
 
-    <dl id="flashBackupCopy_dl">
-        <dt>
-            <div style="display: table; line-height: 1em;"><b>Copy the flash backup to a custom destination</b><br/>This
-                is optional
-            </div>
-        </dt>
+    <div id="flashBackupCopy_dl">
+    <dl>
+        <dt><b>Copy the flash backup to a custom destination</b></dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="flashBackupCopy" name="flashBackupCopy"
                    value="<?= $abSettings->flashBackupCopy ?>"
                    data-pickroot="/mnt/"
                    data-pickfolders/></dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p>Optional: also copies the flash zip to this folder, for example one that another machine backs up. Leave empty to skip.</p>
+    </blockquote>
+    </div>
 
     <dl>
         <dt><b>Backup VM meta?</b></dt>
@@ -381,69 +421,66 @@ if (($code ?? 0) != 0) {
     </dl>
 
     <blockquote class='inline_help'>
-        <p>This saves <code>/etc/libvirt/qemu</code></p>
+        <p>Saves your VM definitions from <code>/etc/libvirt/qemu</code> as <code>vm_meta.tgz</code>. That's only the VM settings: back up the vdisks separately.</p>
     </blockquote>
 
-    <div class="title" onclick="$(this).next().show();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
+    <div class="title" onclick="$(this).next().toggle();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
     </div>
     <div style="display: none;">
         <blockquote>These settings are the <b>global defaults</b> for all containers. You can adjust them per container
             if you want.
         </blockquote>
         <dl>
-            <dt>
-                <div style="display: table; line-height: 1em;"><b>Skip stopping of containers?</b><br/><small>This will
-                        skip stopping containers and leaves them running. Could lead to broken backup for
-                        containers!</small>
-                </div>
-            </dt>
-            <dd><select id='verifyBackup' name="defaults[dontStop]"
+            <dt><b>Skip stopping of containers?</b></dt>
+            <dd><select id='dontStop' name="defaults[dontStop]"
                         data-setting="<?= $abSettings->defaults['dontStop'] ?>">
                     <option value='no'>No</option>
                     <option value='yes'>Yes</option>
                 </select>
             </dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>Backs up containers while they keep running. Files that change during the backup, databases especially, can leave a broken archive. Each container can override this.</p>
+        </blockquote>
 
-            <dt>
-                <div style="display: table; line-height: 1em;"><b>Verify Backup?</b><br/><small>Normally, tar detects
-                        any
-                        errors during backup. This option just adds an extra layer of security</small>
-                </div>
-            </dt>
+        <dl>
+            <dt><b>Verify Backup?</b></dt>
             <dd><select id='verifyBackup' name="defaults[verifyBackup]"
                         data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
             </dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>After each archive is written, reads it back and compares it with the data it was made from. That takes about as long again (no extra downtime with snapshots), and only verified archives get a checksum.</p>
+        </blockquote>
 
-            <dt>
-                <div style="display: table; line-height: 1em;"><b>Ignore errors during backup?</b><br/><small>This can
-                        lead to
-                        broken backups - Only enable if you know what you
-                        do!</small>
-                </div>
-            </dt>
+        <dl>
+            <dt><b>Ignore errors during backup?</b></dt>
             <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
                         data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
             </dd>
+        </dl>
+        <blockquote class='inline_help'>
+            <p>Logs tar errors as info instead of failing the run, so the set isn't marked failed and old sets still get deleted. The affected archive may be incomplete and gets no checksum.</p>
+        </blockquote>
 
-            <dt>
-                <div style="display: table; line-height: 1em;"><b>Enable <code>--ignore-case</code> for
-                        tar?</b><br/><small>This ignores case sensitivity for exclusions.</small>
-                </div>
-            </dt>
+        <dl>
+            <dt><b>Enable <code>--ignore-case</code> for tar?</b></dt>
             <dd><select id='ignoreExclusionCase' name="ignoreExclusionCase"
                         data-setting="<?= $abSettings->ignoreExclusionCase ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
             </dd>
-
         </dl>
+        <blockquote class='inline_help'>
+            <p>Exclusions match regardless of upper or lower case, so <code>*.log</code> also leaves out <code>DEBUG.LOG</code>. Applies to every container and to the extra files.</p>
+        </blockquote>
     </div>
 
     <div class="title"><span class="left"><i
@@ -453,7 +490,7 @@ if (($code ?? 0) != 0) {
     <dl>
         <dt><b>Notification Settings:</b></dt>
         <dd><select id='notification' name="notification" data-setting="<?= $abSettings->notification ?>">
-                <option value='<?= ABHelper::LOGLEVEL_ERR ?>'>Errors Only</option>
+                <option value='<?= ABHelper::LOGLEVEL_ERR ?>'>Errors only</option>
                 <option value='<?= ABHelper::LOGLEVEL_WARN ?>'>Warnings and errors</option>
                 <option value='disabled'>Disabled</option>
             </select>
@@ -545,13 +582,25 @@ if (($code ?? 0) != 0) {
         <dt><b>Custom Cron Entry:</b></dt>
         <dd><input type='text' id='backupFrequencyCustom' name="backupFrequencyCustom"
                    value="<?= $abSettings->backupFrequencyCustom ?>"
-                   placeholder="Setting this, will disable the other options"/></dd>
+                   placeholder="Setting this will disable the other options"/></dd>
     </dl>
+
+    <dl>
+        <dt><b>Use an extra schedule?</b></dt>
+        <dd><select id='extraSchedule' name="extraSchedule" data-setting="<?= htmlspecialchars($abSettings->extraSchedule) ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Backs up chosen containers more often than the rest, for example daily, into their own folder. Yes shows the <b>Extra schedule</b> tab after Save.</p>
+    </blockquote>
 
 
     <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
-    <p><b>General note</b>: This plugin always backup every unknown (new) container with the default settings. In this
+    <p><b>General note</b>: This plugin always backs up every unknown (new) container with the default settings. In this
         section you can set settings that deviate from the defaults.</p>
 
     <dl>
@@ -563,10 +612,13 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
     </dl>
+    <blockquote class='inline_help'>
+        <p>Default for every container: if an update is available, it's installed right after that container's backup. Each container can override this.</p>
+    </blockquote>
 
-    <div style="display: flex;">
-        <div class="dockerSettings" style="flex-grow: 1; flex-basis: 0;">
-            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per container settings. <b>Click on container name to open</b></span>
+    <div class="ab-docker-cols">
+        <div class="dockerSettings">
+            <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per-container settings. <b>Click on container name to open</b></span>
             </div>
 
             <datalist id="containerGroups">
@@ -581,135 +633,28 @@ if (($code ?? 0) != 0) {
             $dockerClient  = new DockerClient();
             $allContainers = $dockerClient->getDockerContainers();
 
+            $containerHelp = [
+                'volumes' => 'This container\'s volume mappings; click one to add it to the exclusions. Folder icon: inside an appdata source, always backed up. Arrow icon: external, backed up only with <b>Save external volumes?</b>',
+                'group' => 'Containers in the same group are stopped, backed up and started as one unit, in the group\'s own order. Type a new name to create a group; the <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&amp;comment=1250363" target="_blank">forum hints</a> have examples.',
+                'extVolumes' => 'Also backs up this container\'s volumes outside your appdata sources (arrow icon). With No they\'re left out, and the log lists which.',
+                'update' => 'If an update is available, installs it right after this container\'s backup. <b>Use standard</b> follows <b>Update containers after backup?</b>',
+                'exclude' => 'Left out of this container\'s archive: one path or pattern per line, such as <code>/mnt/user/appdata/plex/Cache</code> or <code>*.log</code>. Write paths the way the volume is mapped (<code>/mnt/cache/…</code> or <code>/mnt/user/…</code>). Listing a whole volume leaves that volume out.',
+                'skipBackup' => 'Stops and starts this container with the others but doesn\'t back it up, for a container that has to be down while the others are backed up. With <b>Skip stopping of container?</b> on, it isn\'t stopped either.',
+                'verify' => 'Overrides <b>Verify Backup?</b> in Advanced settings for this container. With No its archive isn\'t checked and gets no checksum.',
+                'ignoreErrors' => 'Overrides <b>Ignore errors during backup?</b> in Advanced settings for this container. With Yes, a tar error here is logged as info and doesn\'t fail the run.',
+                'dontStop' => 'Leaves this container running while it is backed up. Not recommended: files that change during the backup can leave a broken archive. <b>Use standard</b> follows Advanced settings.',
+            ];
+
+            require_once __DIR__ . '/container.php';
             foreach ($allContainers as $container) {
-                $isPlex = str_contains(strtolower($container['Name']), 'plex');
-
-                $plexHint                = '';
-                $plexContainerNameSuffix = '';
-                if ($isPlex) {
-                    $plexContainerNameSuffix = ' - Plex detected! Open for more...';
-                    $plexHint                = <<<HTML
-<dt><b>PLEX detected!</b></dt>
-<dd><div style="display: table; font-weight: bold;">This container seems to be a plex container.<br />Please consider setting some exclusions.<br /><a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for a suggestion.</div></dd>
-HTML;
-
-                }
-
-                $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = ABHelper::getContainerVolumes($container, true);
-                $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
-                $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
-
-                if (empty($volumes)) {
-                    $volumes = "<b>No volumes - container will NOT being backed up!</b>";
-                } else {
-                    foreach ($volumes as $index => $volume) {
-                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
-                        $internalVolume  = ABHelper::isVolumeWithinAppdata($volume);
-                        $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
-                    }
-                    $volumes = implode('<br />', $volumes);
-                }
-
-                $containerExcludes = implode("\r\n", $containerSetting['exclude']);
-
-                echo <<<HTML
-<style>
-.containerSettingsDt {
-    overflow: hidden;
-    white-space: nowrap
-}
-.containerSettingsDt:after {
-    opacity: 0.1;
-    content: "  _____________________________________________________________________________________________________________________________________________________________________";
-}
-</style>
-<div style="display: none" id="actualContainerSettings_{$container['Name']}">$realContainerSetting</div>
-        <dl>
-        <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='{$container['Image']}' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr> <span id="containerMultiMappingIssue_{$container['Name']}" style="display: none; color: darkorange;">WARN: Multi mapping detected!</span></dt>
-        <dd><label for="{$container['Name']}_skip">&nbsp;&nbsp;Skip?</label>
-        <select name="containerSettings[{$container['Name']}][skip]" id="{$container['Name']}_skip" data-setting="{$containerSetting['skip']}">
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
-    </select>
-    </dd>
-        </dl>
-
-<blockquote class='inline_help'>
-<dl>
-$plexHint
-<dt>Configured volumes <small>- (Click to exclude)</small><br /><small><abbr style="cursor:help;" title="For info, open the 'Appdata source(s)' help"><i class="fa fa-folder"></i> Internal volume | <i class="fa fa-external-link"></i> External volume</abbr></small></dt>
-<dd><div style="display: table">$volumes</div></dd>
-<br />
-
-<dt>Member of group (type something in to create one) <small>- <a href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363" target="_blank">Click here</a> and scroll to "Hints" for more</small></dt>
-<dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$container['Name']}_group' name="containerSettings[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
-
-<dt>Save external volumes?</dt>
-<dd><select id='{$container['Name']}_backupExtVolumes' name="containerSettings[{$container['Name']}][backupExtVolumes]" data-setting="{$containerSetting['backupExtVolumes']}" >
-		<option value='no'>No</option>
-		<option value='yes'>Yes</option>
-	</select></dd>
-	
-	<dt>Update container after backup?</dt>
-    <dd><select id='{$container['Name']}_updateContainer' name="containerSettings[{$container['Name']}][updateContainer]" data-setting="{$containerSetting['updateContainer']}">
-            <option value=''>Use standard</option>
-            <option value='yes'>Yes</option>
-            <option value='no'>No</option>
-        </select>
-    </dd>
-    
-    <dt>Excluded folders/files<br /><small>One path/pattern per line. See belows "Global exclusions" for more examples.</small></dt>
-    <dd><div style="display: table; width: 300px;"><textarea id="{$container['Name']}_exclude" name="containerSettings[{$container['Name']}][exclude]" onfocus="$(this).next('.ft').slideDown('fast');" style="resize: vertical; width: 400px;">$containerExcludes</textarea><div class="ft" style="display: none;"><div class="fileTreeDiv"></div><button onclick="addSelectionToList(this);  return false;">Add to list</button></div></div></dd>
-    
-
-
-
-<div onclick="$(this).next().toggle();"><a style="cursor:pointer;">Show advanced options</a></div>
-	<div style="display: none;">
-	
-	<dt>Skip backup? <small>Only stop/start</small></dt>
-<dd><select id='{$container['Name']}_skipBackup' name="containerSettings[{$container['Name']}][skipBackup]" data-setting="{$containerSetting['skipBackup']}" >
-		<option value='no'>No, do backup as well</option>
-		<option value='yes'>Yes, skip backup and do stop/start only</option>
-	</select></dd>
-	
-	<dt>Verify Backup?</dt>
-<dd><select id='{$container['Name']}_verifyBackup' name="containerSettings[{$container['Name']}][verifyBackup]" data-setting="{$containerSetting['verifyBackup']}" >
-		<option value=''>Use standard</option>
-		<option value='yes'>Yes</option>
-		<option value='no'>No</option>
-	</select></dd>
-	
-<dt>Ignore errors during backup?</dt>
-<dd>
-    <select id='{$container['Name']}_ignoreBackupErrors' name="containerSettings[{$container['Name']}][ignoreBackupErrors]" data-setting="{$containerSetting['ignoreBackupErrors']}">
-        <option value=''>Use standard</option>
-        <option value='yes'>Yes</option>
-		<option value='no'>No</option>
-	</select>
-</dd>
-    <dt>Skip stopping of container? <small><abbr title="This will skip stopping this container and leaves it running. Could lead to broken backup for this container!">NOT RECOMMENDED!</abbr></small></dt>
-    <dd><select id='{$container['Name']}_dontStop' name="containerSettings[{$container['Name']}][dontStop]" data-setting="{$containerSetting['dontStop']}" >
-            <option value=''>Use standard</option>
-            <option value='no'>No</option>
-            <option value='yes'>Yes</option>
-        </select></dd>
-        
-	</div>
-
-</dl>
-</blockquote>
-HTML;
-
-
+                abContainerPanel($container, $abSettings, $containerHelp);
             }
             ?>
 
         </div>
-        <div style="flex-grow: 1; flex-basis: 0; padding-left: 10px; max-width: 35%;">
+        <div class="ab-start-order">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
-            <p>This defines the start sequence. Stop would be this order in reverse.</p>
+            <p>This defines the start sequence. Containers are stopped in reverse order.</p>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
@@ -718,10 +663,11 @@ HTML;
                     $isGroup = $container['isGroup'];
                     $name         = $container['Name'] ?? key($container);
                     $internalName = $isGroup ? '__grp__' . $name : $name;
-                    $image        = (empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon']);
+                    $image        = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                     $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
+                    $members      = htmlspecialchars(json_encode($isGroup ? array_values($abSettings->getContainerGroups()[$name] ?? []) : [$name]), ENT_QUOTES);
                     echo <<<HTML
-<li id="containerOrder_{$internalName}"><i class="fa fa-sort"></i> $imageHtml $name</li>
+<li id="containerOrder_{$internalName}" data-members="$members"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
 HTML;
 
                 }
@@ -733,16 +679,17 @@ HTML;
                 ?>
                 <div class="title"><span class="left"><i
                                 class="fa fa-sort title"></i>Start order for group <?= $group ?></span></div>
-                <p>This defines the start sequence. Stop would be this order in reverse.<br/><b>All containers inside a
+                <p>This defines the start sequence. Containers are stopped in reverse order.<br/><b>All containers inside a
                         group will be stopped (by their order), backed up and then started again.</b></p>
                 <input type="hidden" id="containerGroupOrder_<?= $group ?>" name="containerGroupOrder[<?= $group ?>]"/>
                 <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
                     <?php
                     $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
                     foreach ($sortedContainers as $container) {
-                        $image = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
+                        $members = htmlspecialchars(json_encode([$container['Name']]), ENT_QUOTES);
+                        $image = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                         echo <<<HTML
-<li id="containerGroupOrder[{$group}]={$container['Name']}"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</li>
+<li id="containerGroupOrder[{$group}]={$container['Name']}" data-members="{$members}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
 HTML;
 
                     }
@@ -755,12 +702,12 @@ HTML;
     </div>
 
     <div class="title"><span class="left"><i class="fa fa-i-cursor title"></i>Custom scripts | <small><i
-                        class="fa fa-info"></i> Those must return exit code 0 for success detection // or 2 (for preContainer) to skip backup</small></span>
+                        class="fa fa-info"></i> Scripts must return exit code 0 for success detection // or 2 (for preContainer) to skip backup</small></span>
     </div>
 
     <blockquote>
-        <p>Scripts must be stored anywhere outside <code>/boot</code> because the boot drive (FAT32) does not support
-            script executions from it!</p>
+        <p>Scripts must be stored outside <code>/boot</code> because the boot drive (FAT32) does not support
+            executing scripts from it!</p>
     </blockquote>
 
     <dl>
@@ -783,7 +730,7 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script BEFORE the backup is starting. Sent arguments: <code>pre-backup</code>, <code>destination
+        <p>Runs the selected script BEFORE the backup starts. Sent arguments: <code>pre-backup</code>, <code>destination
                 path</code></p>
     </blockquote>
 
@@ -820,7 +767,7 @@ HTML;
     </dl>
 
     <blockquote class='inline_help'>
-        <p>Runs the selected script AFTER the backup is done (before containers would start). Sent arguments: <code>post-backup</code>,
+        <p>Runs the selected script AFTER the backup is done (before containers would start, unless snapshots let them start earlier). Sent arguments: <code>post-backup</code>,
             <code>destination path</code></p>
     </blockquote>
 
@@ -852,7 +799,7 @@ HTML;
         </dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Those files will be packed into "extra_files.tar.gz"</p>
+        <p>Other files or folders to back up on every run, packed into one <code>extra_files</code> archive in the set. Global exclusions and --ignore-case apply to them too.</p>
     </blockquote>
 
     <dl>
@@ -866,14 +813,14 @@ HTML;
     <blockquote class='inline_help'>
         <p>With this you can define exclusions which will be used as global exclusion</p>
         <p>You can use parts of paths and/or wildcards like <code>*.png</code>, <code>music/*.m4a</code>,
-            <code>logs</code>. Any folder/file paths matching this patterns will be excluded!<br/><b>Put every
-                exclusions in a seperate line!</b></p>
+            <code>logs</code>. Any folder/file paths matching these patterns will be excluded!<br/><b>Put each
+                exclusion on a separate line!</b></p>
     </blockquote>
 
     <dl>
         <dt>Done?</dt>
         <dd><span><input type="submit" value="Save" id="submitBtn"/> <input type="reset" value="Discard"/>
-            <button id="manualBackup" style="margin-left: 15px;">Manual backup</button></span>
+            <button id="manualBackup" class="ab-job" style="margin-left: 15px;" title="Starts a backup now with the saved settings, so save any changes first.">Manual backup</button></span>
         </dd>
     </dl>
 </form>
@@ -886,16 +833,16 @@ HTML;
     </dd>
 
     <dt>Maintainer</dt>
-    <dd>2022 - now: <a href="https://forums.unraid.net/profile/140912-kluthr/" target="_blank">Robin</a> <a
+    <dd><span>2022 - now: <a href="https://forums.unraid.net/profile/140912-kluthr/" target="_blank">Robin</a> <a
                 href="https://kluthr.de" target="_blank">Kluth</a> | 2015-2022 <a
-                href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
+                href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></span></dd>
 
     <dt>Want to say "Thank You"?</dt>
-    <dd>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins
+    <dd><span>You're welcome! 😊 Thanks for using it! <abbr title="All community developers">We</abbr> make those plugins
         with ❤️ (and a lot of ☕). If you like the work, you can donate via <a
                 href="https://www.paypal.com/donate/?hosted_button_id=KE7Z3KLEEY484"
                                                                               target="_blank"><i
-                    class="fa fa-paypal"></i> PayPal</a>.
+                    class="fa fa-paypal"></i> PayPal</a>.</span>
     </dd>
 
     <dt>GitHub repository</dt>
@@ -908,17 +855,30 @@ HTML;
 
 <script src="<?php autov('/webGui/javascript/jquery.filetree.js') ?>" charset="utf-8"></script>
 <script>
+    // Greys a start-order entry when none of its containers (data-members) is in the schedule; it stays draggable
+    function abGreyOrder(lists, isOut, why) {
+        $(lists).children('li').each(function () {
+            const members = $(this).data('members') || [];
+            const out = members.length > 0 && members.every(isOut);
+            $(this).toggleClass('ab-off', out).attr('title', out ? why : null);
+        });
+    }
+
     $(function () {
-        $('.fileTreeDiv').fileTree({
-            // root: $('#source').val(),
-            multiSelect: true,
-            //filter: "HIDE_FILES_FILTER",
-            //folderEvent: "nothing"
+        // Each tree lists folders from the server, so it is built when its box is first opened, not for every panel on load
+        $(document).on('focus', 'textarea', function () {
+            $(this).next('.ft').find('.fileTreeDiv:not(.ab-tree-ready)').addClass('ab-tree-ready').fileTree({multiSelect: true});
         });
 
         $('.ftAttach').fileTreeAttach();
+        // Unraid leaves the picker's top to the flow (over its own field in 7.2+'s flex dd) and drifts its left on a
+        // reopen, so place it under the field each time; runs after fileTreeAttach's own click handler
+        $('.ftAttach').on('click', function () {
+            const pos = $(this).position();
+            $(this).next('.fileTree').css({left: pos.left, top: pos.top + $(this).outerHeight()});
+        });
         $('.ftAttach').attr('placeholder', 'Please click to select');
-        $('.sortable').sortable();
+        $('.sortable').sortable({handle: '.ab-drag'});
 
         /**
          * Select correct setting value
@@ -928,6 +888,11 @@ HTML;
             console.debug($(this).attr('name'), $(this).data('setting'));
             $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
         });
+
+        const abSkipped = name => $('select[name="containerSettings[' + name + '][skip]"]').val() === 'yes';
+        const abGreyMain = () => abGreyOrder('#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]', abSkipped, 'Not in the backup: Skip? is Yes');
+        abGreyMain();
+        $(document).on('change', 'select[name^="containerSettings["][name$="[skip]"]', abGreyMain);
 
 
         $('#manualBackup').on('click', function () {
@@ -940,11 +905,7 @@ HTML;
                 confirmButtonText: "Yep",
                 cancelButtonText: "Nah"
             }, function () {
-                $.ajax(url, {
-                    data: {action: 'manualBackup'}
-                }).always(function (data) {
-                    $('#tab3').click();
-                });
+                abStartJob({action: 'manualBackup'});
             });
             return false;
         });
@@ -991,6 +952,7 @@ HTML;
     function addSelectionToList(element) {
         $el = $(element).prev().find("input:checked");
         $textarea = $(element).parent().prev();
+        $('#' + $textarea.attr('id') + 'Own').not(function () { return this.value === 'yes'; }).val('yes').trigger('change'); // as in addVolumeToExclude
 
         console.debug($el, $textarea);
 
@@ -1016,7 +978,8 @@ HTML;
 
     function addVolumeToExclude(element) {
         $path = $(element).text();
-        $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
+        $excludeTextarea = $('#' + ($(element).data('exclude') || $(element).data('container') + '_exclude')); // data-exclude: the Extra schedule tab's panels
+        $('#' + $excludeTextarea.attr('id') + 'Own').not(function () { return this.value === 'yes'; }).val('yes').trigger('change'); // an extra panel's list only counts as Own list
 
         if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
             console.log("Not adding this volume to exclusion: already listed!")
@@ -1030,25 +993,12 @@ HTML;
         }
     }
 
-    function checkBackupFrequency() {
-        $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
-        switch ($('#backupFrequency').val()) {
-            case 'disabled':
-                $('#backupFrequencyDay, #backupFrequencyDayOfMonth, #backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyCustom').prop('disabled', true);
-                break;
-            case 'daily':
-                $('#backupFrequencyHour, #backupFrequencyMinute').prop('disabled', false);
-                break;
-            case 'weekly':
-                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDay').prop('disabled', false);
-                break;
-            case 'monthly':
-                $('#backupFrequencyHour, #backupFrequencyMinute, #backupFrequencyDayOfMonth').prop('disabled', false);
-                break;
-            default:
-                $('#backupFrequencyCustom').prop('disabled', false);
-                break;
-        }
+    /** Enables only the fields the chosen frequency uses; prefix = the frequency select's id (backupFrequency or extraFrequency) */
+    function checkBackupFrequency(prefix = 'backupFrequency') {
+        const used = {disabled: [], daily: ['Hour', 'Minute'], weekly: ['Hour', 'Minute', 'Day'], monthly: ['Hour', 'Minute', 'DayOfMonth']}[$('#' + prefix).val()] ?? ['Custom'];
+        ['Day', 'DayOfMonth', 'Hour', 'Minute', 'Custom'].forEach(function (field) {
+            $('#' + prefix + field).prop('disabled', !used.includes(field));
+        });
     }
 
     function checkFlashBackupCopy() {
@@ -1122,7 +1072,7 @@ HTML;
     }
 
     function copyConfigFromProd() {
-        $.ajax(url + '?action=copyConfigFromProd').done(function (data) {
+        $.ajax(url, {type: 'POST', data: {action: 'copyConfigFromProd'}}).done(function (data) {
             alert(data);
             window.location.href = window.location;
         }).fail(function (data) {

@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2025.09.17">
-        <!ENTITY sha256    "610ef6f01e96f2bc008f858766ebe4983bf7302323c9a9532b044b70f0cfa2ee">
+        <!ENTITY version   "2026.03.13">
+        <!ENTITY sha256    "6482aacddc1f006759695afcc123c7537e9003d3a2cfa3e198b88c4dedb05fb3">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,12 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2026.03.13
+- 🩹 Fix UI alignment for container backup settings. [Issue 68](https://github.com/Commifreak/unraid-appdata.backup/issues/68)
+
+###2025.09.23
+- 🩹 Fix errors when a group resolves to no group members
 
 ###2025.09.17
 - 🩹 Fix buttons on Unraid 7.2+ (thanks to Squidly271)
@@ -248,7 +254,14 @@ _That will be the last update for today! I promise! 🍻_
             if [ ! -f "$INIPATH" ]; then
               echo "Applying max_input_vars fix..."
               echo "max_input_vars = 2000" > $INIPATH
-              /etc/rc.d/rc.php-fpm reload
+              CUR_FPM_STATUS=$(/etc/rc.d/rc.php-fpm status)
+              echo "===== CURRENT FPM STATUS: $CUR_FPM_STATUS ====="
+              if [[ "$CUR_FPM_STATUS" =~ (not|stopped) ]]; then
+                echo "Skip FPM reload: not started!"
+              else
+                echo "Skip FPM reload: Reload..."
+                /etc/rc.d/rc.php-fpm reload
+              fi
             fi
         </INLINE>
     </FILE>
