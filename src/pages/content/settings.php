@@ -113,6 +113,11 @@ window.setTimeout(function() {
         exit;
     }
 
+    // Process volume path mappings to ensure proper format
+    if (isset($_POST['volumePathMappings']) && empty(trim($_POST['volumePathMappings']))) {
+        $_POST['volumePathMappings'] = '';
+    }
+
     //Hack the order string
     parse_str($_POST['containerOrder'], $containerOrder);
     if (empty($containerOrder)) {
@@ -305,6 +310,36 @@ if (($code ?? 0) != 0) {
         <p>The plugin detects every volume mapping within your set "appdata source(s)" as internal ones. Everything else
             is being detected as external.</p>
         <p>The list of volume mappings is directly read from your container configuration!</p>
+    </blockquote>
+
+    <dl>
+        <dt><b>Volume path mappings</b> <small>(optional)</small></dt>
+        <dd>
+            <div style="display: table; width: 300px;">
+                <textarea id="volumePathMappings" name="volumePathMappings"
+                         style="resize: vertical; width: 400px; height: 100px;"
+                         placeholder="/mnt/user/appdata => /mnt/snap_backup_source"><?php
+                    $mappingLines = [];
+                    foreach ($abSettings->volumePathMappings as $mapping) {
+                        $mappingLines[] = $mapping['from'] . ' => ' . $mapping['to'];
+                    }
+                    echo implode("\r\n", $mappingLines);
+                ?></textarea>
+            </div>
+        </dd>
+    </dl>
+
+    <blockquote class='inline_help'>
+        <p><b>Volume Path Mappings</b> allow you to transform container volume paths before backup processing.</p>
+        <p>This is useful when backing up from snapshots or alternative mount points. When a container's volume path
+           is processed, if it starts with a "from" path, it will be replaced with the corresponding "to" path.</p>
+        <p><b>Format:</b> One mapping per line, using the format: <code>/original/path => /mapped/path</code></p>
+        <p><b>Example:</b><br/>
+           <code>/mnt/user/appdata => /mnt/snap_backup_source</code><br/>
+           This would transform <code>/mnt/user/appdata/myapp</code> to <code>/mnt/snap_backup_source/myapp</code></p>
+        <p><b>Important:</b> Only the first matching mapping is applied to each path. Order your mappings from most specific to least specific.</p>
+        <p><b>Note:</b> The mapped paths are evaluated against your "Appdata source(s)" to determine if they're internal
+           or external volumes.</p>
     </blockquote>
 
     <dl>
@@ -596,19 +631,29 @@ HTML;
                 }
 
                 $image   = empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
-                $volumes = ABHelper::getContainerVolumes($container, true);
+                $originalVolumes = ABHelper::getContainerVolumes($container, true);
+                $mappedVolumes = ABHelper::getMappedContainerVolumes($container, true);
                 $containerSetting = $abSettings->getContainerSpecificSettings($container['Name'], false);
                 $realContainerSetting = print_r($abSettings->getContainerSpecificSettings($container['Name']), true);
 
-                if (empty($volumes)) {
+                if (empty($mappedVolumes)) {
                     $volumes = "<b>No volumes - container will NOT being backed up!</b>";
                 } else {
-                    foreach ($volumes as $index => $volume) {
-                        $excluded        = in_array($volume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
-                        $internalVolume  = ABHelper::isVolumeWithinAppdata($volume);
-                        $volumes[$index] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" onclick="addVolumeToExclude(this);">' . $volume . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
+                    $volumeDisplay = [];
+                    foreach ($mappedVolumes as $index => $mappedVolume) {
+                        $originalVolume = $originalVolumes[$index];
+                        $excluded = in_array($mappedVolume, $containerSetting['exclude']) ? ' - <abbr style="color: red; font-weight: bold;" title="Will not being backed up! See exclusions list below!">EXCLUDED!</abbr> ' : false;
+                        $internalVolume = ABHelper::isVolumeWithinAppdata($mappedVolume);
+                        
+                        // Show original path, and if different, show mapped path in parentheses
+                        $pathDisplay = $originalVolume;
+                        if ($originalVolume !== $mappedVolume) {
+                            $pathDisplay = $originalVolume . ' <span style="color: #888; font-style: italic;">(→ ' . $mappedVolume . ')</span>';
+                        }
+                        
+                        $volumeDisplay[] = '<span class="fa ' . (!$internalVolume ? 'fa-external-link' : 'fa-folder') . '"></span> <code style="cursor:pointer;" data-container="' . $container['Name'] . '" data-internal="' . ($internalVolume ? 'true' : 'false') . '" data-excluded="' . ($excluded ? 'true' : 'false') . '" data-original="' . htmlspecialchars($originalVolume) . '" data-mapped="' . htmlspecialchars($mappedVolume) . '" onclick="addVolumeToExclude(this);">' . $pathDisplay . '</code>' . $excluded . '<span style="display: none;" class="multiVolumeWarn"> - <a target="_blank" href="https://forums.unraid.net/topic/137710-plugin-appdatabackup/?do=findComment&comment=1250363">used in multiple containers!</a></span>';
                     }
-                    $volumes = implode('<br />', $volumes);
+                    $volumes = implode('<br />', $volumeDisplay);
                 }
 
                 $containerExcludes = implode("\r\n", $containerSetting['exclude']);
@@ -1014,7 +1059,8 @@ HTML;
     }
 
     function addVolumeToExclude(element) {
-        $path = $(element).text();
+        // Use the mapped path for exclusions since that's what actually gets backed up
+        $path = $(element).data('mapped') || $(element).data('original') || $(element).text();
         $excludeTextarea = $('#' + $(element).data('container') + '_exclude');
 
         if ($excludeTextarea.val().split(/\r?\n|\r|\n/g).includes($path)) { // If existing inside textarea
@@ -1078,7 +1124,8 @@ HTML;
 
         $("code[data-container]").each(function () {
             let container = $(this).data('container');
-            let mapping = $(this).text();
+            // Use the mapped path for duplicate checking since that's what gets backed up
+            let mapping = $(this).data('mapped') || $(this).data('original') || $(this).text();
 
             if ($(this).data('excluded')) {
                 console.debug('Ignore ' + mapping + ': Excluded!');
@@ -1104,7 +1151,8 @@ HTML;
 
         affectedMappings.forEach(function (element) {
             let codeElems = $('code[data-container]').filter(function () {
-                return $(this).text() === element;
+                let mapping = $(this).data('mapped') || $(this).data('original') || $(this).text();
+                return mapping === element;
             });
             console.debug("Affected (filtered) code elems", codeElems);
             codeElems.each(function () {

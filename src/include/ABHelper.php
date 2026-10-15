@@ -349,7 +349,7 @@ class ABHelper {
 
         self::backupLog("Backup {$container['Name']} - Container Volumeinfo: " . print_r($container['Volumes'], true), self::LOGLEVEL_DEBUG);
 
-        $volumes = self::getContainerVolumes($container);
+        $volumes = self::getMappedContainerVolumes($container);
 
         $containerSettings = $abSettings->getContainerSpecificSettings($container['Name']);
 
@@ -523,6 +523,50 @@ class ABHelper {
      */
     public static function abortRequested() {
         return file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
+    }
+
+    /**
+     * Helper to get mapped container volumes, applying path mappings if configured
+     * @param $container
+     * @param $skipExclusionCheck
+     * @return array
+     */
+    public static function getMappedContainerVolumes($container, $skipExclusionCheck = false) {
+        global $abSettings;
+
+        $volumes = self::getContainerVolumes($container, $skipExclusionCheck);
+
+        // Apply path mappings if configured
+        if (!empty($abSettings->volumePathMappings)) {
+            self::backupLog("Applying volume path mappings for {$container['Name']}", self::LOGLEVEL_DEBUG);
+
+            foreach ($volumes as $index => $volume) {
+                $originalVolume = $volume;
+
+                // Try each mapping - only the first match is applied
+                foreach ($abSettings->volumePathMappings as $mapping) {
+                    $from = $mapping['from'];
+                    $to = $mapping['to'];
+
+                    // Check if this volume starts with the 'from' path
+                    if (str_starts_with($volume, $from . '/') || $volume === $from) {
+                        // Replace the prefix
+                        if ($volume === $from) {
+                            $volume = $to;
+                        } else {
+                            $volume = $to . substr($volume, strlen($from));
+                        }
+
+                        self::backupLog("Mapped volume path: '$originalVolume' => '$volume'", self::LOGLEVEL_DEBUG);
+                        break; // Apply only the first matching mapping
+                    }
+                }
+
+                $volumes[$index] = $volume;
+            }
+        }
+
+        return $volumes;
     }
 
     /**
