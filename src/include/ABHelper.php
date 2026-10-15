@@ -270,14 +270,14 @@ class ABHelper {
     /**
      * Starts a container
      * @param $container array
-     * @return void
+     * @return bool false only when it did not start after the retries
      */
     public static function startContainer($container) {
         global $dockerClient;
 
         if (in_array($container['Name'], self::$skipStartContainers)) {
             self::backupLog("Not starting " . $container['Name'] . ": this backup did not stop it.");
-            return;
+            return true;
         }
 
         $dockerContainerStarted = false;
@@ -319,7 +319,7 @@ class ABHelper {
 
                 if (str_contains($dockerStartCode, "No such container")) {
                     self::backupLog("Container '" . $container['Name'] . "' has been removed - not starting it.", self::LOGLEVEL_INFO, true, true);
-                    return;
+                    return true;
                 }
 
                 self::backupLog("Container '" . $container['Name'] . "' did not start! - Code: " . $dockerStartCode, self::LOGLEVEL_WARN, true, true);
@@ -348,6 +348,7 @@ class ABHelper {
             // Sleep 2 seconds in general
             sleep(2);
         }
+        return $dockerContainerStarted;
     }
 
     /**

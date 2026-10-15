@@ -121,6 +121,14 @@ if (!isset($config['restoreItem']['containers'])) {
             }
         }
 
+        // The abort endpoint has no command to kill while the stop runs, so check before tar overwrites live data
+        if (ABHelper::abortRequested()) {
+            if ($wasRunning && !ABHelper::startContainer(['Name' => $name])) {
+                $restoreFailed = true;
+            }
+            goto abort;
+        }
+
         $tarOptions = [
             '-C ' . escapeshellarg($tarDestination),
             '-x',
@@ -147,8 +155,8 @@ if (!isset($config['restoreItem']['containers'])) {
         }
 
         // Started again even after a failed or aborted extract: it was running before the restore
-        if ($wasRunning) {
-            ABHelper::startContainer(['Name' => $name]);
+        if ($wasRunning && !ABHelper::startContainer(['Name' => $name])) {
+            $restoreFailed = true;
         }
 
         if (ABHelper::abortRequested()) {
