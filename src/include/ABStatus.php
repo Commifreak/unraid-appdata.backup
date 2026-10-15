@@ -31,7 +31,8 @@ class ABStatus {
         }
         $here    = realpath(dirname($set));
         $newest  = [];
-        foreach ([$settings->destination, $settings->extraSchedule === 'yes' ? $settings->extraDestination : ''] as $destination) {
+        // A switched-off extra schedule still leaves its sets on disk
+        foreach ([$settings->destination, $settings->extraDestination] as $destination) {
             $real = $destination === '' ? false : realpath($destination); // realpath('') is the working directory
             if ($real === false || $real === $here) {
                 continue;
