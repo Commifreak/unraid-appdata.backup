@@ -44,7 +44,7 @@ jobs:
 
           echo "Created: dist/$filename"
           cat "dist/$filename.sha256"
-          tar -tzf "dist/$filename" | head -30
+          tar -tzf "dist/$filename" > /dev/null
 
       - name: Upload release assets
         shell: bash
