@@ -1,0 +1,56 @@
+name: Build plugin TGZ
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build plugin package
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          set -euo pipefail
+
+          # Tags match the version used by appdata.backup(.beta).plg.
+          if [[ ! "$RELEASE_TAG" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}([a-z][0-9]*)?$ ]]; then
+            echo "::error::Unsupported release tag: $RELEASE_TAG"
+            exit 1
+          fi
+
+          suffix=""
+          if [[ "$IS_PRERELEASE" == "true" || "$RELEASE_TAG" =~ b[0-9]+$ ]]; then
+            suffix=".beta"
+          fi
+
+          filename="appdata.backup${suffix}-${RELEASE_TAG}.tgz"
+          mkdir -p dist
+
+          # Package contents of src/ at archive root, like the old build.sh.
+          tar -C src --exclude='./build.sh' -czf "dist/$filename" .
+          (cd dist && sha256sum "$filename" > "$filename.sha256")
+
+          echo "Created: dist/$filename"
+          cat "dist/$filename.sha256"
+          tar -tzf "dist/$filename" > /dev/null
+
+      - name: Upload release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" dist/*.tgz dist/*.sha256 --clobber
