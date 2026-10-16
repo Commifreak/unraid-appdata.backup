@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2025.09.17b1">
-        <!ENTITY sha256    "f4c40a6912e3e0a2827ad0d0afdd89ab42d314d3488cbdf57031ebabd1448c7e">
+        <!ENTITY version   "2026.10.16b1">
+        <!ENTITY sha256    "312573af1e07008c806436d7519ac11e7c65de85acc6d3a2f80089351611ae48">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,38 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2026.10.16b1
+- ➕ Optional snapshot mode for ZFS and btrfs: Containers can restart after taking the snapshot while the backup continues
+- ➕ Added an extra backup schedule for selected containers, with its own destination, retention and settings
+- ➕ New backups include checksums, which can be checked using the new Verify button on the Restore page
+- ➕ Added a backup summary showing the latest backup, retained sets, next scheduled run and available space
+- ➕ Added warnings for outdated backups and low backup destination space
+- ➕ Restore confirmation now shows the backup's age, destination and whether newer container backups exist in the other backup destination
+- 🩹 Fix flash drive backup on Unraid 7.4, including ZIP validation and error reporting
+- 🩹 Fix non-numeric container autostart delays aborting the backup. Thanks to Shyrka973
+- 🩹 Fix exclusions and source lists not being parsed correctly with LF-only line endings. Thanks to rnkang
+- 🩹 Fix container stop order not always being the reverse of the start order
+- 🩹 Containers which fail to stop are no longer backed up while still running
+- 🩹 Improve handling of slow container stops and unreadable container states
+- 🩹 Fix pre-container scripts returning exit code 2 not skipping backups in stop-all mode
+- 🩹 Fix skipped containers being included when missing from the saved start order
+- 🩹 Fix failed container updates being reported as successful; containers with failed backups are no longer updated
+- 🩹 Fix failed or aborted runs being reported as successful or applying retention
+- 🩹 Improve retention handling to protect successful backups and unrelated folders, while allowing failed sets to age out
+- 🩹 Fix nested volume exclusions and symlink handling for extra files
+- 🩹 Fix settings migration and prevent container settings being lost when Docker returns no containers
+- 🩹 Fix concurrent jobs being able to start at the same time within the same plugin installation
+- 🩹 Improve PHP crash reporting, including notifications and a list of containers left stopped
+- 🩹 Fix shell escaping in notifications and HTML escaping in logs and settings
+- 🩹 State-changing actions now require POST requests with Unraid's CSRF protection; job scripts can only run from the command line
+- 🔧 Restoring to the original folders now stops running containers before extraction and starts them again afterwards
+- 🔧 Restore now checks for abort requests after stopping a container and reports restart failures
+- 🔧 Removed containers are skipped instead of reporting a start error. Thanks to kajusnau
+- 🔧 Improved Settings and Restore page layouts on Unraid 7, folder pickers and start-order lists
+- 🔧 Added numbered backup steps, clearer log messages and click-to-open help for settings
+- 🔧 Job buttons are disabled while another job is running, with an explanation
+- 🔧 Improved wording throughout the plugin. Thanks to kajusnau and GlassedSilver
+
 ###2025.09.17b1
 - 🩹 Fixed wrong behavior from previous fix for [Issue 56](https://github.com/Commifreak/unraid-appdata.backup/issues/56)
 - 🩹 Fix buttons on Unraid 7.2+ (thanks to Squidly271)
