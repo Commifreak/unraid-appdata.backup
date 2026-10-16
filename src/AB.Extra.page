@@ -1,0 +1,8 @@
+Menu="AB.Main:4"
+Title="Extra schedule"
+Tag="icon-clock"
+Cond="(json_decode((string)@file_get_contents('/boot/config/plugins/appdata.backup/config.json'), true)['extraSchedule'] ?? '') === 'yes'"
+---
+<?php
+include('/usr/local/emhttp/plugins/appdata.backup/pages/content/extra.php');
+?>
