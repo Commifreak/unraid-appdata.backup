@@ -62,6 +62,19 @@ class ABHelper {
     }
 
     /**
+     * The folder for a set started at $time in $destination, one second later per name already taken, failed or not.
+     * A clock set back, e.g. at the end of daylight saving time, repeats a set's name, and a run must never write into another run's set.
+     */
+    public static function freeSetFolder($destination, \DateTime $time) {
+        $time = clone $time;
+        do {
+            $folder = rtrim($destination, '/') . '/ab_' . $time->format('Ymd_His');
+            $time->modify('+1 second');
+        } while (file_exists($folder) || file_exists($folder . '-failed'));
+        return $folder;
+    }
+
+    /**
      * Checks, if the Array is online
      * @return bool
      */
