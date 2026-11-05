@@ -956,7 +956,10 @@ class ABHelper {
     public static function updateContainer($name) {
         global $abSettings, $dockerClient;
         self::backupLog("Installing planned update for $name...");
-        exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($name));
+        $imageBefore = $dockerClient->getContainerDetails($name)['Image'] ?? null;
+        $output      = $resultcode = null;
+        exec('/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container ' . escapeshellarg($name) . ' 2>&1', $output, $resultcode);
+        self::backupLog(self::dump("update_container return: $resultcode, output", $output), self::LOGLEVEL_DEBUG);
 
         // update_container removes and recreates the container, so a missing one means the recreate failed.
         $dockerClient->flushCaches();
@@ -964,6 +967,23 @@ class ABHelper {
             self::backupLog("Updating '$name' failed: the container no longer exists!", self::LOGLEVEL_ERR);
             return;
         }
+
+        // update_container exits 0 even when the pull fails and recreates the container from the old image (unraid/webgui#2816)
+        $imageAfter = $dockerClient->getContainerDetails($name)['Image'] ?? null;
+        self::backupLog("Image of '$name' before the update: " . ($imageBefore ?? 'unreadable') . ", after: " . ($imageAfter ?? 'unreadable'), self::LOGLEVEL_DEBUG);
+        if ($resultcode != 0) {
+            self::backupLog("Updating '$name' failed: update_container returned $resultcode!", self::LOGLEVEL_ERR);
+            return;
+        }
+        if ($imageBefore === null || $imageAfter === null) {
+            self::backupLog("Cannot tell whether the update of '$name' worked: its image cannot be read!", self::LOGLEVEL_WARN);
+            return;
+        }
+        if ($imageBefore === $imageAfter) {
+            self::backupLog("Updating '$name' failed: it still runs the old image! Is the registry reachable?", self::LOGLEVEL_ERR);
+            return;
+        }
+        self::backupLog("'$name' updated.");
 
         if ($abSettings->updateLogWanted == 'yes') {
             self::notify("Appdata Backup", "Container '$name' updated!", "Container '$name' was successfully updated during this backup run!");
