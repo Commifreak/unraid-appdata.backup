@@ -63,6 +63,11 @@
     opacity: 0.45;
 }
 
+/* a start order that follows the Docker tab: shown, not draggable */
+.sortable.ab-locked .ab-drag {
+    cursor: default;
+}
+
 .ab-docker-cols > .ab-start-order {
     max-width: 35%;
 }

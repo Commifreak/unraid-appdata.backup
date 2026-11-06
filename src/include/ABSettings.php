@@ -13,7 +13,9 @@ class ABSettings {
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
     public static $unraidAutostartFile = "/var/lib/docker/unraid-autostart";
-    public static $settingsVersion = 3;
+    public static $settingsVersion = 4;
+    /** Docker tab order: written by the Docker tab when containers are dragged, and removed by its reset button */
+    public static $unraidUserPrefsFile = "/boot/config/plugins/dockerMan/userprefs.cfg";
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
@@ -130,6 +132,8 @@ class ABSettings {
     /** '' for the main schedule, 'extra' once forSchedule() made these the extra schedule's settings */
     public string $schedule = '';
     public array $containerSettings = [];
+    /** 'unraid' starts containers in the Docker tab's order; 'custom' in the saved containerOrder list */
+    public string $containerOrderMode = 'unraid';
     public array $containerOrder = [];
     public array $containerGroupOrder = [];
     public string $preRunScript = '';
@@ -173,6 +177,9 @@ class ABSettings {
                                     $newPaths[] = rtrim($path, '/');
                                 }
                                 $this->$key = $newPaths;
+                                break;
+                            case 'containerOrderMode':
+                                $this->$key = $value === 'custom' ? 'custom' : 'unraid';
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
@@ -274,6 +281,18 @@ class ABSettings {
                             }
                             $migrationSuccess = true;
                             break;
+                        case 3:
+                            /**
+                             * The start order now follows the Docker tab by default. A saved list that is not just the
+                             * name order the plugin itself proposed was set by hand: keep it as a custom list.
+                             */
+                            foreach (['containerOrder', 'extraContainerOrder'] as $key) {
+                                if (self::isHandMadeOrder($config[$key] ?? [])) {
+                                    $config['containerOrderMode'] = 'custom';
+                                }
+                            }
+                            $migrationSuccess = true;
+                            break;
                     }
                     if ($migrationSuccess) {
                         exec('logger -t "' . self::$appName . '" Migration was successful!');
@@ -285,6 +304,20 @@ class ABSettings {
                 }
             }
         }
+    }
+
+    /**
+     * Whether a saved start order differs from plain name order, which is the order the settings page showed before anyone dragged
+     * (groups are placed last and left out of the comparison)
+     */
+    public static function isHandMadeOrder($order): bool {
+        if (!is_array($order)) {
+            return false;
+        }
+        $names = array_values(array_filter(array_map('strval', $order), fn($name) => !str_starts_with($name, '__grp__')));
+        $by    = $names;
+        usort($by, 'strnatcasecmp');
+        return $by !== $names;
     }
 
     /**

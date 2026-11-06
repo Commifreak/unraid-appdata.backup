@@ -654,7 +654,17 @@ if (($code ?? 0) != 0) {
         </div>
         <div class="ab-start-order">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
-            <p>This defines the start sequence. Containers are stopped in reverse order.</p>
+            <p>Containers are started in this sequence and stopped in reverse order.</p>
+            <dl>
+                <dt><b>Order from:</b></dt>
+                <dd><select id="containerOrderMode" name="containerOrderMode" data-setting="<?= htmlspecialchars($abSettings->containerOrderMode) ?>">
+                        <option value="unraid">Docker tab order</option>
+                        <option value="custom">Custom list below</option>
+                    </select></dd>
+            </dl>
+            <blockquote class='inline_help'>
+                <p>The order of the Docker tab is the one place where Unraid keeps a start order, so by default the backup follows it: drag containers there to change it. With <b>Custom list below</b> the list on this page is used instead and the Docker tab order is ignored. The list shows the order that applies.</p>
+            </blockquote>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
@@ -679,7 +689,7 @@ HTML;
                 ?>
                 <div class="title"><span class="left"><i
                                 class="fa fa-sort title"></i>Start order for group <?= $group ?></span></div>
-                <p>This defines the start sequence. Containers are stopped in reverse order.<br/><b>All containers inside a
+                <p>Containers are started in this sequence and stopped in reverse order.<br/><b>All containers inside a
                         group will be stopped (by their order), backed up and then started again.</b></p>
                 <input type="hidden" id="containerGroupOrder_<?= $group ?>" name="containerGroupOrder[<?= $group ?>]"/>
                 <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
@@ -879,6 +889,11 @@ HTML;
         });
         $('.ftAttach').attr('placeholder', 'Please click to select');
         $('.sortable').sortable({handle: '.ab-drag'});
+        // The Docker tab order applies unless the list is chosen: show it, but don't let it be dragged
+        const abLockOrder = () => {
+            const locked = $('#containerOrderMode').val() !== 'custom';
+            $('.sortable').sortable('option', 'disabled', locked).toggleClass('ab-locked', locked);
+        };
 
         /**
          * Select correct setting value
@@ -888,6 +903,9 @@ HTML;
             console.debug($(this).attr('name'), $(this).data('setting'));
             $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
         });
+
+        abLockOrder();
+        $('#containerOrderMode').on('change', abLockOrder);
 
         const abSkipped = name => $('select[name="containerSettings[' + name + '][skip]"]').val() === 'yes';
         const abGreyMain = () => abGreyOrder('#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]', abSkipped, 'Not in the backup: Skip? is Yes');

@@ -148,6 +148,7 @@ natsort($alSortedContainers);
 
 ABHelper::backupLog("Selected containers: " . implode(', ', $alSortedContainers));
 
+ABHelper::backupLog("Container order: " . ($abSettings->containerOrderMode === 'custom' ? "the custom list from the settings" : "the Docker tab order, containers stop in reverse"), ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("Sorted Stop : " . implode(", ", array_column($sortedStopContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 ABHelper::backupLog("Sorted Start: " . implode(", ", array_column($sortedStartContainers, 'Name')), ABHelper::LOGLEVEL_DEBUG);
 
