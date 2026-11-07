@@ -63,9 +63,13 @@
     opacity: 0.45;
 }
 
-/* a start order that follows the Docker tab: shown, not draggable */
+/* a start order that follows the Docker tab: shown, not draggable, so no drag handle */
 .sortable.ab-locked .ab-drag {
     cursor: default;
+}
+
+.sortable.ab-locked .ab-drag > .fa-sort {
+    display: none;
 }
 
 .ab-docker-cols > .ab-start-order {
