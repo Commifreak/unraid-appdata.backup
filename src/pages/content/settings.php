@@ -665,10 +665,26 @@ if (($code ?? 0) != 0) {
             <blockquote class='inline_help'>
                 <p>The order of the Docker tab is the one place where Unraid keeps a start order, so by default the backup follows it: drag containers there to change it. With <b>Custom list below</b> the list on this page is used instead and the Docker tab order is ignored. The list shows the order that applies.</p>
             </blockquote>
+            <?php
+            /**
+             * Each list item carries its place in both orders, so switching "Order from" re-sorts the list without
+             * a reload: the custom list comes back as saved, not as the Docker tab order it was shown in.
+             */
+            $abOrderPositions = function (array $containers, array $order, array $group = []) {
+                $pos = [];
+                foreach (['custom', 'unraid'] as $mode) {
+                    foreach (array_values(ABHelper::sortContainers($containers, $order, false, false, $group, $mode)) as $i => $container) {
+                        $pos[($container['isGroup'] ? '__grp__' : '') . $container['Name']][$mode] = $i;
+                    }
+                }
+                return fn($name) => 'data-custom-pos="' . ($pos[$name]['custom'] ?? 0) . '" data-unraid-pos="' . ($pos[$name]['unraid'] ?? 0) . '"';
+            };
+            ?>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
+                $abPos            = $abOrderPositions($allContainers, $abSettings->containerOrder);
                 foreach ($sortedContainers as $container) {
                     $isGroup = $container['isGroup'];
                     $name         = $container['Name'] ?? key($container);
@@ -677,7 +693,7 @@ if (($code ?? 0) != 0) {
                     $imageHtml    = $isGroup ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . $image . '" height="16" />';
                     $members      = htmlspecialchars(json_encode($isGroup ? array_values($abSettings->getContainerGroups()[$name] ?? []) : [$name]), ENT_QUOTES);
                     echo <<<HTML
-<li id="containerOrder_{$internalName}" data-members="$members"><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
+<li id="containerOrder_{$internalName}" data-members="$members" {$abPos($internalName)}><span class="ab-drag"><i class="fa fa-sort"></i> $imageHtml $name</span></li>
 HTML;
 
                 }
@@ -695,11 +711,12 @@ HTML;
                 <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
                     <?php
                     $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
+                    $abPos            = $abOrderPositions($allContainers, $abSettings->containerGroupOrder[$group] ?? [], $members);
                     foreach ($sortedContainers as $container) {
                         $members = htmlspecialchars(json_encode([$container['Name']]), ENT_QUOTES);
                         $image = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
                         echo <<<HTML
-<li id="containerGroupOrder[{$group}]={$container['Name']}" data-members="{$members}"><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
+<li id="containerGroupOrder[{$group}]={$container['Name']}" data-members="{$members}" {$abPos($container['Name'])}><span class="ab-drag"><i class="fa fa-sort"></i> <img src="$image" height="16" /> {$container['Name']}</span></li>
 HTML;
 
                     }
@@ -890,9 +907,19 @@ HTML;
         $('.ftAttach').attr('placeholder', 'Please click to select');
         $('.sortable').sortable({handle: '.ab-drag'});
         // The Docker tab order applies unless the list is chosen: show it, but don't let it be dragged
-        const abLockOrder = () => {
+        // Switching re-sorts the lists: the Docker tab order, or the custom list with any dragging done since the page loaded
+        const abOrderLists = '#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]';
+        const abLockOrder = (onLoad) => {
             const locked = $('#containerOrderMode').val() !== 'custom';
-            $('.sortable').sortable('option', 'disabled', locked).toggleClass('ab-locked', locked);
+            $(abOrderLists).each(function () {
+                const list = $(this);
+                if (locked && !onLoad && !list.hasClass('ab-locked')) {
+                    list.children('li').each(function (i) { $(this).attr('data-custom-pos', i); }); // keep what was dragged
+                }
+                const key = locked ? 'data-unraid-pos' : 'data-custom-pos';
+                list.append(list.children('li').get().sort((a, b) => a.getAttribute(key) - b.getAttribute(key)));
+            });
+            $(abOrderLists).sortable('option', 'disabled', locked).toggleClass('ab-locked', locked);
         };
 
         /**
@@ -904,8 +931,8 @@ HTML;
             $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
         });
 
-        abLockOrder();
-        $('#containerOrderMode').on('change', abLockOrder);
+        abLockOrder(true);
+        $('#containerOrderMode').on('change', () => abLockOrder(false));
 
         const abSkipped = name => $('select[name="containerSettings[' + name + '][skip]"]').val() === 'yes';
         const abGreyMain = () => abGreyOrder('#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]', abSkipped, 'Not in the backup: Skip? is Yes');

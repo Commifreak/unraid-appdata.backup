@@ -376,9 +376,10 @@ class ABHelper {
      * @param $containers array DockerClient container array
      * @param $order array order array; ignored unless the saved setting is a custom list, otherwise the Docker tab order applies
      * @param $reverse bool return the start order reversed (containers missing from $order come last when starting, first when stopping)
+     * @param $mode string|null 'custom' or 'unraid' to sort as that mode would; null follows the saved setting
      * @return array with name as key and DockerClient info-array as value
      */
-    public static function sortContainers($containers, $order, $reverse = false, $removeSkipped = true, array $group = []) {
+    public static function sortContainers($containers, $order, $reverse = false, $removeSkipped = true, array $group = [], ?string $mode = null) {
         global $abSettings;
 
         // Add isGroup default to false
@@ -387,7 +388,7 @@ class ABHelper {
         }
 
         $_containers = array_column($containers, null, 'Name');
-        $useUnraid   = ($abSettings->containerOrderMode ?? 'unraid') !== 'custom';
+        $useUnraid   = ($mode ?? $abSettings->containerOrderMode ?? 'unraid') !== 'custom';
         $unraid      = $useUnraid ? self::unraidOrder(array_keys($_containers)) : [];
         $memberGroup = [];
         if ($group) {

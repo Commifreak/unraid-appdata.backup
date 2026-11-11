@@ -283,11 +283,18 @@ class ABSettings {
                             break;
                         case 3:
                             /**
-                             * The start order now follows the Docker tab by default. A saved list that is not just the
-                             * name order the plugin itself proposed was set by hand: keep it as a custom list.
+                             * The start order now follows the Docker tab by default. Any saved list that is not what the
+                             * page showed before anyone dragged (see isHandMadeOrder) keeps the custom list: the main and
+                             * extra lists, and each group's own list. Containers added later were appended to the saved
+                             * list, so most installs that have run for a while stay on the custom list even if nobody
+                             * dragged; that keeps their order unchanged, and the Docker tab order is one choice away.
                              */
-                            foreach (['containerOrder', 'extraContainerOrder'] as $key) {
-                                if (self::isHandMadeOrder($config[$key] ?? [])) {
+                            $lists = [$config['containerOrder'] ?? [], $config['extraContainerOrder'] ?? []];
+                            foreach ((array)($config['containerGroupOrder'] ?? []) as $groupOrder) {
+                                $lists[] = $groupOrder;
+                            }
+                            foreach ($lists as $list) {
+                                if (self::isHandMadeOrder($list)) {
                                     $config['containerOrderMode'] = 'custom';
                                 }
                             }
@@ -307,15 +314,27 @@ class ABSettings {
     }
 
     /**
-     * Whether a saved start order differs from plain name order, which is the order the settings page showed before anyone dragged
-     * (groups are placed last and left out of the comparison)
+     * Whether a saved start order differs from what the settings page showed before anyone dragged: containers in name
+     * order, then the groups. A container after a group, or containers out of name order, means the list was changed.
+     * The order of the groups among themselves is not judged: the page listed them in the order of the container settings.
      */
     public static function isHandMadeOrder($order): bool {
         if (!is_array($order)) {
             return false;
         }
-        $names = array_values(array_filter(array_map('strval', $order), fn($name) => !str_starts_with($name, '__grp__')));
-        $by    = $names;
+        $names     = [];
+        $seenGroup = false;
+        foreach (array_map('strval', $order) as $name) {
+            if (str_starts_with($name, '__grp__')) {
+                $seenGroup = true;
+                continue;
+            }
+            if ($seenGroup) {
+                return true;
+            }
+            $names[] = $name;
+        }
+        $by = $names;
         usort($by, 'strnatcasecmp');
         return $by !== $names;
     }
@@ -339,6 +358,15 @@ class ABSettings {
                 // No container panels were drawn (Docker down?): keep the saved ones instead of wiping them
                 $post = array_intersect_key($saved, array_flip(['containerSettings', 'containerOrder', 'containerGroupOrder'])) + $post;
             }
+            if (($post['containerOrderMode'] ?? 'unraid') !== 'custom' && is_array($saved)) {
+                // The lists were shown in the Docker tab order and could not be dragged: keep the custom lists as saved
+                foreach (['containerOrder', 'containerGroupOrder'] as $key) {
+                    unset($post[$key]);
+                    if (isset($saved[$key])) {
+                        $post[$key] = $saved[$key];
+                    }
+                }
+            }
             self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
             return true;
         }
@@ -352,13 +380,17 @@ class ABSettings {
         $fields['extraContainerSettings'] = self::ownExtraValues((array)($post['extraContainerSettings'] ?? []));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
+        $keep = ($saved['containerOrderMode'] ?? 'unraid') !== 'custom'
+            ? ['extraContainerOrder'] // shown in the Docker tab order, not draggable: keep the custom list as saved
+            : [];
         if (!isset($post['extraContainers'])) {
             // No container rows were drawn (Docker down?); every drawn row posts Include?, so keep the saved choices
-            foreach (['extraContainers', 'extraContainerOrder', 'extraContainerSettings'] as $key) {
-                unset($fields[$key]);
-                if (isset($saved[$key])) {
-                    $fields[$key] = $saved[$key];
-                }
+            $keep = ['extraContainers', 'extraContainerOrder', 'extraContainerSettings'];
+        }
+        foreach ($keep as $key) {
+            unset($fields[$key]);
+            if (isset($saved[$key])) {
+                $fields[$key] = $saved[$key];
             }
         }
         self::store(array_diff_key($saved, $extra) + $fields);
