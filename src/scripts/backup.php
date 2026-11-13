@@ -37,6 +37,7 @@ if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
  * Helper for later renaming of the backup folder to suffix -failed
  */
 $backupStarted = new DateTime(); // after claimRun(): a scheduled run's wait is not part of its duration
+$setCreated    = false; // only a set folder this run made may get its checksums, logs, -failed rename and permissions
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 $unraidVersion           = parse_ini_file('/etc/unraid-version');
@@ -90,7 +91,8 @@ if (empty($abSettings->destination)) {
 ABSteps::plan($abSettings);
 ABSteps::start('Preparing');
 
-$abDestination = rtrim($abSettings->destination, '/') . '/ab_' . date("Ymd_His");
+$setTime       = new DateTime();
+$abDestination = ABHelper::freeSetFolder($abSettings->destination, $setTime);
 
 ABHelper::handlePrePostScript($abSettings->preRunScript, 'pre-run', $abDestination);
 
@@ -98,6 +100,8 @@ if (!ABHelper::destinationUsable($abSettings->destination)) {
     ABHelper::backupLog("Destination is unavailable or not writeable! Did you create the destination folder?", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
+
+$abDestination = ABHelper::freeSetFolder($abSettings->destination, $setTime); // again: the pre-run script may have just mounted the destination
 
 ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSources));
 
@@ -107,10 +111,15 @@ ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSour
  */
 ABHelper::backupLog("Backing up to: " . $abDestination);
 
+if (basename($abDestination) !== 'ab_' . $setTime->format('Ymd_His')) {
+    ABHelper::backupLog("A set named ab_" . $setTime->format('Ymd_His') . " already exists (was the clock set back, e.g. at the end of daylight saving time?), so this set is named " . basename($abDestination) . ".", ABHelper::LOGLEVEL_WARN);
+}
+
 if (!mkdir($abDestination)) {
     ABHelper::backupLog("Cannot create destination folder!", ABHelper::LOGLEVEL_ERR);
     goto end;
 }
+$setCreated = true;
 
 if (ABHelper::abortRequested()) {
     goto abort;
@@ -329,7 +338,7 @@ if (!empty($abSettings->includeFiles)) {
 
 end:
 
-if (empty($abDestination) || !is_dir($abDestination)) {
+if (!$setCreated || !is_dir($abDestination)) {
     ABHelper::$errorOccured = true; // an early exit made no backup set, so nothing below may treat the run as clean
 } elseif (($setFiles = glob(ABHelper::globQuote($abDestination) . '/*')) === false) {
     ABHelper::backupLog("Cannot list $abDestination, so it cannot be flushed to disk!", ABHelper::LOGLEVEL_ERR);
@@ -426,7 +435,7 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
     ABHelper::notify("Appdata Backup", "Backup done [$backupDuration]!", "The backup was successful and took $backupDuration!");
 }
 
-if (!empty($abDestination) && is_dir($abDestination)) {
+if ($setCreated && is_dir($abDestination)) {
     copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if (ABHelper::$errorOccured) {
