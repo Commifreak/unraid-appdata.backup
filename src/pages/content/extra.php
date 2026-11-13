@@ -178,7 +178,11 @@ foreach ($extraAll as $container) {
     </div>
     <div class="ab-start-order">
         <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
+        <?php if ($abSettings->containerOrderMode === 'custom'): ?>
         <p>The extra schedule's own start sequence; containers are stopped in reverse order. A group keeps its order from the Settings tab.</p>
+<?php else: ?>
+        <p>Containers follow the Docker tab order and are stopped in reverse order. To use a list of your own, choose <b>Custom list</b> for the order on the Settings tab.</p>
+<?php endif; ?>
         <input type="hidden" id="extraContainerOrder" name="extraContainerOrder"/>
         <ul class="sortable" id="extraOrderSortable">
 <?php foreach (ABHelper::sortContainers($extraAll, $abSettings->extraContainerOrder ?: $abSettings->containerOrder, false, false) as $container): ?>
@@ -287,6 +291,9 @@ foreach ($extraAll as $container) {
         const abExcluded = name => $('select[name="extraContainers[' + name + ']"]').val() !== 'yes';
         const abGreyExtra = () => abGreyOrder('#extraOrderSortable', abExcluded, 'Not in the extra schedule: Include? is No'); // settings.php
         abGreyExtra();
+        if (<?= $abSettings->containerOrderMode === 'custom' ? 'false' : 'true' ?>) { // the Docker tab order applies: shown, not draggable
+            $('#extraOrderSortable').sortable({handle: '.ab-drag', disabled: true}).addClass('ab-locked'); // (re)initialising is safe whichever page script ran first
+        }
         $(document).on('change', 'select[name^="extraContainers["]', abGreyExtra);
         $(document).on('change', 'select[id^="extra_"][id$="_excludeOwn"]', function () {
             abExtraExcludeOwn(this);
