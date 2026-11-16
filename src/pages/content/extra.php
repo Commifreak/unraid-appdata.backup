@@ -179,9 +179,9 @@ foreach ($extraAll as $container) {
     <div class="ab-start-order">
         <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
         <?php if ($abSettings->containerOrderMode === 'custom'): ?>
-        <p>The extra schedule's own start sequence; containers are stopped in reverse order. A group keeps its order from the Settings tab.</p>
+        <p>The extra schedule's own start sequence; containers are stopped in reverse order. When containers are backed up one at a time, each is stopped and started again in turn, from the bottom of the list up. A group keeps its order from the Settings tab.</p>
 <?php else: ?>
-        <p>Containers follow the Docker tab order and are stopped in reverse order. To use a list of your own, choose <b>Custom list</b> for the order on the Settings tab.</p>
+        <p>Containers follow the Docker tab order and are stopped in reverse order. When containers are backed up one at a time, each is stopped and started again in turn, from the bottom of the list up. To use a list of your own, choose <b>Custom list</b> for the order on the Settings tab.</p>
 <?php endif; ?>
         <input type="hidden" id="extraContainerOrder" name="extraContainerOrder"/>
         <ul class="sortable" id="extraOrderSortable">

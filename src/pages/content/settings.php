@@ -654,16 +654,16 @@ if (($code ?? 0) != 0) {
         </div>
         <div class="ab-start-order">
             <div class="title"><span class="left"><i class="fa fa-sort title"></i>Start order</span></div>
-            <p>Containers are started in this sequence and stopped in reverse order.</p>
+            <p>Containers are started in this sequence and stopped in reverse order. When containers are backed up one at a time, each is stopped and started again in turn, from the bottom of the list up.</p>
             <dl>
                 <dt><b>Order from:</b></dt>
                 <dd><select id="containerOrderMode" name="containerOrderMode" data-setting="<?= htmlspecialchars($abSettings->containerOrderMode) ?>">
-                        <option value="unraid">Docker tab order</option>
                         <option value="custom">Custom list below</option>
+                        <option value="unraid">Docker tab order</option>
                     </select></dd>
             </dl>
             <blockquote class='inline_help'>
-                <p>The order of the Docker tab is the one place where Unraid keeps a start order, so by default the backup follows it: drag containers there to change it. With <b>Custom list below</b> the list on this page is used instead and the Docker tab order is ignored. The list shows the order that applies.</p>
+                <p>By default the backup uses the list below: drag containers in it to change the order. With <b>Docker tab order</b> it follows the order of the Docker tab instead, so drag containers there; the list here is kept but not used. The list shows the order that applies.</p>
             </blockquote>
             <?php
             /**
@@ -906,11 +906,11 @@ HTML;
         });
         $('.ftAttach').attr('placeholder', 'Please click to select');
         $('.sortable').sortable({handle: '.ab-drag'});
-        // The Docker tab order applies unless the list is chosen: show it, but don't let it be dragged
+        // While the Docker tab order is chosen the lists show it but can't be dragged
         // Switching re-sorts the lists: the Docker tab order, or the custom list with any dragging done since the page loaded
         const abOrderLists = '#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]';
         const abLockOrder = (onLoad) => {
-            const locked = $('#containerOrderMode').val() !== 'custom';
+            const locked = $('#containerOrderMode').val() === 'unraid';
             $(abOrderLists).each(function () {
                 const list = $(this);
                 if (locked && !onLoad && !list.hasClass('ab-locked')) {

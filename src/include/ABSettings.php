@@ -13,7 +13,7 @@ class ABSettings {
     public static $pluginDir = '/boot/config/plugins/appdata.backup';
     public static $settingsFile = 'config.json';
     public static $unraidAutostartFile = "/var/lib/docker/unraid-autostart";
-    public static $settingsVersion = 4;
+    public static $settingsVersion = 3;
     /** Docker tab order: written by the Docker tab when containers are dragged, and removed by its reset button */
     public static $unraidUserPrefsFile = "/boot/config/plugins/dockerMan/userprefs.cfg";
     public static $cronFile = 'appdata_backup.cron';
@@ -132,8 +132,8 @@ class ABSettings {
     /** '' for the main schedule, 'extra' once forSchedule() made these the extra schedule's settings */
     public string $schedule = '';
     public array $containerSettings = [];
-    /** 'unraid' starts containers in the Docker tab's order; 'custom' in the saved containerOrder list */
-    public string $containerOrderMode = 'unraid';
+    /** 'custom' (also any value but 'unraid') starts containers in the saved containerOrder list; 'unraid' in the Docker tab's order */
+    public string $containerOrderMode = 'custom';
     public array $containerOrder = [];
     public array $containerGroupOrder = [];
     public string $preRunScript = '';
@@ -179,7 +179,7 @@ class ABSettings {
                                 $this->$key = $newPaths;
                                 break;
                             case 'containerOrderMode':
-                                $this->$key = $value === 'custom' ? 'custom' : 'unraid';
+                                $this->$key = $value === 'unraid' ? 'unraid' : 'custom';
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
@@ -281,25 +281,6 @@ class ABSettings {
                             }
                             $migrationSuccess = true;
                             break;
-                        case 3:
-                            /**
-                             * The start order now follows the Docker tab by default. Any saved list that is not what the
-                             * page showed before anyone dragged (see isHandMadeOrder) keeps the custom list: the main and
-                             * extra lists, and each group's own list. Containers added later were appended to the saved
-                             * list, so most installs that have run for a while stay on the custom list even if nobody
-                             * dragged; that keeps their order unchanged, and the Docker tab order is one choice away.
-                             */
-                            $lists = [$config['containerOrder'] ?? [], $config['extraContainerOrder'] ?? []];
-                            foreach ((array)($config['containerGroupOrder'] ?? []) as $groupOrder) {
-                                $lists[] = $groupOrder;
-                            }
-                            foreach ($lists as $list) {
-                                if (self::isHandMadeOrder($list)) {
-                                    $config['containerOrderMode'] = 'custom';
-                                }
-                            }
-                            $migrationSuccess = true;
-                            break;
                     }
                     if ($migrationSuccess) {
                         exec('logger -t "' . self::$appName . '" Migration was successful!');
@@ -311,32 +292,6 @@ class ABSettings {
                 }
             }
         }
-    }
-
-    /**
-     * Whether a saved start order differs from what the settings page showed before anyone dragged: containers in name
-     * order, then the groups. A container after a group, or containers out of name order, means the list was changed.
-     * The order of the groups among themselves is not judged: the page listed them in the order of the container settings.
-     */
-    public static function isHandMadeOrder($order): bool {
-        if (!is_array($order)) {
-            return false;
-        }
-        $names     = [];
-        $seenGroup = false;
-        foreach (array_map('strval', $order) as $name) {
-            if (str_starts_with($name, '__grp__')) {
-                $seenGroup = true;
-                continue;
-            }
-            if ($seenGroup) {
-                return true;
-            }
-            $names[] = $name;
-        }
-        $by = $names;
-        usort($by, 'strnatcasecmp');
-        return $by !== $names;
     }
 
     /**
@@ -358,7 +313,7 @@ class ABSettings {
                 // No container panels were drawn (Docker down?): keep the saved ones instead of wiping them
                 $post = array_intersect_key($saved, array_flip(['containerSettings', 'containerOrder', 'containerGroupOrder'])) + $post;
             }
-            if (($post['containerOrderMode'] ?? 'unraid') !== 'custom' && is_array($saved)) {
+            if (($post['containerOrderMode'] ?? '') === 'unraid' && is_array($saved)) {
                 // The lists were shown in the Docker tab order and could not be dragged: keep the custom lists as saved
                 foreach (['containerOrder', 'containerGroupOrder'] as $key) {
                     unset($post[$key]);
@@ -380,7 +335,7 @@ class ABSettings {
         $fields['extraContainerSettings'] = self::ownExtraValues((array)($post['extraContainerSettings'] ?? []));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
-        $keep = ($saved['containerOrderMode'] ?? 'unraid') !== 'custom'
+        $keep = ($saved['containerOrderMode'] ?? '') === 'unraid'
             ? ['extraContainerOrder'] // shown in the Docker tab order, not draggable: keep the custom list as saved
             : [];
         if (!isset($post['extraContainers'])) {
@@ -531,7 +486,7 @@ class ABSettings {
             'Destination' => $run->destination,
             'Retention'   => ($run->deleteBackupsOlderThan === '' ? 'no age limit' : 'older than ' . $run->deleteBackupsOlderThan . ($run->deleteBackupsOlderThan == 1 ? ' day' : ' days')) . ', keep at least ' . ($run->keepMinBackups === '' ? 'none' : $run->keepMinBackups),
             'Containers'  => $this->extraContainers ? implode(', ', $this->extraContainers) : 'none',
-            'Start order' => ($this->extraContainerOrder ? 'own' : 'Settings tab'),
+            'Start order' => $this->containerOrderMode === 'unraid' ? 'Docker tab' : ($this->extraContainerOrder ? 'own' : 'Settings tab'),
         ];
         foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {
             $value                     = (string)$run->$mainKey;
