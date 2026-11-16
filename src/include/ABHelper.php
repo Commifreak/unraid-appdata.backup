@@ -1105,6 +1105,9 @@ class ABHelper {
                 }
             }
         }
+        foreach (array_diff_key(self::$stoppedByRun, $toStart) as $name => $_) {
+            $toStart[$name] = ['Name' => $name, 'isGroup' => false]; // not in the start list: started last rather than left down
+        }
         self::setCurrentContainerName(null);
 
         if (!$toStart) {
@@ -1268,7 +1271,9 @@ class ABHelper {
                     if ($container['isGroup']) {
                         $groupContainers = self::resolveContainer($container);
                         if (!empty($groupContainers)) {
-                            self::doBackupMethod('stopAll', $groupContainers);
+                            if (!self::doBackupMethod('stopAll', $groupContainers)) {
+                                return false;
+                            }
                             self::setCurrentContainerName($container, true);
                         }
                         continue;

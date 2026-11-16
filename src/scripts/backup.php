@@ -440,6 +440,7 @@ ABSteps::start('Finishing');
 ABSnapshot::destroyAll(); // an aborted run can still hold snapshots
 if (ABHelper::abortRequested()) {
     ABHelper::$errorOccured = true;
+    @unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd); // no command of this run is left: a second Abort must not kill a reused PID
     ABHelper::startAfterAbort();
 }
 
