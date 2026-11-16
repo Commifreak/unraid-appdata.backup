@@ -1092,7 +1092,7 @@ class ABHelper {
         return true;
     }
 
-    /** Ends an aborted run: starts every container it stopped and did not start again, in start order; the abort request cannot cut this short */
+    /** Ends an aborted run: starts every container it stopped and did not start again, in start order (any missing from it last); the abort request cannot cut this short */
     public static function startAfterAbort() {
         global $sortedStartContainers;
 
