@@ -1146,6 +1146,9 @@ class ABHelper {
                 foreach ($backupOrder as $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
+                        if (self::abortRequested()) { // before each stop: a skipped or failed stop below continues without a check
+                            return false;
+                        }
                         self::setCurrentContainerName($container);
                         ABSteps::detail($container['Name']);
                         $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
@@ -1164,10 +1167,6 @@ class ABHelper {
                         $queued++;
                         if ($abSettings->snapshotMode == 'yes') {
                             $plans[$container['Name']] = self::backupPlan($container);
-                        }
-
-                        if (self::abortRequested()) {
-                            return false;
                         }
                     }
                     self::setCurrentContainerName($_container, true);
@@ -1259,13 +1258,12 @@ class ABHelper {
                     ABSteps::start('Backing up containers');
                 }
 
-                if (self::abortRequested()) {
-                    return false;
-                }
-
                 $list = $containerListOverride ?: $sortedStopContainers;
                 $done = 0;
                 foreach ($list as $container) {
+                    if (self::abortRequested()) { // before each container: a skipped or failed stop below continues without a check
+                        return false;
+                    }
                     ABSteps::detail($container['Name'] . ', ' . ++$done . ' of ' . count($list));
 
                     if ($container['isGroup']) {
