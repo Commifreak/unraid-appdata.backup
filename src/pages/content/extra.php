@@ -127,7 +127,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 </blockquote>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Backup options</span></div>
-<?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], $abSettings->backupMethod, 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab.') ?>
+<?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], $abSettings->containerBackupMethod(), 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab. While that is <b>Flash only</b>, <b>Same as Settings tab</b> means <b>For each container</b>.') ?>
 <?= $sameAs('extraSnapshotMode', 'Use snapshots', ['no' => 'No', 'yes' => 'Yes, on ZFS and btrfs'], $abSettings->snapshotMode, 'Snapshots for this schedule; see <b>Use snapshots</b> on the Settings tab.') ?>
 <?= $sameAs('extraCompression', 'Use Compression?', ['no' => 'No', 'yes' => 'Yes, normal', 'yesMulticore' => 'Yes, multicore'], $abSettings->compression, 'Compression for this schedule\'s archives.') ?>
 <div id="extraCompressionCpuLimit_dl"><?= $sameAs('extraCompressionCpuLimit', 'How many cores should be used?', $cores, $abSettings->compressionCpuLimit, 'Only used with <b>Yes, multicore</b>.') ?></div>

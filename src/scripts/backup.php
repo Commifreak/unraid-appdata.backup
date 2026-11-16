@@ -103,7 +103,9 @@ if (!ABHelper::destinationUsable($abSettings->destination)) {
 
 $abDestination = ABHelper::freeSetFolder($abSettings->destination, $setTime); // again: the pre-run script may have just mounted the destination
 
-ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSources));
+if (!$abSettings->flashOnly()) {
+    ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSources));
+}
 
 /**
  * At this point, we have something to work with.
@@ -121,10 +123,21 @@ if (!mkdir($abDestination)) {
 }
 $setCreated = true;
 
+// Retention tells the two types of set apart by this marker (ABSettings::flashOnlySet): without it, it would count this set wrongly
+if ($abSettings->flashOnly() && @file_put_contents($abDestination . '/' . ABSettings::FLASH_ONLY_MARKER, '') === false) {
+    ABHelper::backupLog("Cannot mark the new set as Flash only, so retention could not tell it apart: stopping", ABHelper::LOGLEVEL_ERR);
+    ABHelper::$errorOccured = true;
+    goto end;
+}
+
 if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+if ($abSettings->flashOnly()) {
+    ABHelper::backupLog("Backup type is Flash only: no container is stopped or backed up");
+    goto continuationForAll;
+}
 
 $dockerClient     = new DockerClient();
 $allContainers    = $dockerClient->getDockerContainers();
@@ -228,7 +241,7 @@ if (ABHelper::abortRequested()) {
 /**
  * FlashBackup
  */
-if ($abSettings->flashBackup == 'yes') {
+if ($abSettings->backsUpFlash()) {
     ABSteps::start('Backing up the flash drive');
     if (!ABHelper::backupFlash($abDestination)) {
         ABHelper::$errorOccured = true;
@@ -239,7 +252,7 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
-if ($abSettings->backupVMMeta == 'yes') {
+if ($abSettings->backsUpVMMeta()) {
     ABSteps::start('Backing up VM meta');
 
     if (!file_exists(ABSettings::$qemuFolder)) {
@@ -262,7 +275,7 @@ if (ABHelper::abortRequested()) {
 }
 
 
-if (!empty($abSettings->includeFiles)) {
+if ($abSettings->backsUpExtraFiles()) {
     ABSteps::start('Backing up extra files');
     ABHelper::backupLog(ABHelper::dump('Include files', $abSettings->includeFiles), ABHelper::LOGLEVEL_DEBUG);
     $extrasChecked = [];
@@ -371,6 +384,12 @@ if (ABHelper::$errorOccured) {
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
         $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem)) && !in_array(realpath($backupItem), $abDestinations, true)));
+        // Flash only sets (marked when created) and the others keep and delete only their own type, so switching type never deletes the other's
+        $otherKind       = array_filter($curBackupsState, fn($backupItem) => $backupItem !== $abDestination && ABSettings::flashOnlySet($backupItem) !== $abSettings->flashOnly());
+        $curBackupsState = array_values(array_diff($curBackupsState, $otherKind));
+        if ($otherKind) {
+            ABHelper::backupLog("Retention leaves " . count($otherKind) . " set(s) of the other Backup type here alone: it only counts and deletes this type's sets");
+        }
 
         // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));

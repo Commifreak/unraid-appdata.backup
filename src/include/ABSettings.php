@@ -55,7 +55,11 @@ class ABSettings {
     public static $externalCmdPidCapture = '';
 
 
-    public string|null $backupMethod = 'oneAfterTheOther';
+    /** The backup type a fresh install gets, and the one a schedule copying a Flash only Settings tab backs its containers up with */
+    const DEFAULT_BACKUP_METHOD = 'oneAfterTheOther';
+
+    /** 'stopAll', 'oneAfterTheOther', or 'flashOnly' (no container is stopped or backed up, see flashOnly()) */
+    public string|null $backupMethod = self::DEFAULT_BACKUP_METHOD;
     public string $snapshotMode = 'no';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
@@ -398,6 +402,39 @@ class ABSettings {
         return $groups;
     }
 
+    /** Backup type Flash only: the run backs up the flash drive and nothing else, and stops no container */
+    public function flashOnly(): bool {
+        return $this->backupMethod === 'flashOnly';
+    }
+
+    /** The file a Flash only run puts into its set when it creates it (backup.php), from the type that run loaded */
+    const FLASH_ONLY_MARKER = '.flash-only';
+
+    /** Whether a set was made by a Flash only run: its marker, written at the start, so a Settings save during the run cannot relabel it */
+    public static function flashOnlySet(string $set): bool {
+        return file_exists("$set/" . self::FLASH_ONLY_MARKER);
+    }
+
+    /** The type a schedule copying this one backs its containers up with: Flash only has none, so it gives the default */
+    public function containerBackupMethod(): string {
+        return $this->flashOnly() ? self::DEFAULT_BACKUP_METHOD : (string)$this->backupMethod;
+    }
+
+    /** Whether the run backs up the flash drive: always with Flash only */
+    public function backsUpFlash(): bool {
+        return $this->flashOnly() || $this->flashBackup === 'yes';
+    }
+
+    /** Whether the run backs up VM meta: never with Flash only */
+    public function backsUpVMMeta(): bool {
+        return !$this->flashOnly() && $this->backupVMMeta === 'yes';
+    }
+
+    /** Whether the run backs up extra files: never with Flash only */
+    public function backsUpExtraFiles(): bool {
+        return !$this->flashOnly() && !empty($this->includeFiles);
+    }
+
     /** These settings as $schedule runs them: 'extra' swaps in its frequency, destination, retention, start order, per-container and run-wide settings */
     public function forSchedule($schedule) {
         if ($schedule !== 'extra') {
@@ -432,6 +469,9 @@ class ABSettings {
             if ($this->$extraKey !== '') {
                 $settings->$mainKey = $this->$extraKey;
             }
+        }
+        if ($this->extraBackupMethod === '') {
+            $settings->backupMethod = $this->containerBackupMethod(); // the extra schedule backs up containers whatever the Settings tab's type
         }
         foreach (self::EXTRA_OWN_YES as $mainKey => $extraKey) {
             $settings->$mainKey = $this->$extraKey === 'yes' ? 'yes' : 'no';
@@ -471,6 +511,9 @@ class ABSettings {
         foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {
             $value                     = (string)$run->$mainKey;
             $settings[$labels[$mainKey]] = ($names[$mainKey][$value] ?? ['yes' => 'Yes', 'no' => 'No'][$value] ?? $value) . $source($this->$extraKey !== '');
+        }
+        if ($this->flashOnly() && $this->extraBackupMethod === '') {
+            $settings['Backup type'] = ($names['backupMethod'][$run->backupMethod] ?? $run->backupMethod) . ' (default: the Settings tab is Flash only)';
         }
         foreach (self::EXTRA_OWN_YES as $mainKey => $extraKey) {
             $settings[$labels[$mainKey]] = ($run->$mainKey === 'yes' ? 'Yes' : 'No') . ' (own)';

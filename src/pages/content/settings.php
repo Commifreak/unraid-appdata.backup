@@ -270,13 +270,14 @@ if (($code ?? 0) != 0) {
         <dd><select id="backupMethod" name="backupMethod" data-setting="<?= $abSettings->backupMethod ?>">
                 <option value="stopAll">Stop all containers, backup, start all</option>
                 <option value="oneAfterTheOther">Stop, backup, start for each container</option>
+                <option value="flashOnly">Flash only</option>
             </select></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Without snapshots, <b>Stop all</b> keeps every container down for the whole backup, while <b>For each container</b> stops, backs up and starts them one at a time (a group counts as one), so each is down only for its own backup. Containers that were already stopped stay stopped.</p>
+        <p>Without snapshots, <b>Stop all</b> keeps every container down for the whole backup, while <b>For each container</b> stops, backs up and starts them one at a time (a group counts as one), so each is down only for its own backup. Containers that were already stopped stay stopped. <b>Flash only</b> backs up just the flash drive: no container is stopped or backed up.</p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt><b>Use snapshots</b></dt>
         <dd><select id="snapshotMode" name="snapshotMode" data-setting="<?= $abSettings->snapshotMode ?>">
                 <option value="no">No</option>
@@ -295,7 +296,7 @@ if (($code ?? 0) != 0) {
                    placeholder='Leave empty to disable'/></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set.</p>
+        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set. <b>Flash only</b> sets and the others are counted and deleted separately, so switching <b>Backup type</b> deletes neither.</p>
     </blockquote>
 
     <dl>
@@ -304,10 +305,10 @@ if (($code ?? 0) != 0) {
                    placeholder='Leave empty to disable'/></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>The newest this-many good sets are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
+        <p>The newest this-many good sets of each <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt><b>Appdata source(s)</b> Please read the info in the help block!</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
@@ -351,7 +352,7 @@ if (($code ?? 0) != 0) {
         <p>Each run creates a dated <code>ab_YYYYMMDD_HHMMSS</code> folder here. Pick disks other than the ones your appdata is on, such as a share on the array, so one failure can't take both.</p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt><b>Use Compression?</b></dt>
         <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>"
                     onchange="checkMultiCoreCpuCount();">
@@ -365,7 +366,7 @@ if (($code ?? 0) != 0) {
         <p><b>Yes, normal</b> compresses with gzip on one core. <b>Yes, multicore</b> uses zstd on several cores: much faster, but it can slow other services during the backup.</p>
     </blockquote>
 
-    <div id="compressionCpuLimit_dl">
+    <div id="compressionCpuLimit_dl" data-ab-flash-off>
     <dl>
         <dt><b>How many cores should be used?</b></dt>
         <dd><select id='compressionCpuLimit' name="compressionCpuLimit"
@@ -386,7 +387,7 @@ if (($code ?? 0) != 0) {
     </blockquote>
     </div>
 
-    <dl>
+    <dl data-ab-flash-on>
         <dt><b>Backup the flash drive?</b></dt>
         <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>"
                     onchange="checkFlashBackupCopy();">
@@ -412,7 +413,7 @@ if (($code ?? 0) != 0) {
     </blockquote>
     </div>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt><b>Backup VM meta?</b></dt>
         <dd><select id='backupVMMeta' name="backupVMMeta" data-setting="<?= $abSettings->backupVMMeta ?>">
                 <option value='yes'>Yes</option>
@@ -426,7 +427,7 @@ if (($code ?? 0) != 0) {
 
     <div class="title" onclick="$(this).next().toggle();"><span class="left"><i class="fa fa-cog title"></i>Advanced settings <small>| Some special/dangerous settings - Click to open</small></span>
     </div>
-    <div style="display: none;">
+    <div style="display: none;" data-ab-flash-off>
         <blockquote>These settings are the <b>global defaults</b> for all containers. You can adjust them per container
             if you want.
         </blockquote>
@@ -503,8 +504,8 @@ if (($code ?? 0) != 0) {
             </select>
         </dd>
 
-        <dt><b>Send notification if containers were updated:</b></dt>
-        <dd><select id='updateLogWanted' name="updateLogWanted" data-setting="<?= $abSettings->updateLogWanted ?>">
+        <dt data-ab-flash-off><b>Send notification if containers were updated:</b></dt>
+        <dd data-ab-flash-off><select id='updateLogWanted' name="updateLogWanted" data-setting="<?= $abSettings->updateLogWanted ?>">
                 <option value='no'>No</option>
                 <option value='yes'>Yes</option>
             </select>
@@ -598,12 +599,12 @@ if (($code ?? 0) != 0) {
     </blockquote>
 
 
-    <div class="title"><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
+    <div class="title" data-ab-flash-off><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
     <p><b>General note</b>: This plugin always backs up every unknown (new) container with the default settings. In this
         section you can set settings that deviate from the defaults.</p>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt><b>Update containers after backup?</b></dt>
         <dd><select id='updateContainer' name="defaults[updateContainer]"
                     data-setting="<?= $abSettings->defaults['updateContainer'] ?>">
@@ -616,7 +617,7 @@ if (($code ?? 0) != 0) {
         <p>Default for every container: if an update is available, it's installed right after that container's backup. Each container can override this.</p>
     </blockquote>
 
-    <div class="ab-docker-cols">
+    <div class="ab-docker-cols" data-ab-flash-off>
         <div class="dockerSettings">
             <div class="title"><span class="left"><i class="fa fa-docker title"></i>Per-container settings. <b>Click on container name to open</b></span>
             </div>
@@ -722,7 +723,7 @@ HTML;
                 path</code></p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt>Pre-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="preBackupScript" name="preBackupScript"
                    value="<?= $abSettings->preBackupScript ?>"
@@ -734,7 +735,7 @@ HTML;
                 path</code></p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt>Pre-container-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="preContainerBackupScript" name="preContainerBackupScript"
                    value="<?= $abSettings->preContainerBackupScript ?>"
@@ -747,7 +748,7 @@ HTML;
             <code>container name</code></p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt>Post-container-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="postContainerBackupScript" name="postContainerBackupScript"
                    value="<?= $abSettings->postContainerBackupScript ?>"
@@ -759,7 +760,7 @@ HTML;
             <code>container name</code></p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt>Post-backup script</dt>
         <dd><input style="width: 500px;" type='text' class='ftAttach' id="postBackupScript" name="postBackupScript"
                    value="<?= $abSettings->postBackupScript ?>"
@@ -785,7 +786,7 @@ HTML;
 
     <div class="title"><span class="left"><i class="fa fa-plus-square title"></i>Some extra options</span></div>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt>Include extra files/folders</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea id="includeFiles" name="includeFiles"
@@ -802,7 +803,7 @@ HTML;
         <p>Other files or folders to back up on every run, packed into one <code>extra_files</code> archive in the set. Global exclusions and --ignore-case apply to them too.</p>
     </blockquote>
 
-    <dl>
+    <dl data-ab-flash-off>
         <dt>Global exclusion list</dt>
         <dd>
             <div style="display: table; width: 300px;"><textarea id="globalExclusions" name="globalExclusions"
@@ -955,6 +956,35 @@ HTML;
         console.debug('Final form:', $(this).serialize());
     });
 
+    // Flash only locks the settings its run does not use, and the flash row it always uses; inert, not disabled, so the values are still
+    // saved as they are. An extra schedule copies most of these settings from this tab, so with one on nothing is locked
+    function abFlashOnly() {
+        const on = $('#backupMethod').val() === 'flashOnly' && $('#extraSchedule').val() !== 'yes';
+        checkFlashBackupCopy();
+        $('.ab-flash-why').remove();
+        $('[data-ab-flash-off], [data-ab-flash-on]').each(function () {
+            this.inert = on;
+            $(this).toggleClass('ab-flash-locked', on);
+            // The browser still checks a required field when it is inert, and cannot take the user to it: Save would just do nothing
+            $(this).find('[required], [data-ab-required]').each(function () {
+                if (on && this.required) { this.required = false; this.setAttribute('data-ab-required', ''); }
+                else if (!on && this.hasAttribute('data-ab-required')) { this.required = true; this.removeAttribute('data-ab-required'); }
+            });
+            if (!on || $(this).is('.ab-docker-cols, #compressionCpuLimit_dl')) return; // their section's row already says why
+            const why = $('<span class="ab-flash-why"></span>').text(this.hasAttribute('data-ab-flash-on') ? 'Always backed up with Flash only' : 'Not used with Flash only');
+            if ($(this).is('dl')) $(this).children('dd').first().append(why); // under the control, not between the row and its help
+            else if ($(this).is('.title')) $(this).after(why);
+            else if ($(this).is('dd')) $(this).append(why);
+            else if ($(this).is('div')) $(this).prepend(why);
+            // a marked dt gets none: its dd carries the note
+        });
+    }
+    // Registered after the page's own ready handler, so it reads the select once data-setting has chosen its option
+    $(function () {
+        abFlashOnly();
+        $('#backupMethod, #extraSchedule').on('change', abFlashOnly);
+    });
+
 
     function addSelectionToList(element) {
         $el = $(element).prev().find("input:checked");
@@ -1009,7 +1039,7 @@ HTML;
     }
 
     function checkFlashBackupCopy() {
-        switch ($('#flashBackup').val()) {
+        switch ($('#backupMethod').val() === 'flashOnly' ? 'yes' : $('#flashBackup').val()) { // Flash only always backs it up
             case 'no':
                 $('#flashBackupCopy').val('');
                 $('#flashBackupCopy_dl').fadeOut();
