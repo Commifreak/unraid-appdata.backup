@@ -796,7 +796,7 @@ class ABHelper {
         return true;
     }
 
-    /** Starts a run: takes the run lock, clears the last run's logs and abort request, records this process; false, with a notification, when the lock file cannot be opened or another backup, restore or check holds the lock ($wait: for up to 12 hours) */
+    /** Starts a run: takes the run lock, clears the last run's logs, abort request and command PID, records this process; false, with a notification, when the lock file cannot be opened or another backup, restore or check holds the lock ($wait: for up to 12 hours) */
     public static function claimRun($wait = false) {
         $lockFile = ABSettings::$tempFolder . '/' . ABSettings::$stateFileLock;
         $lock     = @fopen($lockFile, 'ce'); // 'e': commands this run starts must not inherit the lock
@@ -817,6 +817,7 @@ class ABHelper {
         if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
             unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
         }
+        @unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd); // left by an older version or a killed run
         exec("rm -f " . escapeshellarg(ABSettings::$tempFolder) . "/*.log");
         file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
         return true;
