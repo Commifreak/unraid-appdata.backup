@@ -47,6 +47,15 @@ class ABHelper {
     /** Containers this run stopped (an unreadable state counts) and has not started again, as name => true, for reportCrash() */
     private static array $stoppedByRun = [];
 
+    /** Notes a run reports once at its end (reportRunNotes()) instead of once per container, as cause => [container => [item => true]] */
+    private static array $runNotes = [];
+
+    /** What each cause's single end-of-run warning says before its list */
+    const RUN_NOTES = [
+        'exclusionOutside' => 'Exclusions outside every volume of their container exclude nothing; paths compare as text, so /mnt/user/... does not match a volume mapped as /mnt/cache/...',
+        'dockerVolume'     => 'Docker volumes are not folders on the host, so they are not backed up',
+    ];
+
     /**
      * Logs a message to the system log
      * @param $string
@@ -455,8 +464,9 @@ class ABHelper {
             '--exclude ' . escapeshellarg('/usr/local/share/docker/tailscale_container_hook'),
             '--exclude ' . escapeshellarg('.' . ABSnapshot::PREFIX . '*'), // a leftover btrfs snapshot can sit inside a volume, see ABSnapshot::btrfsFolder()
         ];
-        // getContainerVolumes already dropped an excluded volume; tar needs its path only to cut it out of a volume around it
-        $mapped = array_map(fn($volume) => rtrim(explode(':', $volume)[0], '/'), $container['Volumes'] ?? []);
+        // getContainerVolumes already dropped an excluded volume; tar needs its path only to cut it out of a volume around it.
+        // Host folders only: a rootfs mapping ("/" trims to '') would contain every path, a named Docker volume none.
+        $mapped = array_values(array_filter(array_map(fn($volume) => rtrim(explode(':', $volume)[0], '/'), $container['Volumes'] ?? []), fn($path) => str_starts_with($path, '/')));
         if (!empty($containerSettings['exclude'])) {
             self::backupLog("Container got excludes! " . implode(", ", $containerSettings['exclude']), self::LOGLEVEL_DEBUG);
             foreach ($containerSettings['exclude'] as $exclude) {
@@ -466,9 +476,11 @@ class ABHelper {
                         self::backupLog("Exclusion \"$exclude\" is a whole volume of this container, so that volume is left out");
                         continue;
                     }
-                    // tar compares the text, so /mnt/user/... never matches a volume mapped as /mnt/cache/... (and the reverse)
-                    if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !self::isWithinVolumes($exclude, $volumes)) {
-                        self::backupLog("Exclusion \"$exclude\" is outside every volume of this container, so it excludes nothing. Its volumes: " . implode(', ', $volumes), self::LOGLEVEL_WARN);
+                    // tar compares the text, so /mnt/user/... never matches a volume mapped as /mnt/cache/... (and the reverse).
+                    // Checked against every mapped volume: one inside a volume this run leaves out (external, excluded) is moot, not wrong.
+                    if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !self::isWithinVolumes($exclude, $mapped)) {
+                        self::backupLog("Exclusion \"$exclude\" is outside every volume of this container, so it excludes nothing. Its volumes: " . implode(', ', $mapped), self::LOGLEVEL_DEBUG);
+                        self::noteForRun('exclusionOutside', "{$container['Name']} (volumes: " . implode(', ', $mapped) . ')', "\"$exclude\"");
                     }
                     $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                 }
@@ -491,6 +503,24 @@ class ABHelper {
 
     private static function isWithinVolumes($path, array $volumes) {
         return (bool)array_filter($volumes, fn($volume) => str_starts_with($path, rtrim($volume, '/') . '/'));
+    }
+
+    /** Keeps an item of a RUN_NOTES cause for reportRunNotes(); the same item noted again is listed once */
+    private static function noteForRun(string $cause, string $container, string $item) {
+        self::$runNotes[$cause][$container][$item] = true;
+    }
+
+    /** Logs each noted cause as one warning, so a run sends one notification per cause instead of one per container */
+    public static function reportRunNotes() {
+        foreach (self::$runNotes as $cause => $containers) {
+            $list = [];
+            foreach ($containers as $container => $items) {
+                $list[] = "$container: " . implode(', ', array_keys($items));
+            }
+            sleep(1); // Unraid's notify drops a second notification of the same event within the same second
+            self::backupLog(self::RUN_NOTES[$cause] . ' (' . array_sum(array_map('count', $containers)) . '): ' . implode('; ', $list), self::LOGLEVEL_WARN);
+        }
+        self::$runNotes = [];
     }
 
     /**
@@ -827,7 +857,8 @@ class ABHelper {
             }
 
             if (!str_starts_with($hostPath, '/')) {
-                self::backupLog("'$hostPath' is a Docker volume, not a folder on the host, so it is not backed up.", self::LOGLEVEL_WARN);
+                self::backupLog("'$hostPath' is a Docker volume, not a folder on the host, so it is not backed up.", self::LOGLEVEL_DEBUG);
+                self::noteForRun('dockerVolume', $container['Name'], "\"$hostPath\"");
                 continue;
             }
 

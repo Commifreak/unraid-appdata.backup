@@ -423,6 +423,7 @@ if (ABHelper::abortRequested()) {
     ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
 }
 
+ABHelper::reportRunNotes();
 ABHelper::backupLog("DONE! Thanks for using this plugin and have a safe day ;)");
 ABHelper::backupLog("❤️");
 
