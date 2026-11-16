@@ -960,7 +960,8 @@ HTML;
             $(this).toggleClass('ab-flash-locked', on);
             if (!on || $(this).is('.ab-docker-cols, #compressionCpuLimit_dl')) return; // their section's row already says why
             const why = $('<span class="ab-flash-why"></span>').text(this.hasAttribute('data-ab-flash-on') ? 'Always backed up with Flash only' : 'Not used with Flash only');
-            if ($(this).is('dl, .title')) $(this).after(why);
+            if ($(this).is('dl')) $(this).children('dd').first().append(why); // under the control, not between the row and its help
+            else if ($(this).is('.title')) $(this).after(why);
             else if ($(this).is('dd')) $(this).append(why);
             else if ($(this).is('div')) $(this).prepend(why); // a dt's note is its dd's
         });
