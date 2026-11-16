@@ -1159,6 +1159,9 @@ class ABHelper {
                             self::setCurrentContainerName($container, true);
                             continue;
                         }
+                        if (self::abortRequested()) { // Abort clicked while the pre-container script ran
+                            return false;
+                        }
                         if (!self::stopContainer($container)) {
                             $skipped[] = $container['Name'];
                             self::setCurrentContainerName($container, true);
@@ -1283,6 +1286,9 @@ class ABHelper {
                         self::backupLog("preContainer script decided to skip backup.");
                         self::setCurrentContainerName($container, true);
                         continue;
+                    }
+                    if (self::abortRequested()) { // Abort clicked while the pre-container script ran
+                        return false;
                     }
 
                     if (!self::stopContainer($container)) {
