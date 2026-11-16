@@ -125,6 +125,10 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
+if ($abSettings->flashOnly()) {
+    ABHelper::backupLog("Backup type is Flash only: no container is stopped or backed up");
+    goto continuationForAll;
+}
 
 $dockerClient     = new DockerClient();
 $allContainers    = $dockerClient->getDockerContainers();
@@ -228,7 +232,7 @@ if (ABHelper::abortRequested()) {
 /**
  * FlashBackup
  */
-if ($abSettings->flashBackup == 'yes') {
+if ($abSettings->backsUpFlash()) {
     ABSteps::start('Backing up the flash drive');
     if (!ABHelper::backupFlash($abDestination)) {
         ABHelper::$errorOccured = true;
@@ -239,7 +243,7 @@ if (ABHelper::abortRequested()) {
     goto abort;
 }
 
-if ($abSettings->backupVMMeta == 'yes') {
+if ($abSettings->backsUpVMMeta()) {
     ABSteps::start('Backing up VM meta');
 
     if (!file_exists(ABSettings::$qemuFolder)) {
@@ -262,7 +266,7 @@ if (ABHelper::abortRequested()) {
 }
 
 
-if (!empty($abSettings->includeFiles)) {
+if ($abSettings->backsUpExtraFiles()) {
     ABSteps::start('Backing up extra files');
     ABHelper::backupLog(ABHelper::dump('Include files', $abSettings->includeFiles), ABHelper::LOGLEVEL_DEBUG);
     $extrasChecked = [];

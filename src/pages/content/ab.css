@@ -72,6 +72,16 @@
     vertical-align: top;
 }
 
+/* a setting Backup type Flash only does not use (abFlashOnly in settings.php); the note beside it stays readable */
+.ab-flash-locked > :not(.ab-flash-why) {
+    opacity: 0.45;
+}
+
+.ab-flash-why {
+    display: block;
+    font-style: italic;
+}
+
 blockquote.inline_help.ab-box,
 .ab-status,
 .ab-restore-list {
