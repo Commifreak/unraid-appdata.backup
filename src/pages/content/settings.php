@@ -924,6 +924,13 @@ HTML;
 
     });
 
+    // Discard reloads the saved settings: a form reset puts the data-setting selects on their first option, not the saved one
+    $(document).on('reset', '#abSettingsForm, #abExtraForm', function () {
+        $.cookie('top', $(window).scrollTop()); // as Unraid's refresh(top): its page layout scrolls back to about here on load
+        window.location.replace(window.location.pathname + window.location.search);
+        return false;
+    });
+
     $('#abSettingsForm').on('submit', function () {
         console.debug("SUBMIT!");
         let mainValue = $('#containerOrderSortable').sortable('serialize', {
