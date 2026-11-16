@@ -305,7 +305,7 @@ if (($code ?? 0) != 0) {
                    placeholder='Leave empty to disable'/></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>The newest this-many good sets of the same <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
+        <p>The newest this-many good sets of each <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
     </blockquote>
 
     <dl data-ab-flash-off>
