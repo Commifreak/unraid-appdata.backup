@@ -1092,6 +1092,34 @@ class ABHelper {
         return true;
     }
 
+    /** Ends an aborted run: starts every container it stopped and did not start again, in start order; the abort request cannot cut this short */
+    public static function startAfterAbort() {
+        global $sortedStartContainers;
+
+        $toStart = [];
+        foreach ($sortedStartContainers ?? [] as $_container) {
+            $resolvedContainer = self::resolveContainer($_container);
+            foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
+                if (isset(self::$stoppedByRun[$container['Name']])) {
+                    $toStart[$container['Name']] = $container;
+                }
+            }
+        }
+        self::setCurrentContainerName(null);
+
+        if (!$toStart) {
+            self::backupLog("Backup cancelled! No container is left stopped by this run.", self::LOGLEVEL_WARN);
+            return;
+        }
+        self::backupLog("Backup cancelled! Starting the containers this run stopped: " . implode(', ', array_keys($toStart)), self::LOGLEVEL_WARN);
+        foreach ($toStart as $container) {
+            self::setCurrentContainerName($container);
+            ABSteps::detail($container['Name']);
+            self::startContainer($container);
+        }
+        self::setCurrentContainerName(null);
+    }
+
     public static function doBackupMethod($method, $containerListOverride = null) {
         global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination;
 

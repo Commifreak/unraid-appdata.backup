@@ -440,7 +440,7 @@ ABSteps::start('Finishing');
 ABSnapshot::destroyAll(); // an aborted run can still hold snapshots
 if (ABHelper::abortRequested()) {
     ABHelper::$errorOccured = true;
-    ABHelper::backupLog("Backup cancelled! Executing final things. You will be left behind with the current state!", ABHelper::LOGLEVEL_WARN);
+    ABHelper::startAfterAbort();
 }
 
 ABHelper::reportRunNotes();
