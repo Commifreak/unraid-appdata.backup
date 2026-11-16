@@ -123,6 +123,13 @@ if (!mkdir($abDestination)) {
 }
 $setCreated = true;
 
+// Retention tells the two types of set apart by this marker (ABSettings::flashOnlySet): without it, it would count this set wrongly
+if ($abSettings->flashOnly() && @file_put_contents($abDestination . '/' . ABSettings::FLASH_ONLY_MARKER, '') === false) {
+    ABHelper::backupLog("Cannot mark the new set as Flash only, so retention could not tell it apart: stopping", ABHelper::LOGLEVEL_ERR);
+    ABHelper::$errorOccured = true;
+    goto end;
+}
+
 if (ABHelper::abortRequested()) {
     goto abort;
 }
@@ -377,14 +384,11 @@ if (ABHelper::$errorOccured) {
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
         $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem)) && !in_array(realpath($backupItem), $abDestinations, true)));
-        if ($abSettings->schedule !== 'extra') {
-            // Flash only sets and container sets keep and delete only their own kind, so switching type never deletes the other's backups.
-            // Not for the extra schedule: its sets copy the Settings tab's type, but it always backs up containers into its own destination
-            $otherKind       = array_filter($curBackupsState, fn($backupItem) => $backupItem !== $abDestination && ABSettings::flashOnlySet($backupItem) !== $abSettings->flashOnly());
-            $curBackupsState = array_values(array_diff($curBackupsState, $otherKind));
-            if ($otherKind) {
-                ABHelper::backupLog("Retention leaves the " . count($otherKind) . " " . ($abSettings->flashOnly() ? 'container' : 'Flash only') . " set(s) here alone: it only counts and deletes this backup type's sets");
-            }
+        // Flash only sets (marked when created) and the others keep and delete only their own type, so switching type never deletes the other's
+        $otherKind       = array_filter($curBackupsState, fn($backupItem) => $backupItem !== $abDestination && ABSettings::flashOnlySet($backupItem) !== $abSettings->flashOnly());
+        $curBackupsState = array_values(array_diff($curBackupsState, $otherKind));
+        if ($otherKind) {
+            ABHelper::backupLog("Retention leaves " . count($otherKind) . " set(s) of the other Backup type here alone: it only counts and deletes this type's sets");
         }
 
         // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.

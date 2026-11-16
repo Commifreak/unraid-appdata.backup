@@ -407,10 +407,12 @@ class ABSettings {
         return $this->backupMethod === 'flashOnly';
     }
 
-    /** Whether a set was made by a Flash only run, read from the settings copy every run saves into its set; unreadable = not */
+    /** The file a Flash only run puts into its set when it creates it (backup.php), from the type that run loaded */
+    const FLASH_ONLY_MARKER = '.flash-only';
+
+    /** Whether a set was made by a Flash only run: its marker, written at the start, so a Settings save during the run cannot relabel it */
     public static function flashOnlySet(string $set): bool {
-        $config = json_decode((string)@file_get_contents("$set/" . self::$settingsFile), true);
-        return is_array($config) && ($config['backupMethod'] ?? null) === 'flashOnly';
+        return file_exists("$set/" . self::FLASH_ONLY_MARKER);
     }
 
     /** The type a schedule copying this one backs its containers up with: Flash only has none, so it gives the default */

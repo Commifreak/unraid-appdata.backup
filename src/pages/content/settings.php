@@ -296,7 +296,7 @@ if (($code ?? 0) != 0) {
                    placeholder='Leave empty to disable'/></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set.</p>
+        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set. <b>Flash only</b> sets and the others are counted and deleted separately, so switching <b>Backup type</b> deletes neither.</p>
     </blockquote>
 
     <dl>
@@ -305,7 +305,7 @@ if (($code ?? 0) != 0) {
                    placeholder='Leave empty to disable'/></dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>The newest this-many good sets are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
+        <p>The newest this-many good sets of the same <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
     </blockquote>
 
     <dl data-ab-flash-off>
@@ -949,8 +949,8 @@ HTML;
         console.debug('Final form:', $(this).serialize());
     });
 
-    // Flash only greys out what its run does not use; inert, not disabled, so the values are still saved as they are.
-    // An extra schedule copies most of these settings from this tab, so with one on nothing is greyed out
+    // Flash only locks the settings its run does not use, and the flash row it always uses; inert, not disabled, so the values are still
+    // saved as they are. An extra schedule copies most of these settings from this tab, so with one on nothing is locked
     function abFlashOnly() {
         const on = $('#backupMethod').val() === 'flashOnly' && $('#extraSchedule').val() !== 'yes';
         checkFlashBackupCopy();
@@ -958,12 +958,18 @@ HTML;
         $('[data-ab-flash-off], [data-ab-flash-on]').each(function () {
             this.inert = on;
             $(this).toggleClass('ab-flash-locked', on);
+            // The browser still checks a required field when it is inert, and cannot take the user to it: Save would just do nothing
+            $(this).find('[required], [data-ab-required]').each(function () {
+                if (on && this.required) { this.required = false; this.setAttribute('data-ab-required', ''); }
+                else if (!on && this.hasAttribute('data-ab-required')) { this.required = true; this.removeAttribute('data-ab-required'); }
+            });
             if (!on || $(this).is('.ab-docker-cols, #compressionCpuLimit_dl')) return; // their section's row already says why
             const why = $('<span class="ab-flash-why"></span>').text(this.hasAttribute('data-ab-flash-on') ? 'Always backed up with Flash only' : 'Not used with Flash only');
             if ($(this).is('dl')) $(this).children('dd').first().append(why); // under the control, not between the row and its help
             else if ($(this).is('.title')) $(this).after(why);
             else if ($(this).is('dd')) $(this).append(why);
-            else if ($(this).is('div')) $(this).prepend(why); // a dt's note is its dd's
+            else if ($(this).is('div')) $(this).prepend(why);
+            // a marked dt gets none: its dd carries the note
         });
     }
     // Registered after the page's own ready handler, so it reads the select once data-setting has chosen its option
