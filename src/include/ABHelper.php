@@ -47,13 +47,13 @@ class ABHelper {
     /** Containers this run stopped (an unreadable state counts) and has not started again, as name => true, for reportCrash() */
     private static array $stoppedByRun = [];
 
-    /** Notes a run reports once at its end (reportRunNotes()) instead of once per container, as cause => [container => [item => true]] */
+    /** Notes a run reports once at its end (reportRunNotes()) instead of once per container, as cause => [container => ['detail' => string, 'items' => [item => true]]] */
     private static array $runNotes = [];
 
-    /** What each cause's single end-of-run warning says before its list */
+    /** Per cause: the log line's lead, then the short notification's wording for one item and for several */
     const RUN_NOTES = [
-        'exclusionOutside' => 'Exclusions outside every volume of their container exclude nothing; paths compare as text, so /mnt/user/... does not match a volume mapped as /mnt/cache/...',
-        'dockerVolume'     => 'Docker volumes are not folders on the host, so they are not backed up',
+        'exclusionOutside' => ['Exclusions outside every volume of their container exclude nothing; paths compare as text, so /mnt/user/... does not match a volume mapped as /mnt/cache/...', 'exclusion excludes nothing', 'exclusions exclude nothing'],
+        'dockerVolume'     => ['Docker volumes are not folders on the host, so they are not backed up', 'Docker volume is not backed up', 'Docker volumes are not backed up'],
     ];
 
     /**
@@ -141,9 +141,10 @@ class ABHelper {
      * @param $msg string
      * @param $newLine bool
      * @param $skipDate bool
+     * @param $notifyMessage string the notification's text when it should be shorter than the log line; '' sends the log line
      * @return void
      */
-    public static function backupLog(string $msg, string $level = self::LOGLEVEL_INFO, bool $newLine = true, bool $skipDate = false) {
+    public static function backupLog(string $msg, string $level = self::LOGLEVEL_INFO, bool $newLine = true, bool $skipDate = false, string $notifyMessage = '') {
 
         /**
          * Do not log, if the script is not running or the requesting pid is not the script pid
@@ -175,12 +176,13 @@ class ABHelper {
             return; // No notification wanted!
         }
 
+        $notifyText = $sectionString . ' ' . ($notifyMessage !== '' ? $notifyMessage : $msg);
         if ($level == self::LOGLEVEL_ERR) { // Log errors always
-            self::notify("[AppdataBackup] Error!", "Please check the backup log!", "$sectionString $msg", 'alert');
+            self::notify("[AppdataBackup] Error!", "Please check the backup log!", $notifyText, 'alert');
         }
 
         if ($level == self::LOGLEVEL_WARN && self::$targetLogLevel == self::LOGLEVEL_WARN) {
-            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", "$sectionString $msg", 'warning');
+            self::notify("[AppdataBackup] Warning!", "Please check the backup log!", $notifyText, 'warning');
         }
     }
 
@@ -480,7 +482,7 @@ class ABHelper {
                     // Checked against every mapped volume: one inside a volume this run leaves out (external, excluded) is moot, not wrong.
                     if (str_starts_with($exclude, '/') && strpbrk($exclude, '*?[') === false && !self::isWithinVolumes($exclude, $mapped)) {
                         self::backupLog("Exclusion \"$exclude\" is outside every volume of this container, so it excludes nothing. Its volumes: " . implode(', ', $mapped), self::LOGLEVEL_DEBUG);
-                        self::noteForRun('exclusionOutside', "{$container['Name']} (volumes: " . implode(', ', $mapped) . ')', "\"$exclude\"");
+                        self::noteForRun('exclusionOutside', $container['Name'], "\"$exclude\"", 'volumes: ' . implode(', ', $mapped));
                     }
                     $tarExcludes[] = '--exclude ' . escapeshellarg($exclude);
                 }
@@ -505,20 +507,26 @@ class ABHelper {
         return (bool)array_filter($volumes, fn($volume) => str_starts_with($path, rtrim($volume, '/') . '/'));
     }
 
-    /** Keeps an item of a RUN_NOTES cause for reportRunNotes(); the same item noted again is listed once */
-    private static function noteForRun(string $cause, string $container, string $item) {
-        self::$runNotes[$cause][$container][$item] = true;
+    /** Keeps an item of a RUN_NOTES cause for reportRunNotes(); the same item noted again is listed once. $detail is shown after the name in the log */
+    private static function noteForRun(string $cause, string $container, string $item, string $detail = '') {
+        self::$runNotes[$cause][$container]['detail'] = $detail;
+        self::$runNotes[$cause][$container]['items'][$item] = true;
     }
 
-    /** Logs each noted cause as one warning, so a run sends one notification per cause instead of one per container */
+    /** Logs each noted cause as one warning with every item, and notifies it as one short line pointing to the log */
     public static function reportRunNotes() {
         foreach (self::$runNotes as $cause => $containers) {
-            $list = [];
-            foreach ($containers as $container => $items) {
-                $list[] = "$container: " . implode(', ', array_keys($items));
+            [$lead, $one, $many] = self::RUN_NOTES[$cause];
+            $list  = [];
+            $count = 0;
+            foreach ($containers as $container => $note) {
+                $list[] = $container . ($note['detail'] === '' ? '' : " ({$note['detail']})") . ': ' . implode(', ', array_keys($note['items']));
+                $count += count($note['items']);
             }
+            $names = array_keys($containers);
+            $shown = implode(', ', array_slice($names, 0, 3)) . (count($names) > 3 ? ' and ' . (count($names) - 3) . ' more' : '');
             sleep(1); // Unraid's notify drops a second notification of the same event within the same second
-            self::backupLog(self::RUN_NOTES[$cause] . ' (' . array_sum(array_map('count', $containers)) . '): ' . implode('; ', $list), self::LOGLEVEL_WARN);
+            self::backupLog("$lead ($count): " . implode('; ', $list), self::LOGLEVEL_WARN, true, false, "$count " . ($count === 1 ? $one : $many) . " ($shown) - see the backup log");
         }
         self::$runNotes = [];
     }
