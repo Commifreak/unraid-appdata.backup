@@ -14,6 +14,8 @@ class ABSettings {
     public static $settingsFile = 'config.json';
     public static $unraidAutostartFile = "/var/lib/docker/unraid-autostart";
     public static $settingsVersion = 3;
+    /** Docker tab order: written by the Docker tab when containers are dragged, and removed by its reset button */
+    public static $unraidUserPrefsFile = "/boot/config/plugins/dockerMan/userprefs.cfg";
     public static $cronFile = 'appdata_backup.cron';
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
@@ -134,6 +136,8 @@ class ABSettings {
     /** '' for the main schedule, 'extra' once forSchedule() made these the extra schedule's settings */
     public string $schedule = '';
     public array $containerSettings = [];
+    /** 'custom' (also any value but 'unraid') starts containers in the saved containerOrder list; 'unraid' in the Docker tab's order */
+    public string $containerOrderMode = 'custom';
     public array $containerOrder = [];
     public array $containerGroupOrder = [];
     public string $preRunScript = '';
@@ -177,6 +181,9 @@ class ABSettings {
                                     $newPaths[] = rtrim($path, '/');
                                 }
                                 $this->$key = $newPaths;
+                                break;
+                            case 'containerOrderMode':
+                                $this->$key = $value === 'unraid' ? 'unraid' : 'custom';
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
@@ -310,6 +317,15 @@ class ABSettings {
                 // No container panels were drawn (Docker down?): keep the saved ones instead of wiping them
                 $post = array_intersect_key($saved, array_flip(['containerSettings', 'containerOrder', 'containerGroupOrder'])) + $post;
             }
+            if (($post['containerOrderMode'] ?? '') === 'unraid' && is_array($saved)) {
+                // The lists were shown in the Docker tab order and could not be dragged: keep the custom lists as saved
+                foreach (['containerOrder', 'containerGroupOrder'] as $key) {
+                    unset($post[$key]);
+                    if (isset($saved[$key])) {
+                        $post[$key] = $saved[$key];
+                    }
+                }
+            }
             self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
             return true;
         }
@@ -323,13 +339,17 @@ class ABSettings {
         $fields['extraContainerSettings'] = self::ownExtraValues((array)($post['extraContainerSettings'] ?? []));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
+        $keep = ($saved['containerOrderMode'] ?? '') === 'unraid'
+            ? ['extraContainerOrder'] // shown in the Docker tab order, not draggable: keep the custom list as saved
+            : [];
         if (!isset($post['extraContainers'])) {
             // No container rows were drawn (Docker down?); every drawn row posts Include?, so keep the saved choices
-            foreach (['extraContainers', 'extraContainerOrder', 'extraContainerSettings'] as $key) {
-                unset($fields[$key]);
-                if (isset($saved[$key])) {
-                    $fields[$key] = $saved[$key];
-                }
+            $keep = ['extraContainers', 'extraContainerOrder', 'extraContainerSettings'];
+        }
+        foreach ($keep as $key) {
+            unset($fields[$key]);
+            if (isset($saved[$key])) {
+                $fields[$key] = $saved[$key];
             }
         }
         self::store(array_diff_key($saved, $extra) + $fields);
@@ -506,7 +526,7 @@ class ABSettings {
             'Destination' => $run->destination,
             'Retention'   => ($run->deleteBackupsOlderThan === '' ? 'no age limit' : 'older than ' . $run->deleteBackupsOlderThan . ($run->deleteBackupsOlderThan == 1 ? ' day' : ' days')) . ', keep at least ' . ($run->keepMinBackups === '' ? 'none' : $run->keepMinBackups),
             'Containers'  => $this->extraContainers ? implode(', ', $this->extraContainers) : 'none',
-            'Start order' => ($this->extraContainerOrder ? 'own' : 'Settings tab'),
+            'Start order' => $this->containerOrderMode === 'unraid' ? 'Docker tab' : ($this->extraContainerOrder ? 'own' : 'Settings tab'),
         ];
         foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {
             $value                     = (string)$run->$mainKey;

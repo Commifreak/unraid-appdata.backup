@@ -376,13 +376,34 @@ class ABHelper {
     }
 
     /**
+     * Container names in the order the Docker tab shows them, which is the one start order Unraid defines.
+     * This repeats the tab's own sort (DockerContainers.php): by position in userprefs.cfg, a container without one
+     * counting as position 0, ties and a missing file keeping DockerClient's name order.
+     * @param $names array container names in DockerClient order
+     * @return array the same names in Docker tab order
+     */
+    public static function unraidOrder(array $names): array {
+        $prefs = file_exists(ABSettings::$unraidUserPrefsFile) ? (array)@parse_ini_file(ABSettings::$unraidUserPrefsFile) : [];
+        $prefs = array_map('strval', $prefs);
+        $pos   = [];
+        foreach (array_values($names) as $i => $name) {
+            $index       = array_search((string)$name, $prefs, true);
+            $pos[$name] = [$index === false ? 0 : (int)$index, $i];
+        }
+        $names = array_values($names);
+        usort($names, fn($a, $b) => $pos[$a] <=> $pos[$b]);
+        return $names;
+    }
+
+    /**
      * Sort docker containers, provided by dynamix DockerClient and provided order array
      * @param $containers array DockerClient container array
-     * @param $order array order array
+     * @param $order array order array; ignored when the Docker tab order applies ($mode, or else the saved setting, is 'unraid')
      * @param $reverse bool return the start order reversed (containers missing from $order come last when starting, first when stopping)
+     * @param $mode string|null 'custom' or 'unraid' to sort as that mode would; null follows the saved setting
      * @return array with name as key and DockerClient info-array as value
      */
-    public static function sortContainers($containers, $order, $reverse = false, $removeSkipped = true, array $group = []) {
+    public static function sortContainers($containers, $order, $reverse = false, $removeSkipped = true, array $group = [], ?string $mode = null) {
         global $abSettings;
 
         // Add isGroup default to false
@@ -391,6 +412,9 @@ class ABHelper {
         }
 
         $_containers = array_column($containers, null, 'Name');
+        $useUnraid   = ($mode ?? $abSettings->containerOrderMode ?? '') === 'unraid';
+        $unraid      = $useUnraid ? self::unraidOrder(array_keys($_containers)) : [];
+        $memberGroup = [];
         if ($group) {
             $_containers = array_filter($_containers, function ($key) use ($group) {
                 return in_array($key, $group);
@@ -402,6 +426,7 @@ class ABHelper {
                 $inRun = false;
                 foreach ($members as $member) {
                     if (isset($_containers[$member])) {
+                        $memberGroup[$member] = $groupName;
                         unset($_containers[$member]);
                         $inRun = true;
                     }
@@ -417,6 +442,10 @@ class ABHelper {
             $_containers = $_containers + $appendinggroups;
         }
 
+        if ($useUnraid) {
+            // A group sits where its first member is in the Docker tab order
+            $order = array_map(fn($name) => isset($memberGroup[$name]) ? '__grp__' . $memberGroup[$name] : $name, $unraid);
+        }
         $sortedContainers = [];
         foreach ($order as $name) {
             if (isset($_containers[$name])) {
