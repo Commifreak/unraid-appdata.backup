@@ -949,9 +949,11 @@ HTML;
         console.debug('Final form:', $(this).serialize());
     });
 
-    // Flash only greys out what its run does not use; inert, not disabled, so the values are still saved as they are
+    // Flash only greys out what its run does not use; inert, not disabled, so the values are still saved as they are.
+    // An extra schedule copies most of these settings from this tab, so with one on nothing is greyed out
     function abFlashOnly() {
-        const on = $('#backupMethod').val() === 'flashOnly';
+        const on = $('#backupMethod').val() === 'flashOnly' && $('#extraSchedule').val() !== 'yes';
+        checkFlashBackupCopy();
         $('.ab-flash-why').remove();
         $('[data-ab-flash-off], [data-ab-flash-on]').each(function () {
             this.inert = on;
@@ -960,13 +962,13 @@ HTML;
             const why = $('<span class="ab-flash-why"></span>').text(this.hasAttribute('data-ab-flash-on') ? 'Always backed up with Flash only' : 'Not used with Flash only');
             if ($(this).is('dl, .title')) $(this).after(why);
             else if ($(this).is('dd')) $(this).append(why);
-            else $(this).prepend(why);
+            else if ($(this).is('div')) $(this).prepend(why); // a dt's note is its dd's
         });
     }
     // Registered after the page's own ready handler, so it reads the select once data-setting has chosen its option
     $(function () {
         abFlashOnly();
-        $('#backupMethod').on('change', abFlashOnly);
+        $('#backupMethod, #extraSchedule').on('change', abFlashOnly);
     });
 
 
@@ -1023,7 +1025,7 @@ HTML;
     }
 
     function checkFlashBackupCopy() {
-        switch ($('#flashBackup').val()) {
+        switch ($('#backupMethod').val() === 'flashOnly' ? 'yes' : $('#flashBackup').val()) { // Flash only always backs it up
             case 'no':
                 $('#flashBackupCopy').val('');
                 $('#flashBackupCopy_dl').fadeOut();

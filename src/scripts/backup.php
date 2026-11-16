@@ -103,7 +103,9 @@ if (!ABHelper::destinationUsable($abSettings->destination)) {
 
 $abDestination = ABHelper::freeSetFolder($abSettings->destination, $setTime); // again: the pre-run script may have just mounted the destination
 
-ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSources));
+if (!$abSettings->flashOnly()) {
+    ABHelper::backupLog("Backing up from: " . implode(', ', $abSettings->allowedSources));
+}
 
 /**
  * At this point, we have something to work with.
@@ -375,6 +377,15 @@ if (ABHelper::$errorOccured) {
         $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
         $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem)) && !in_array(realpath($backupItem), $abDestinations, true)));
+        if ($abSettings->schedule !== 'extra') {
+            // Flash only sets and container sets keep and delete only their own kind, so switching type never deletes the other's backups.
+            // Not for the extra schedule: its sets copy the Settings tab's type, but it always backs up containers into its own destination
+            $otherKind       = array_filter($curBackupsState, fn($backupItem) => $backupItem !== $abDestination && ABSettings::flashOnlySet($backupItem) !== $abSettings->flashOnly());
+            $curBackupsState = array_values(array_diff($curBackupsState, $otherKind));
+            if ($otherKind) {
+                ABHelper::backupLog("Retention leaves the " . count($otherKind) . " " . ($abSettings->flashOnly() ? 'container' : 'Flash only') . " set(s) here alone: it only counts and deletes this backup type's sets");
+            }
+        }
 
         // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));

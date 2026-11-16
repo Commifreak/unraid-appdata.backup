@@ -407,6 +407,12 @@ class ABSettings {
         return $this->backupMethod === 'flashOnly';
     }
 
+    /** Whether a set was made by a Flash only run, read from the settings copy every run saves into its set; unreadable = not */
+    public static function flashOnlySet(string $set): bool {
+        $config = json_decode((string)@file_get_contents("$set/" . self::$settingsFile), true);
+        return is_array($config) && ($config['backupMethod'] ?? null) === 'flashOnly';
+    }
+
     /** The type a schedule copying this one backs its containers up with: Flash only has none, so it gives the default */
     public function containerBackupMethod(): string {
         return $this->flashOnly() ? self::DEFAULT_BACKUP_METHOD : (string)$this->backupMethod;
@@ -505,7 +511,7 @@ class ABSettings {
             $settings[$labels[$mainKey]] = ($names[$mainKey][$value] ?? ['yes' => 'Yes', 'no' => 'No'][$value] ?? $value) . $source($this->$extraKey !== '');
         }
         if ($this->flashOnly() && $this->extraBackupMethod === '') {
-            $settings['Backup type'] = $names['backupMethod'][self::DEFAULT_BACKUP_METHOD] . ' (default: the Settings tab is Flash only)';
+            $settings['Backup type'] = ($names['backupMethod'][$run->backupMethod] ?? $run->backupMethod) . ' (default: the Settings tab is Flash only)';
         }
         foreach (self::EXTRA_OWN_YES as $mainKey => $extraKey) {
             $settings[$labels[$mainKey]] = ($run->$mainKey === 'yes' ? 'Yes' : 'No') . ' (own)';
