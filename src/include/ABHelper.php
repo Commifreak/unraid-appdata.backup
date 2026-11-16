@@ -817,7 +817,7 @@ class ABHelper {
         if (file_exists(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort)) {
             unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
         }
-        @unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd); // left by an older version or a killed run
+        @unlink(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd); // left by an older version, or by a command shell that was killed
         exec("rm -f " . escapeshellarg(ABSettings::$tempFolder) . "/*.log");
         file_put_contents(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning, getmypid());
         return true;
