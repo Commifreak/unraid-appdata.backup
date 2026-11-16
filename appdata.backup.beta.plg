@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.10.16b1">
-        <!ENTITY sha256    "312573af1e07008c806436d7519ac11e7c65de85acc6d3a2f80089351611ae48">
+        <!ENTITY version   "2026.11.16b1">
+        <!ENTITY sha256    "712278a9bc9e965d0c00b42d40188531f5c1c3c84eb55821ef507c6120a32007">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,13 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2026.11.16b1
+- New Backup type "Flash only": backs up just the flash drive, no container is stopped or backed up
+- Optional: start containers in the Docker tab order instead of the plugin's own list. Thanks to luuvasara
+- Fix Discard putting settings on their first option instead of restoring the saved ones
+- Fix a warning notification for every container's exclusions and Docker volumes: now one short notification per run
+- Fix a backup set name collision after the daylight saving time change
+- Fix a container update that leaves the old image in place being reported as successful
 ###2026.10.16b1
 - ➕ Optional snapshot mode for ZFS and btrfs: Containers can restart after taking the snapshot while the backup continues
 - ➕ Added an extra backup schedule for selected containers, with its own destination, retention and settings
