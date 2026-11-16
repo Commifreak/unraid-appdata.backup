@@ -407,6 +407,11 @@ class ABSettings {
         return $this->backupMethod === 'flashOnly';
     }
 
+    /** The type a schedule copying this one backs its containers up with: Flash only has none, so it gives the default */
+    public function containerBackupMethod(): string {
+        return $this->flashOnly() ? self::DEFAULT_BACKUP_METHOD : (string)$this->backupMethod;
+    }
+
     /** Whether the run backs up the flash drive: always with Flash only */
     public function backsUpFlash(): bool {
         return $this->flashOnly() || $this->flashBackup === 'yes';
@@ -457,8 +462,8 @@ class ABSettings {
                 $settings->$mainKey = $this->$extraKey;
             }
         }
-        if ($settings->flashOnly()) {
-            $settings->backupMethod = self::DEFAULT_BACKUP_METHOD; // the extra schedule backs up containers whatever the Settings tab's type
+        if ($this->extraBackupMethod === '') {
+            $settings->backupMethod = $this->containerBackupMethod(); // the extra schedule backs up containers whatever the Settings tab's type
         }
         foreach (self::EXTRA_OWN_YES as $mainKey => $extraKey) {
             $settings->$mainKey = $this->$extraKey === 'yes' ? 'yes' : 'no';
