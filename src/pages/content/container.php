@@ -3,6 +3,17 @@
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
+/** Filter box and Skip all above a container list; abListTools() in settings.php drives them. No names: never saved */
+function abContainerTools(): void {
+    echo <<<HTML
+        <div class="ab-list-tools">
+            <input type="text" class="ab-filter" placeholder="Filter containers" aria-label="Filter containers by name" autocomplete="off" />
+            <label class="ab-check ab-skip-all" title="Sets Skip? for every container shown. Save to keep it."><input type="checkbox" /> <span>Skip all</span></label>
+        </div>
+
+HTML;
+}
+
 /**
  * One container's row and settings panel, for the Settings tab or (with $extra) the Extra schedule tab, which saves
  * extraContainerSettings where '' means "Same as Settings tab" (see ABSettings::forSchedule)
@@ -23,7 +34,7 @@ function abContainerPanel(array $container, ABSettings $abSettings, array $conta
         $ownExcludes                 = (array)($own['exclude'] ?? []);
         $containerSetting['exclude'] = $containerSetting['excludeOwn'] === 'yes' ? $ownExcludes : $main['exclude'];
         $containerExcludes           = htmlspecialchars(implode("\r\n", $ownExcludes));
-        $included                    = in_array($container['Name'], $abSettings->extraContainers, true);
+        $skipped                     = !in_array($container['Name'], $abSettings->extraContainers, true);
     } else {
         $containerSetting     = $main;
         $realContainerSetting = htmlspecialchars(print_r($abSettings->getContainerSpecificSettings($container['Name']), true));
@@ -44,6 +55,7 @@ HTML;
     }
 
     $image   = htmlspecialchars(empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'], ENT_QUOTES);
+    $nameAttr = htmlspecialchars($container['Name'], ENT_QUOTES);
     $imageRef = htmlspecialchars((string)($container['Image'] ?? ''), ENT_QUOTES); // names are [a-zA-Z0-9_.-] by Docker's rules, icon URLs and image refs are not
     $volumes = ABHelper::getContainerVolumes($container, true);
 
@@ -62,7 +74,7 @@ HTML;
     if ($extra) {
         $actualSettingsDiv = '';
         $multiMappingSpan  = '';
-        $rowControl        = "        <dd><label for=\"extraInclude_{$container['Name']}\">Include?</label>\n        <select name=\"extraContainers[{$container['Name']}]\" id=\"extraInclude_{$container['Name']}\">\n            <option value=\"no\">No</option>\n            <option value=\"yes\"" . ($included ? ' selected' : '') . ">Yes</option>\n    </select>\n    </dd>";
+        $rowControl        = "        <dd><label for=\"extraSkip_{$container['Name']}\">Skip?</label>\n        <select name=\"extraSkip[{$container['Name']}]\" id=\"extraSkip_{$container['Name']}\">\n            <option value=\"no\">No</option>\n            <option value=\"yes\"" . ($skipped ? ' selected' : '') . ">Yes</option>\n    </select>\n    </dd>";
         $groupControl      = '<dd><span>' . ($containerSetting['group'] === '' ? 'None' : htmlspecialchars($containerSetting['group'])) . ' (set on the Settings tab)</span></dd>';
         $settingsExcludes  = htmlspecialchars(implode("\n", $main['exclude']) ?: 'none');
         $readonly          = $containerSetting['excludeOwn'] === 'yes' ? '' : ' readonly'; // editable only as an Own list (extra.php)
@@ -83,7 +95,7 @@ HTML;
 
     echo <<<HTML
 $actualSettingsDiv
-        <dl class="ab-container-row">
+        <dl class="ab-container-row" data-ab-name="$nameAttr">
         <dt class="containerSettingsDt"><img alt="pic" src='$image' height='16' /> <i title='$imageRef' class='fa fa-info-circle'></i> <abbr title='Click for advanced settings'>{$container['Name']}$plexContainerNameSuffix</abbr>$multiMappingSpan</dt>
 $rowControl
         </dl>

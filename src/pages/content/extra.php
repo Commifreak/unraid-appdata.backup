@@ -36,7 +36,7 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <?php endif; ?>
 
 <?php
-$extraGaps = array_filter(['a destination' => $abSettings->extraDestination === '', 'containers set to Include? Yes' => !$abSettings->extraContainers]);
+$extraGaps = array_filter(['a destination' => $abSettings->extraDestination === '', 'containers set to Skip? No' => !$abSettings->extraContainers]);
 if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 ?>
 <p class="ab-warn">Scheduled runs of this schedule will fail until it has <?= implode(' and ', array_keys($extraGaps)) ?>.</p>
@@ -62,7 +62,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
     </dd>
 </dl>
 <blockquote class='inline_help'>
-    <p>Backs up only the containers included below, for example daily for apps whose data changes every day, into its own destination with its own retention. Flash drive, VM meta, extra files and scripts follow this tab's options below (flash drive and VM meta are off by default). <b>Disabled</b> runs it only from <b>Run extra backup</b>.</p>
+    <p>Backs up only the containers set to <b>Skip?</b> No below, for example daily for apps whose data changes every day, into its own destination with its own retention. Flash drive, VM meta, extra files and scripts follow this tab's options below (flash drive and VM meta are off by default). <b>Disabled</b> runs it only from <b>Run extra backup</b>.</p>
     <p>A scheduled run that starts while another job runs waits for it, up to 12 hours.</p>
 </blockquote>
 
@@ -171,6 +171,7 @@ $extraHelp['ignoreErrors'] = 'Overrides this tab\'s <b>Ignore errors during back
 $extraHelp['dontStop']     = 'Leaves this container running while this schedule backs it up; risky for databases. <b>Use standard</b> follows this tab\'s <b>Skip stopping of containers?</b>';
 $extraHelp['group']   = 'Groups are set on the Settings tab: a group\'s containers are stopped, backed up and started as one unit.';
 $extraHelp['exclude'] = '<b>Same as Settings tab</b> uses this container\'s exclusions there (shown greyed out). <b>Own list</b> uses only the lines here, so an empty own list excludes nothing. ' . $containerHelp['exclude'];
+abContainerTools();
 foreach ($extraAll as $container) {
     abContainerPanel($container, $abSettings, $extraHelp, true);
 }
@@ -290,13 +291,13 @@ foreach ($extraAll as $container) {
         checkBackupFrequency('extraFrequency'); // settings.php
         abExtraToggle();
         $('#extraFlashBackup, #extraCompression').on('change', abExtraToggle);
-        const abExcluded = name => $('select[name="extraContainers[' + name + ']"]').val() !== 'yes';
-        const abGreyExtra = () => abGreyOrder('#extraOrderSortable', abExcluded, 'Not in the extra schedule: Include? is No'); // settings.php
+        const abExcluded = name => $('select[name="extraSkip[' + name + ']"]').val() !== 'no';
+        const abGreyExtra = () => abGreyOrder('#extraOrderSortable', abExcluded, 'Not in the extra schedule: Skip? is Yes'); // settings.php
         abGreyExtra();
         if (<?= $abSettings->containerOrderMode === 'custom' ? 'false' : 'true' ?>) { // the Docker tab order applies: shown, not draggable
             $('#extraOrderSortable').sortable({handle: '.ab-drag', disabled: true}).addClass('ab-locked'); // (re)initialising is safe whichever page script ran first
         }
-        $(document).on('change', 'select[name^="extraContainers["]', abGreyExtra);
+        $(document).on('change', 'select[name^="extraSkip["]', abGreyExtra);
         $(document).on('change', 'select[id^="extra_"][id$="_excludeOwn"]', function () {
             abExtraExcludeOwn(this);
         });
