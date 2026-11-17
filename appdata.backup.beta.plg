@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.11.17b2">
-        <!ENTITY sha256    "c1de00a3393634f2e26749046b59ac2e58aeb382e7cd9b68d072778dfd1d48ea">
+        <!ENTITY version   "2026.11.18b1">
+        <!ENTITY sha256    "24c9e640a4fa55f465767a9a9971a399ad141f294ee30cb199a16339a42d9dc0">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2026.11.18b1
+- 🔧 The Extra schedule tab asks Skip? like the Settings tab, instead of Include?
+- ➕ A filter and Skip all above the container list on the Settings and Extra schedule tabs
 ###2026.11.17b2
 - 🔧 Start-order list on the Extra schedule tab lines up under the same column as the Settings tab's
 - 🩹 Fix a long container or group name in a start-order list running past the panel: it wraps under the name
