@@ -76,6 +76,27 @@
     max-width: 35%;
 }
 
+/* A start-order list sits in a dd so it lines up under the Order from select. The dt holds &nbsp;: 7.2+ hides an
+   empty one. Up to 7.1 the dt floats: flow-root keeps the whole list beside it, not only its first row */
+.ab-order-list {
+    line-height: inherit;
+}
+
+.ab-order-list > dd {
+    display: flow-root;
+    margin-bottom: 0;
+    white-space: normal;
+}
+
+.ab-order-list .sortable {
+    margin: 0;
+    padding: 0;
+}
+
+.ab-order-list .sortable li {
+    margin: 0 0 15px;
+}
+
 /* 7.2+ lines labels up on the baseline, which for a textarea is its bottom edge */
 #abSettingsForm textarea {
     vertical-align: top;
@@ -287,6 +308,10 @@ blockquote.inline_help.ab-box {
 
     .ab-docker-cols > .ab-start-order {
         max-width: none;
+    }
+
+    .ab-order-list > dt {
+        display: none;
     }
 
     .ab-container-row > dt {
