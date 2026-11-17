@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.11.17b1">
-        <!ENTITY sha256    "6ac2409e0e674d9a983268c9029f35977509901eb4dc12fe54c95c1ff31a73f2">
+        <!ENTITY version   "2026.11.17b2">
+        <!ENTITY sha256    "c1de00a3393634f2e26749046b59ac2e58aeb382e7cd9b68d072778dfd1d48ea">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,9 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2026.11.17b2
+- 🔧 Start-order list on the Extra schedule tab lines up under the same column as the Settings tab's
+- 🩹 Fix a long container or group name in a start-order list running past the panel: it wraps under the name
 ###2026.11.17b1
 - 🩹 Fix Abort leaving containers stopped: the containers the run stopped are started again, in start order
 - 🩹 Fix Abort being able to stop an unrelated process after a backup command had finished
