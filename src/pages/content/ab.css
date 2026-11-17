@@ -97,6 +97,23 @@
     margin: 0 0 15px;
 }
 
+/* a long name wraps under itself, not under the icons, and breaks mid-word rather than run past the panel */
+.ab-order-list .ab-drag {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: flex-start;
+    column-gap: 4px;
+    overflow-wrap: anywhere;
+}
+
+/* 0.13em down is where they sat inline with Unraid's font: a one-line row stays as tall as before */
+.ab-order-list .ab-drag > i,
+.ab-order-list .ab-drag > img {
+    flex: none;
+    margin-top: 0.13em;
+}
+
 /* 7.2+ lines labels up on the baseline, which for a textarea is its bottom edge */
 #abSettingsForm textarea {
     vertical-align: top;
