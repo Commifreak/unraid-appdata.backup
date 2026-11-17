@@ -628,7 +628,8 @@ if (str_contains(__DIR__, 'appdata.backup.beta')) {
     ABSettings::$tempFolder .= '.beta';
     ABSettings::$supportUrl = 'https://forums.unraid.net/topic/136995-pluginbeta-appdatabackup/';
 }
-ABSettings::$externalCmdPidCapture = '& echo $! > ' . escapeshellarg(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd) . ' && wait $!';
+// When the command ends, its shell removes the PID file if it still holds that command's PID: Abort kills the PID in it, which must never be a finished command's reused one
+ABSettings::$externalCmdPidCapture = sprintf('& abpid=$!; echo $abpid > %1$s; wait $abpid; rc=$?; [ "$(cat %1$s 2>/dev/null)" = "$abpid" ] && rm -f %1$s; exit $rc', escapeshellarg(ABSettings::$tempFolder . '/' . ABSettings::$stateExtCmd));
 
 if (!file_exists(ABSettings::$tempFolder)) {
     mkdir(ABSettings::$tempFolder);
