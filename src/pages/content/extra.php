@@ -184,6 +184,7 @@ foreach ($extraAll as $container) {
         <p>Containers follow the Docker tab order and are stopped in reverse order. When containers are backed up one at a time, each is stopped and started again in turn, from the bottom of the list up. To use a list of your own, choose <b>Custom list</b> for the order on the Settings tab.</p>
 <?php endif; ?>
         <input type="hidden" id="extraContainerOrder" name="extraContainerOrder"/>
+        <dl class="ab-order-list"><dt>&nbsp;</dt><dd>
         <ul class="sortable" id="extraOrderSortable">
 <?php foreach (ABHelper::sortContainers($extraAll, $abSettings->extraContainerOrder ?: $abSettings->containerOrder, false, false) as $container): ?>
 <?php $id = $container['isGroup'] ? '__grp__' . $container['Name'] : $container['Name']; ?>
@@ -191,6 +192,7 @@ foreach ($extraAll as $container) {
             <li id="extraContainerOrder_<?= htmlspecialchars($id) ?>" data-members="<?= htmlspecialchars(json_encode($members), ENT_QUOTES) ?>"><span class="ab-drag"><i class="fa fa-sort"></i> <?= $container['isGroup'] ? '<i class="fa fa-folder" style="padding-right: 10px;"></i>' : '<img src="' . htmlspecialchars($extraIcon($container)) . '" height="16" />' ?> <?= htmlspecialchars($container['Name']) ?></span></li>
 <?php endforeach; ?>
         </ul>
+        </dd></dl>
     </div>
 </div>
 

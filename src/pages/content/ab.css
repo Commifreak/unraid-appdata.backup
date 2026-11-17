@@ -76,8 +76,8 @@
     max-width: 35%;
 }
 
-/* A start-order list sits in a dd so it lines up under the Order from select. The dt holds &nbsp;: 7.2+ hides an
-   empty one. Up to 7.1 the dt floats: flow-root keeps the whole list beside it, not only its first row */
+/* A start-order list sits in a dd: under Settings' Order from select, in the same place on the Extra tab. The dt holds
+   &nbsp;: 7.2+ hides an empty one. Up to 7.1 the dt floats: flow-root keeps the whole list beside it, not only row 1 */
 .ab-order-list {
     line-height: inherit;
 }
@@ -95,6 +95,23 @@
 
 .ab-order-list .sortable li {
     margin: 0 0 15px;
+}
+
+/* a long name wraps under itself, not under the icons, and breaks mid-word rather than run past the panel */
+.ab-order-list .ab-drag {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: flex-start;
+    column-gap: 4px;
+    overflow-wrap: anywhere;
+}
+
+/* 0.13em down is where they sat inline with Unraid's font: a one-line row stays as tall as before */
+.ab-order-list .ab-drag > i,
+.ab-order-list .ab-drag > img {
+    flex: none;
+    margin-top: 0.13em;
 }
 
 /* 7.2+ lines labels up on the baseline, which for a textarea is its bottom edge */
