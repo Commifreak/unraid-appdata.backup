@@ -1092,6 +1092,37 @@ class ABHelper {
         return true;
     }
 
+    /** Ends an aborted run: starts every container it stopped and did not start again, in start order (any missing from it last); the abort request cannot cut this short */
+    public static function startAfterAbort() {
+        global $sortedStartContainers;
+
+        $toStart = [];
+        foreach ($sortedStartContainers ?? [] as $_container) {
+            $resolvedContainer = self::resolveContainer($_container);
+            foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
+                if (isset(self::$stoppedByRun[$container['Name']])) {
+                    $toStart[$container['Name']] = $container;
+                }
+            }
+        }
+        foreach (array_diff_key(self::$stoppedByRun, $toStart) as $name => $_) {
+            $toStart[$name] = ['Name' => $name, 'isGroup' => false]; // not in the start list: started last rather than left down
+        }
+        self::setCurrentContainerName(null);
+
+        if (!$toStart) {
+            self::backupLog("Backup cancelled! No container is left stopped by this run.", self::LOGLEVEL_WARN);
+            return;
+        }
+        self::backupLog("Backup cancelled! Starting the containers this run stopped: " . implode(', ', array_keys($toStart)), self::LOGLEVEL_WARN);
+        foreach ($toStart as $container) {
+            self::setCurrentContainerName($container);
+            ABSteps::detail($container['Name']);
+            self::startContainer($container);
+        }
+        self::setCurrentContainerName(null);
+    }
+
     public static function doBackupMethod($method, $containerListOverride = null) {
         global $abSettings, $dockerContainers, $sortedStopContainers, $sortedStartContainers, $abDestination;
 
@@ -1115,6 +1146,9 @@ class ABHelper {
                 foreach ($backupOrder as $_container) {
                     $resolvedContainer = self::resolveContainer($_container, true);
                     foreach (($resolvedContainer !== false ? $resolvedContainer : [$_container]) as $container) {
+                        if (self::abortRequested()) { // before each stop: a skipped or failed stop below continues without a check
+                            return false;
+                        }
                         self::setCurrentContainerName($container);
                         ABSteps::detail($container['Name']);
                         $preContainerRet = ABHelper::handlePrePostScript($abSettings->preContainerBackupScript, 'pre-container', $container['Name']);
@@ -1125,6 +1159,9 @@ class ABHelper {
                             self::setCurrentContainerName($container, true);
                             continue;
                         }
+                        if (self::abortRequested()) { // Abort clicked while the pre-container script ran
+                            return false;
+                        }
                         if (!self::stopContainer($container)) {
                             $skipped[] = $container['Name'];
                             self::setCurrentContainerName($container, true);
@@ -1133,10 +1170,6 @@ class ABHelper {
                         $queued++;
                         if ($abSettings->snapshotMode == 'yes') {
                             $plans[$container['Name']] = self::backupPlan($container);
-                        }
-
-                        if (self::abortRequested()) {
-                            return false;
                         }
                     }
                     self::setCurrentContainerName($_container, true);
@@ -1228,19 +1261,20 @@ class ABHelper {
                     ABSteps::start('Backing up containers');
                 }
 
-                if (self::abortRequested()) {
-                    return false;
-                }
-
                 $list = $containerListOverride ?: $sortedStopContainers;
                 $done = 0;
                 foreach ($list as $container) {
+                    if (self::abortRequested()) { // before each container: a skipped or failed stop below continues without a check
+                        return false;
+                    }
                     ABSteps::detail($container['Name'] . ', ' . ++$done . ' of ' . count($list));
 
                     if ($container['isGroup']) {
                         $groupContainers = self::resolveContainer($container);
                         if (!empty($groupContainers)) {
-                            self::doBackupMethod('stopAll', $groupContainers);
+                            if (!self::doBackupMethod('stopAll', $groupContainers)) {
+                                return false;
+                            }
                             self::setCurrentContainerName($container, true);
                         }
                         continue;
@@ -1252,6 +1286,9 @@ class ABHelper {
                         self::backupLog("preContainer script decided to skip backup.");
                         self::setCurrentContainerName($container, true);
                         continue;
+                    }
+                    if (self::abortRequested()) { // Abort clicked while the pre-container script ran
+                        return false;
                     }
 
                     if (!self::stopContainer($container)) {
