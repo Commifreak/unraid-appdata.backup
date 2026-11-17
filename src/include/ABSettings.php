@@ -332,18 +332,18 @@ class ABSettings {
         if (!is_array($saved)) {
             return false; // storing only the extra fields would wipe every other setting
         }
-        // Include? per container (name => yes/no), and the start order as a jQuery sortable string, as settings.php gets containerOrder
+        // Skip? per container (name => yes/no; the schedule keeps the No ones), and the start order as a jQuery sortable string, as settings.php gets containerOrder
         $fields                    = array_intersect_key($post, $extra);
         // array_keys() turns a numeric container name such as 1234 into an int; names compare strictly as strings
-        $fields['extraContainers'] = array_map('strval', array_keys(array_filter((array)($post['extraContainers'] ?? []), fn($include) => $include === 'yes')));
+        $fields['extraContainers'] = array_map('strval', array_keys(array_filter((array)($post['extraSkip'] ?? []), fn($skip) => $skip === 'no')));
         $fields['extraContainerSettings'] = self::ownExtraValues((array)($post['extraContainerSettings'] ?? []));
         parse_str((string)($post['extraContainerOrder'] ?? ''), $order);
         $fields['extraContainerOrder'] = array_values((array)($order['extraContainerOrder'] ?? []));
         $keep = ($saved['containerOrderMode'] ?? '') === 'unraid'
             ? ['extraContainerOrder'] // shown in the Docker tab order, not draggable: keep the custom list as saved
             : [];
-        if (!isset($post['extraContainers'])) {
-            // No container rows were drawn (Docker down?); every drawn row posts Include?, so keep the saved choices
+        if (!isset($post['extraSkip'])) {
+            // No container rows were drawn (Docker down?); every drawn row posts Skip?, so keep the saved choices
             $keep = ['extraContainers', 'extraContainerOrder', 'extraContainerSettings'];
         }
         foreach ($keep as $key) {
@@ -482,7 +482,7 @@ class ABSettings {
                     $set[$key] = $this->$field; // this tab's default beats the Settings tab's value for this container
                 }
             }
-            $set['skip'] = in_array($name, $this->extraContainers, true) ? 'no' : 'yes'; // Include?, not the Settings tab's Skip?
+            $set['skip'] = in_array($name, $this->extraContainers, true) ? 'no' : 'yes'; // the Extra tab's Skip?, not the Settings tab's
             $settings->containerSettings[$name] = array_merge($this->containerSettings[$name] ?? [], $set);
         }
         foreach (self::EXTRA_SAME_AS as $mainKey => $extraKey) {

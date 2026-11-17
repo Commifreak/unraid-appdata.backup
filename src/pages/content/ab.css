@@ -42,9 +42,33 @@
     white-space: nowrap;
 }
 
+/* margin: 6.12 gives selects 10px on the right, which would leave Skip all past their edge */
 .ab-container-row > dd select {
     width: auto;
     min-width: 7rem;
+    margin-right: 0;
+}
+
+/* abContainerTools (container.php): Skip all sits over the rows' Skip? column */
+.ab-list-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin: 0.5rem 0;
+    padding-left: 12px;
+}
+
+.ab-list-tools .ab-filter {
+    width: 16rem;
+    max-width: 100%;
+    margin: 0;
+}
+
+/* !important: an opened panel carries an inline display */
+.ab-filtered {
+    display: none !important;
 }
 
 /* Stacked on phones: see the media query at the end */

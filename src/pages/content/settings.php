@@ -647,6 +647,7 @@ if (($code ?? 0) != 0) {
             ];
 
             require_once __DIR__ . '/container.php';
+            abContainerTools();
             foreach ($allContainers as $container) {
                 abContainerPanel($container, $abSettings, $containerHelp);
             }
@@ -896,6 +897,36 @@ HTML;
         });
     }
 
+    // drives abContainerTools (container.php) on both tabs
+    function abListTools() {
+        $('.ab-list-tools').each(function () {
+            const tools = $(this), rows = tools.parent().find('dl.ab-container-row'), all = tools.find('.ab-skip-all input');
+            const shownSelects = () => rows.not('.ab-filtered').find('> dd select');
+            const sync = () => {
+                const values = shownSelects().map((i, select) => select.value).get();
+                const skipped = values.filter(value => value === 'yes').length;
+                all.prop({checked: values.length > 0 && skipped === values.length, indeterminate: skipped > 0 && skipped < values.length, disabled: values.length === 0});
+            };
+            tools.find('.ab-filter').on('input', function () {
+                const text = this.value.trim().toLowerCase();
+                rows.each(function () {
+                    const hide = text !== '' && !this.dataset.abName.toLowerCase().includes(text);
+                    $(this).add($(this).next('blockquote.ab-box')).toggleClass('ab-filtered', hide);
+                });
+                tools.find('.ab-skip-all span').text(text === '' ? 'Skip all' : 'Skip all shown');
+                sync();
+            }).on('keydown', event => {
+                if (event.key === 'Enter' && !event.originalEvent?.isComposing) event.preventDefault(); // would submit the tab's form; jQuery's event has no isComposing
+            });
+            all.on('change', function () {
+                // one change event: its listeners (the tab's start-order greying, sync) re-read every select
+                shownSelects().val(this.checked ? 'yes' : 'no').last().trigger('change');
+            });
+            rows.find('> dd select').on('change', sync);
+            sync();
+        });
+    }
+
     $(function () {
         // Each tree lists folders from the server, so it is built when its box is first opened, not for every panel on load
         $(document).on('focus', 'textarea', function () {
@@ -943,6 +974,7 @@ HTML;
         const abGreyMain = () => abGreyOrder('#containerOrderSortable, [id^="containerGroupOrder_"][id$="_Sortable"]', abSkipped, 'Not in the backup: Skip? is Yes');
         abGreyMain();
         $(document).on('change', 'select[name^="containerSettings["][name$="[skip]"]', abGreyMain);
+        abListTools(); // after the data-setting values above are applied
 
 
         $('#manualBackup').on('click', function () {
