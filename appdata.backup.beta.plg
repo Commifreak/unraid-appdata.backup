@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.11.16b1">
-        <!ENTITY sha256    "712278a9bc9e965d0c00b42d40188531f5c1c3c84eb55821ef507c6120a32007">
+        <!ENTITY version   "2026.11.17b1">
+        <!ENTITY sha256    "6ac2409e0e674d9a983268c9029f35977509901eb4dc12fe54c95c1ff31a73f2">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,10 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2026.11.17b1
+- 🩹 Fix Abort leaving containers stopped: the containers the run stopped are started again, in start order
+- 🩹 Fix Abort being able to stop an unrelated process after a backup command had finished
+- 🔧 Start-order lists on the Settings tab line up under the Order from select
 ###2026.11.16b1
 - ➕ New Backup type "Flash only": backs up just the flash drive, no container is stopped or backed up
 - ➕ Optional: start containers in the Docker tab order instead of the plugin's own list. Thanks to luuvasara
