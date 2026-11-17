@@ -4,34 +4,63 @@ require_once __DIR__ . '/ABSettings.php';
 require_once __DIR__ . '/ABHelper.php';
 
 use unraid\plugins\AppdataBackup\ABHelper;
+use unraid\plugins\AppdataBackup\ABIntegrity;
 use unraid\plugins\AppdataBackup\ABSettings;
+use unraid\plugins\AppdataBackup\ABStatus;
 
-if (isset($_GET['action'])) {
+$writeActions = ['manualBackup', 'extraBackup', 'abort', 'startRestore', 'verifySet', 'copyConfigFromProd'];
+$isPost       = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
+$action       = $isPost ? ($_POST['action'] ?? null) : ($_GET['action'] ?? null);
 
-    if (!in_array($_GET['action'], ['dlLog', 'copyConfigFromProd'])) {
+if (isset($action)) {
+
+    // State changes are POST-only so Unraid's local_prepend.php enforces csrf_token on them.
+    if (in_array($action, $writeActions) !== $isPost) {
+        http_response_code(405);
+        exit;
+    }
+
+    if (!in_array($action, ['dlLog', 'copyConfigFromProd'])) {
         header('Content-Type: application/json; charset=utf-8');
     }
 
-    switch ($_GET['action']) {
+    switch ($action) {
         case 'getBackupState':
 
             $log     = "";
             $logFile = $_GET['logType'] == 'normal' ? ABSettings::$tempFolder . '/' . ABSettings::$logfile : ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile;
 
             if (file_exists($logFile)) {
-                $log = nl2br(file_get_contents($logFile));
+                $log = nl2br(htmlspecialchars(file_get_contents($logFile))); // the Status tab inserts this as HTML
             }
 
+            $running  = ABHelper::scriptRunning();
+            $stepFile = ABSettings::$tempFolder . '/' . ABSettings::$stateFileStep;
+            // A step file older than the running file is left over from an earlier run (or a verify or restore is running)
+            $step = $running && @filemtime($stepFile) >= @filemtime(ABSettings::$tempFolder . '/' . ABSettings::$stateFileScriptRunning) ? (string)@file_get_contents($stepFile) : '';
+
             $data = [
-                'running' => ABHelper::scriptRunning(),
-                'log'     => $log
+                'running' => $running,
+                'job'     => $running ? ABHelper::runningJob($running) : '',
+                'log'     => $log,
+                'step'    => $step
             ];
 
             echo json_encode($data);
 
             break;
+        case 'getStatus':
+            require_once __DIR__ . '/ABStatus.php';
+            $abSettings = new ABSettings();
+            ob_start();
+            include dirname(__DIR__) . '/pages/content/status.php';
+            echo json_encode(['html' => ob_get_clean()]);
+            break;
         case 'manualBackup':
             exec('php ' . dirname(__DIR__) . '/scripts/backup.php > /dev/null &');
+            break;
+        case 'extraBackup':
+            exec('php ' . dirname(__DIR__) . '/scripts/backup.php extra > /dev/null &');
             break;
         case 'abort':
             touch(ABSettings::$tempFolder . '/' . ABSettings::$stateFileAbort);
@@ -46,7 +75,7 @@ if (isset($_GET['action'])) {
             break;
         case 'checkRestoreSource':
 
-            $files = glob(rtrim($_GET['src'], '/') . "/ab_*");
+            $files = glob(ABHelper::globQuote(rtrim($_GET['src'], '/')) . "/ab_*");
             if (empty($files)) {
                 echo json_encode(['result' => false]);
                 exit;
@@ -59,8 +88,9 @@ if (isset($_GET['action'])) {
                     continue;
                 }
                 $result[] = [
-                    'path' => $file,
-                    'name' => $date->format('d.m.Y H:i:s')
+                    'path'      => $file,
+                    'name'      => $date->format('d.m.Y H:i:s'),
+                    'checksums' => is_file($file . '/' . ABIntegrity::FILE)
                 ];
 
             }
@@ -110,10 +140,18 @@ if (isset($_GET['action'])) {
                 }
             }
 
+            require_once __DIR__ . '/ABStatus.php';
+            $setTime          = ABStatus::setTime(basename($item));
+            $config['setAge'] = $setTime === null ? null : time() - $setTime;
+            $config['newer']  = ABStatus::newerElsewhere(new ABSettings(), $item, $config['containers'] ?: []) ?: new stdClass(); // {} in JSON, never []
+
             echo json_encode(['result' => $config]);
             break;
         case 'startRestore':
-            exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_GET)) . ' > /dev/null &');
+            exec('php ' . dirname(__DIR__) . '/scripts/restore.php ' . escapeshellarg(json_encode($_POST)) . ' > /dev/null &');
+            break;
+        case 'verifySet':
+            exec('php ' . escapeshellarg(dirname(__DIR__) . '/scripts/verify.php') . ' ' . escapeshellarg((string)($_POST['set'] ?? '')) . ' > /dev/null &');
             break;
 
         case 'copyConfigFromProd':
