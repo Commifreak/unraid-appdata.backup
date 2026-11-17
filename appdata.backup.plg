@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.03.13">
-        <!ENTITY sha256    "6482aacddc1f006759695afcc123c7537e9003d3a2cfa3e198b88c4dedb05fb3">
+        <!ENTITY version   "2026.11.18">
+        <!ENTITY sha256    "bd70cf030e6474db13d1cbfdd19ef8f3315f857b1f78d148671d1904702ba215">
         <!ENTITY launch    "Settings/AB.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,29 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+
+###2026.11.18
+- ➕ Optional snapshot mode for ZFS and btrfs: containers restart while the backup continues (chodeus)
+- ➕ Extra backup schedule for selected containers, with its own destination and retention (chodeus)
+- ➕ Backup type "Flash only": backs up just the flash drive (chodeus)
+- ➕ Optional: start containers in the Docker tab order (thanks to luuvasara)
+- ➕ New backups include checksums of verified archives, checked with the Verify button on the Restore page (chodeus)
+- ➕ Backup summary: latest backup, retained sets, next run and free space (chodeus)
+- ➕ Warnings for outdated backups and low destination space (chodeus)
+- ➕ A filter and Skip all above the container lists (chodeus)
+- 🩹 Fix Abort leaving containers stopped and being able to stop an unrelated process (chodeus)
+- 🩹 Fix flash drive backup on Unraid 7.4 (chodeus)
+- 🩹 Fix failed or aborted runs being reported as successful or applying retention (chodeus)
+- 🩹 Fix failed container updates being reported as successful (chodeus)
+- 🩹 Fix a container update that leaves the old image in place being reported as successful (KluthR)
+- 🩹 Containers that fail to stop are no longer backed up while running (chodeus)
+- 🩹 Fix a backup set name collision after the daylight saving time change (KluthR)
+- 🩹 Fix Discard not restoring the saved settings (chodeus)
+- 🩹 Fix non-numeric autostart delays aborting the backup (thanks to Shyrka973)
+- 🩹 Fix exclusions being dropped when the settings file has LF-only line endings (thanks to rnkang)
+- 🩹 More fixes to retention, exclusions and stop order (chodeus)
+- 🔧 Restoring to the original folders stops running containers first and starts them again afterwards (chodeus)
+- 🔧 Reworked Settings and Restore layouts, backup steps, help and wording (chodeus, thanks to kajusnau and GlassedSilver)
 
 ###2026.03.13
 - 🩹 Fix UI alignment for container backup settings. [Issue 68](https://github.com/Commifreak/unraid-appdata.backup/issues/68)
