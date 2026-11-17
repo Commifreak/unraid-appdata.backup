@@ -682,6 +682,7 @@ if (($code ?? 0) != 0) {
             };
             ?>
             <input type="hidden" id="containerOrder" name="containerOrder"/>
+            <dl class="ab-order-list"><dt>&nbsp;</dt><dd>
             <ul class="sortable" id="containerOrderSortable">
                 <?php
                 $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerOrder, false, false);
@@ -700,6 +701,7 @@ HTML;
                 }
                 ?>
             </ul>
+            </dd></dl>
 
             <?php
             foreach ($abSettings->getContainerGroups() as $group => $members) {
@@ -709,6 +711,7 @@ HTML;
                 <p>Containers are started in this sequence and stopped in reverse order.<br/><b>All containers inside a
                         group will be stopped (by their order), backed up and then started again.</b></p>
                 <input type="hidden" id="containerGroupOrder_<?= $group ?>" name="containerGroupOrder[<?= $group ?>]"/>
+                <dl class="ab-order-list"><dt>&nbsp;</dt><dd>
                 <ul class="sortable" id="containerGroupOrder_<?= $group ?>_Sortable">
                     <?php
                     $sortedContainers = ABHelper::sortContainers($allContainers, $abSettings->containerGroupOrder[$group] ?? [], false, false, $members);
@@ -723,6 +726,7 @@ HTML;
                     }
                     ?>
                 </ul>
+                </dd></dl>
                 <?php
             }
             ?>
