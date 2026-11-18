@@ -65,7 +65,7 @@ class ABSnapshot {
     public static function destroyAll() {
         foreach (array_reverse(self::$active) as $snapshot) {
             if (self::destroy($snapshot)) {
-                ABHelper::backupLog("Snapshot removed: " . $snapshot['name'], ABHelper::LOGLEVEL_DEBUG);
+                ABHelper::backupLog("Snapshot removed: " . $snapshot['name']);
             }
         }
         self::$active = [];
