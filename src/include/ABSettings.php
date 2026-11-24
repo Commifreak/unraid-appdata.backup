@@ -368,22 +368,16 @@ class ABSettings {
             return $post;
         }
         $post['defaults'] = (array)($post['defaults'] ?? []);
-        $running          = ABHelper::isDockerRunning();
-        $listed           = $running ? self::listedContainers() : null;
-        self::$skipKeptWhy = match (true) {
-            !$running        => 'Docker is not running',
-            $listed === null => 'Docker did not list its containers',
-            default          => null,
-        };
-        if (self::$skipKeptWhy !== null) {
+        $names            = self::dockerNames();
+        if ($names === null) {
+            self::$skipKeptWhy        = ABHelper::isDockerRunning() ? 'Docker did not list its containers' : 'Docker is not running';
             $post['defaults']['skip'] = $old;
             return $post;
         }
         $rows      = (array)($post['containerSettings'] ?? []);
         $savedRows = (array)($saved['containerSettings'] ?? []);
         $unset     = array_fill_keys(array_keys(get_class_vars(self::class)['defaults']), ''); // '' = use the default; exclude is saved as text
-        foreach ($listed as $container) {
-            $name = (string)$container['Name'];
+        foreach ($names as $name) {
             // Its posted row, else its saved one (Unraid leaves a container it cannot inspect off the page), else none: added since the draw
             $row = (array)($rows[$name] ?? $savedRows[$name] ?? $unset);
             if (!in_array($row['skip'] ?? '', ['yes', 'no'], true)) {
@@ -395,17 +389,21 @@ class ABSettings {
         return $post;
     }
 
-    /** The containers Docker lists, or null unless an empty list is Docker's whole answer: a failed read also gives an empty getDockerContainers() */
-    private static function listedContainers() {
-        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
-        $client = new \DockerClient();
-        $listed = $client->getDockerContainers();
-        if ($listed) {
-            return $listed;
+    /** Names of the containers Docker has, dead and unreadable ones too (getDockerContainers leaves those out from Unraid 7.2); null when Docker is stopped or did not answer with a whole list */
+    private static function dockerNames() {
+        if (!ABHelper::isDockerRunning()) {
+            return null;
         }
+        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
         $body = '';
-        $client->getDockerJSON('/containers/json?all=1', 'GET', $status, function ($line) use (&$body) { $body .= $line; }, true); // HTTP/1.0: no chunk lines
-        return trim($body) === '[]' ? [] : null; // only Docker's whole answer for no containers: a failed, cut or garbled read also decodes to []
+        ob_start(); // getDockerJSON echoes a socket failure, which would land in the page
+        (new \DockerClient())->getDockerJSON('/containers/json?all=1', 'GET', $status, function ($line) use (&$body) { $body .= $line; }, true); // HTTP/1.0: no chunk lines
+        ob_end_clean();
+        $list = json_decode($body); // objects stay objects, so only a JSON list is an array: a failed, cut or garbled read is not
+        if (!is_array($list)) {
+            return null;
+        }
+        return array_values(array_filter(array_map(fn($ct) => ltrim((string)(((array)$ct)['Names'][0] ?? ''), '/'), $list), fn($name) => $name !== ''));
     }
 
     /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */
