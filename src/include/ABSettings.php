@@ -40,6 +40,9 @@ class ABSettings {
     /** Per-container settings the Extra schedule tab can set for itself ('' = same as the Settings tab) */
     const EXTRA_CONTAINER_KEYS = ['backupExtVolumes', 'updateContainer', 'skipBackup', 'verifyBackup', 'ignoreBackupErrors', 'dontStop'];
 
+    /** Why the last storeForm kept Skip new containers? as saved (settings.php shows it); null when it did not */
+    public static ?string $skipKeptWhy = null;
+
     public static $tempFolder = '/tmp/appdata.backup';
 
     public static $logfile = 'ab.log';
@@ -79,9 +82,9 @@ class ABSettings {
         'updateContainer'    => 'no',
         'skipBackup' => 'no',
         'group' => '',
+        'skip'               => 'no', // Skip new containers? on the Settings tab
 
         // The following are hidden, container special default settings
-        'skip'               => 'no',
         'exclude' => [],
         'dontStop'           => 'no',
         'backupExtVolumes'   => 'no'
@@ -313,10 +316,9 @@ class ABSettings {
         $saved = $raw === false ? [] : json_decode($raw, true);
         $extra = array_flip(self::EXTRA_FIELDS);
         if (!isset($post['extraScheduleForm'])) {
-            if (!isset($post['containerSettings']) && is_array($saved)) {
-                // No container panels were drawn (Docker down?): keep the saved ones instead of wiping them
-                $post = array_intersect_key($saved, array_flip(['containerSettings', 'containerOrder', 'containerGroupOrder'])) + $post;
-            }
+            $prev  = is_array($saved) ? $saved : [];
+            $names = self::dockerNames();
+            $post  = self::keepUndrawn($post, $prev, $names); // also when no panels were drawn (Docker down at the draw)
             if (($post['containerOrderMode'] ?? '') === 'unraid' && is_array($saved)) {
                 // The lists were shown in the Docker tab order and could not be dragged: keep the custom lists as saved
                 foreach (['containerOrder', 'containerGroupOrder'] as $key) {
@@ -326,7 +328,8 @@ class ABSettings {
                     }
                 }
             }
-            self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
+            $post = self::keepListedSkip($post, $prev, $names);
+            self::store($post + array_intersect_key($prev, $extra));
             return true;
         }
         if (!is_array($saved)) {
@@ -352,8 +355,109 @@ class ABSettings {
                 $fields[$key] = $saved[$key];
             }
         }
+        if (isset($post['extraSkip'])) {
+            $undrawn = self::undrawnFilter(array_keys((array)$post['extraSkip']), self::dockerNames(), (array)($saved['containerSettings'] ?? []));
+            $fields['extraContainers'] = [...$fields['extraContainers'], ...array_values(array_filter(array_map('strval', (array)($saved['extraContainers'] ?? [])), $undrawn))];
+            $fields['extraContainerSettings'] += array_filter((array)($saved['extraContainerSettings'] ?? []), $undrawn, ARRAY_FILTER_USE_KEY);
+            $fields['extraContainerOrder'] = self::keepPlaces((array)($fields['extraContainerOrder'] ?? []), (array)($saved['extraContainerOrder'] ?? []), $undrawn); // the $keep loop unsets it in Docker tab order when none was saved
+        }
         self::store(array_diff_key($saved, $extra) + $fields);
         return true;
+    }
+
+    /** Skip new containers? decides only for containers added after the Save that changes it: a listed container with no Skip? choice posted or saved gets the old value as its own */
+    private static function keepListedSkip(array $post, array $saved, ?array $names) {
+        self::$skipKeptWhy = null;
+        $old               = ($saved['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no';
+        if ((($post['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no') === $old) {
+            return $post;
+        }
+        $post['defaults'] = (array)($post['defaults'] ?? []);
+        if ($names === null) {
+            self::$skipKeptWhy        = ABHelper::isDockerRunning() ? 'Docker did not list its containers' : 'Docker is not running';
+            $post['defaults']['skip'] = $old;
+            return $post;
+        }
+        $rows  = (array)($post['containerSettings'] ?? []);
+        $unset = array_fill_keys(array_keys(get_class_vars(self::class)['defaults']), ''); // '' = use the default; exclude is saved as text
+        foreach ($names as $name) {
+            $row = (array)($rows[$name] ?? $unset); // none posted or saved (keepUndrawn put the saved ones back), e.g. added since the page was drawn
+            if (!in_array($row['skip'] ?? '', ['yes', 'no'], true)) {
+                $row['skip'] = $old; // also a saved row with no choice, which the new value would otherwise decide
+            }
+            $rows[$name] = $row;
+        }
+        $post['containerSettings'] = $rows;
+        return $post;
+    }
+
+    /** Names of the containers Docker has, dead and unreadable ones too (getDockerContainers leaves those out from Unraid 7.2); null when Docker is stopped or did not answer with a whole list */
+    private static function dockerNames() {
+        if (!ABHelper::isDockerRunning()) {
+            return null;
+        }
+        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
+        $body = '';
+        ob_start(); // getDockerJSON echoes a socket failure, which would land in the page
+        (new \DockerClient())->getDockerJSON('/containers/json?all=1', 'GET', $status, function ($line) use (&$body) { $body .= $line; }, true); // HTTP/1.0: no chunk lines
+        ob_end_clean();
+        $list = json_decode($body); // objects stay objects, so only a JSON list is an array: a cut or garbled read is not
+        if ($status !== true || !is_array($list)) { // true: HTTP 2xx (DockerClient::$codes)
+            return null;
+        }
+        $names = [];
+        foreach ($list as $ct) {
+            // Its own name: a link alias ("/app/redis") has a second slash, and docker ps leaves it out too
+            if ($own = preg_grep('#^/[^/]+$#', (array)(((array)$ct)['Names'] ?? []))) {
+                $names[] = substr(reset($own), 1);
+            }
+        }
+        return $names;
+    }
+
+    /** Settings tab: puts back what the page could not draw of a container Docker still has (of every one when its list cannot be read): its saved row, and its places in the start order and its group's */
+    private static function keepUndrawn(array $post, array $saved, ?array $names) {
+        $rows    = (array)($post['containerSettings'] ?? []);
+        $undrawn = self::undrawnFilter(array_keys($rows), $names, (array)($saved['containerSettings'] ?? []));
+        if ($kept = array_filter((array)($saved['containerSettings'] ?? []), $undrawn, ARRAY_FILTER_USE_KEY)) {
+            $post['containerSettings'] = $rows + $kept;
+        }
+        $post['containerOrder'] = self::keepPlaces((array)($post['containerOrder'] ?? []), (array)($saved['containerOrder'] ?? []), $undrawn);
+        foreach ((array)($saved['containerGroupOrder'] ?? []) as $group => $order) {
+            if ($places = self::keepPlaces((array)($post['containerGroupOrder'][$group] ?? []), (array)$order, $undrawn)) {
+                $post['containerGroupOrder'][$group] = $places;
+            }
+        }
+        return $post;
+    }
+
+    /** Accepts a saved name the page did not draw ($drawn) that Docker still has (every one when $names is null), and the start order entry of such a container's group */
+    private static function undrawnFilter(array $drawn, ?array $names, array $savedRows) {
+        $drawn = array_flip(array_map('strval', $drawn));
+        $has   = $names === null ? null : array_flip($names);
+        $kept  = fn($name) => !isset($drawn[(string)$name]) && ($has === null || isset($has[(string)$name]));
+        $groups = [];
+        foreach ($savedRows as $name => $row) {
+            if ($kept($name) && ($group = self::groupName(((array)$row)['group'] ?? '')) !== '') {
+                $groups['__grp__' . $group] = true; // a group's start order entry, as ABHelper::sortContainers reads it
+            }
+        }
+        return fn($entry) => $kept($entry) || isset($groups[(string)$entry]);
+    }
+
+    /** $order with each entry of $saved that $keep accepts and $order lacks put back after the entry it followed in $saved */
+    private static function keepPlaces(array $order, array $saved, callable $keep) {
+        $order = array_values($order);
+        $at    = 0;
+        foreach ($saved as $entry) {
+            $found = array_search((string)$entry, $order, true);
+            if ($found !== false) {
+                $at = $found + 1;
+            } elseif ($keep((string)$entry)) {
+                array_splice($order, $at++, 0, [(string)$entry]);
+            }
+        }
+        return $order;
     }
 
     /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */
@@ -397,9 +501,14 @@ class ABSettings {
             }
         }
 
-        $settings['group'] = preg_replace('/[\W]/', '', $settings['group']);
+        $settings['group'] = self::groupName($settings['group']);
 
         return $settings;
+    }
+
+    /** A group's name as the lists and the start order use it: only word characters of what was typed */
+    public static function groupName($group) {
+        return preg_replace('/[\W]/', '', (string)$group);
     }
 
     /**

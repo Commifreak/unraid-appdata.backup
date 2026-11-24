@@ -250,9 +250,14 @@ HTML;
 
 }
 
+if (ABSettings::$skipKeptWhy !== null) {
+    echo '<p class="ab-warn">Skip new containers? was not changed: ' . htmlspecialchars(ABSettings::$skipKeptWhy) . ', so the containers already there could not keep their Skip?. Set it again and Save once the Docker tab lists your containers.'
+        . (empty($abTabsChanged) ? '' : ' <a href="#" onclick="location.replace(location.href); return false;">Reload the page</a> to update the tabs for Extra schedule.') // the reload below is skipped so this stays readable
+        . '</p>';
+}
 if (($code ?? 0) != 0) {
     echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
-} elseif (!empty($abTabsChanged)) {
+} elseif (!empty($abTabsChanged) && ABSettings::$skipKeptWhy === null) {
     echo "<script>location.replace(location.href);</script>"; // a GET, not a resubmit
 }
 ?>
@@ -601,8 +606,8 @@ if (($code ?? 0) != 0) {
 
     <div class="title" data-ab-flash-off><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
-    <p><b>General note</b>: This plugin always backs up every unknown (new) container with the default settings. In this
-        section you can set settings that deviate from the defaults.</p>
+    <p><b>General note</b>: This plugin backs up every unknown (new) container with the default settings, unless
+        <b>Skip new containers?</b> is Yes. In this section you can set settings that deviate from the defaults.</p>
 
     <dl data-ab-flash-off>
         <dt><b>Update containers after backup?</b></dt>
@@ -615,6 +620,21 @@ if (($code ?? 0) != 0) {
     </dl>
     <blockquote class='inline_help'>
         <p>Default for every container: if an update is available, it's installed right after that container's backup. Each container can override this.</p>
+    </blockquote>
+
+    <dl data-ab-flash-off>
+        <dt><b>Skip new containers?</b></dt>
+        <?php $abDockerUp = ABHelper::isDockerRunning(); // without Docker, ABSettings::keepListedSkip keeps the saved value ?>
+        <dd><select id='defaultSkip' name="defaults[skip]"
+                    data-setting="<?= htmlspecialchars((string)$abSettings->defaults['skip']) ?>"<?= $abDockerUp ? '' : ' inert' ?>>
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+            <?= $abDockerUp ? '' : '<span class="ab-lock-why">Start Docker to change this</span>' ?>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Yes gives each container added after you save it <b>Skip?</b> Yes, so the run leaves it alone (no stop, backup or update) until you set it to No. Changing it never changes a container that is already there: each keeps its <b>Skip?</b>.</p>
     </blockquote>
 
     <div class="ab-docker-cols" data-ab-flash-off>

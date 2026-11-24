@@ -149,9 +149,19 @@
     opacity: 0.45;
 }
 
-.ab-flash-why {
+.ab-flash-why,
+.ab-lock-why {
     display: block;
     font-style: italic;
+}
+
+/* Skip new containers? while Docker is stopped (settings.php); with Flash only, abFlashOnly's note already says why */
+#defaultSkip[inert] {
+    opacity: 0.45;
+}
+
+.ab-flash-locked .ab-lock-why {
+    display: none;
 }
 
 blockquote.inline_help.ab-box,

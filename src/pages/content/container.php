@@ -37,7 +37,9 @@ function abContainerPanel(array $container, ABSettings $abSettings, array $conta
         $skipped                     = !in_array($container['Name'], $abSettings->extraContainers, true);
     } else {
         $containerSetting     = $main;
-        $realContainerSetting = htmlspecialchars(print_r($abSettings->getContainerSpecificSettings($container['Name']), true));
+        $resolved             = $abSettings->getContainerSpecificSettings($container['Name']);
+        $realContainerSetting = htmlspecialchars(print_r($resolved, true));
+        $skipShown            = htmlspecialchars((string)$resolved['skip']); // no saved choice: the Skip new containers? default, which the run uses too
         $containerExcludes    = htmlspecialchars(implode("\r\n", $containerSetting['exclude']));
     }
 
@@ -84,7 +86,7 @@ HTML;
     } else {
         $actualSettingsDiv = "<div style=\"display: none\" id=\"actualContainerSettings_{$container['Name']}\">$realContainerSetting</div>";
         $multiMappingSpan  = " <span id=\"containerMultiMappingIssue_{$container['Name']}\" style=\"display: none; color: darkorange;\">WARN: Multi mapping detected!</span>";
-        $rowControl        = "        <dd><label for=\"{$container['Name']}_skip\">Skip?</label>\n        <select name=\"containerSettings[{$container['Name']}][skip]\" id=\"{$container['Name']}_skip\" data-setting=\"{$containerSetting['skip']}\">\n            <option value=\"no\">No</option>\n            <option value=\"yes\">Yes</option>\n    </select>\n    </dd>";
+        $rowControl        = "        <dd><label for=\"{$container['Name']}_skip\">Skip?</label>\n        <select name=\"containerSettings[{$container['Name']}][skip]\" id=\"{$container['Name']}_skip\" data-setting=\"{$skipShown}\">\n            <option value=\"no\">No</option>\n            <option value=\"yes\">Yes</option>\n    </select>\n    </dd>";
         $groupControl      = <<<HTML
 <dd><div style="display: table"><input list="containerGroups" type="text" placeholder="None - Double click for a list" id='{$idPrefix}{$container['Name']}_group' name="{$field}[{$container['Name']}][group]" value="{$containerSetting['group']}" onkeyup="$(this).next().show();" onchange="$(this).next().show();" autocomplete="off" /><span style="color: red; display: none;"><br />To adjust group order, save your changes.</span></div></dd>
 HTML;
