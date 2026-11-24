@@ -39,6 +39,7 @@ if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
  */
 $backupStarted = new DateTime(); // after claimRun(): a scheduled run's wait is not part of its duration
 $setCreated    = false; // only a set folder this run made may get its checksums, logs, -failed rename and permissions
+$backupDone    = false; // set before Retention: an abort after it must not fail the set retention relies on
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 $unraidVersion           = parse_ini_file('/etc/unraid-version');
@@ -375,6 +376,7 @@ if (!$setCreated || !is_dir($abDestination)) {
 if (ABHelper::abortRequested()) {
     goto abort;
 }
+$backupDone = !ABHelper::$errorOccured;
 
 ABSteps::start('Retention');
 if (ABHelper::$errorOccured) {
@@ -407,15 +409,15 @@ if (ABHelper::$errorOccured) {
         $toDelete   = array_diff($curBackupsState, array_keys($toKeep));
         $notDeleted = [];
         foreach ($toDelete as $deleteBackupPath) {
-            if (ABHelper::abortRequested()) { // the abort fails this run's set, so the sets it would replace stay
+            if (ABHelper::abortRequested()) {
                 ABHelper::backupLog("Abort: retention stops, the sets not deleted yet stay");
                 break;
             }
             ABHelper::backupLog("Delete old backup: " . $deleteBackupPath);
             $rmOut = [];
-            exec("rm -rf " . escapeshellarg($deleteBackupPath) . " 2>&1", $rmOut, $rmCode);
+            exec("rm -rf " . escapeshellarg($deleteBackupPath) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $rmOut, $rmCode);
             if ($rmCode !== 0) {
-                $notDeleted[] = "$deleteBackupPath (rm exited $rmCode): " . implode(' ', array_slice($rmOut, 0, 3));
+                $notDeleted[] = "$deleteBackupPath (rm exited $rmCode" . (ABHelper::abortRequested() ? ', Abort was pressed' : '') . "): " . implode(' ', array_slice($rmOut, 0, 3));
             }
         }
         if ($notDeleted) { // one warning (= one notification): one cause, such as a read-only disk, usually fails them all
@@ -433,8 +435,12 @@ ABHelper::setCurrentContainerName(null);
 ABSteps::start('Finishing');
 ABSnapshot::destroyAll(); // an aborted run can still hold snapshots
 if (ABHelper::abortRequested()) {
-    ABHelper::$errorOccured = true;
-    ABHelper::startAfterAbort();
+    if ($backupDone) {
+        ABHelper::backupLog("Abort came after the backup had finished, so this run's set stays good", ABHelper::LOGLEVEL_WARN);
+    } else {
+        ABHelper::$errorOccured = true;
+        ABHelper::startAfterAbort();
+    }
 }
 
 ABHelper::reportRunNotes();
@@ -451,7 +457,9 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
 }
 
 if ($setCreated && is_dir($abDestination)) {
-    if (!copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log')) {
+    $setLog = $abDestination . '/backup.log';
+    if (!copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, "$setLog.part") || !rename("$setLog.part", $setLog)) { // a part-written backup.log would count as finished
+        @unlink("$setLog.part");
         ABHelper::backupLog("Could not copy backup.log into $abDestination, so retention will count this set as unfinished", ABHelper::LOGLEVEL_WARN);
     }
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
