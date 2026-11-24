@@ -1005,7 +1005,7 @@ class ABHelper {
         return addcslashes($path, '\\*?[');
     }
 
-    /** Flushes these files and folders to disk, one by one: sync -f does not reach the disks through /mnt/user. null, or what sync said when it failed */
+    /** Flushes these files and folders to disk, one by one: sync -f does not reach the disks through /mnt/user. null, or what sync said (its exit code if nothing) when it failed */
     public static function flush(array $paths): ?string {
         $output = $resultcode = null;
         exec('sync ' . implode(' ', array_map('escapeshellarg', $paths)) . ' 2>&1', $output, $resultcode);
