@@ -399,8 +399,8 @@ class ABSettings {
         ob_start(); // getDockerJSON echoes a socket failure, which would land in the page
         (new \DockerClient())->getDockerJSON('/containers/json?all=1', 'GET', $status, function ($line) use (&$body) { $body .= $line; }, true); // HTTP/1.0: no chunk lines
         ob_end_clean();
-        $list = json_decode($body); // objects stay objects, so only a JSON list is an array: a failed, cut or garbled read is not
-        if (!is_array($list)) {
+        $list = json_decode($body); // objects stay objects, so only a JSON list is an array: a cut or garbled read is not
+        if ($status !== true || !is_array($list)) { // true: HTTP 2xx (DockerClient::$codes)
             return null;
         }
         return array_values(array_filter(array_map(fn($ct) => ltrim((string)(((array)$ct)['Names'][0] ?? ''), '/'), $list), fn($name) => $name !== ''));
