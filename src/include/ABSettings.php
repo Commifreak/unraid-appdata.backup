@@ -360,7 +360,7 @@ class ABSettings {
         return true;
     }
 
-    /** Skip new containers? decides only for containers added after the Save that changes it: a listed container no row posted gets the old value as its own Skip? */
+    /** Skip new containers? decides only for containers added after the Save that changes it: a listed container with no Skip? choice posted or saved gets the old value as its own */
     private static function keepListedSkip(array $post, array $saved) {
         self::$skipKeptWhy = null;
         $old               = ($saved['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no';
@@ -379,10 +379,17 @@ class ABSettings {
             $post['defaults']['skip'] = $old;
             return $post;
         }
-        $rows  = (array)($post['containerSettings'] ?? []);
-        $unset = array_fill_keys(array_keys(get_class_vars(self::class)['defaults']), ''); // '' = use the default; exclude is saved as text
+        $rows      = (array)($post['containerSettings'] ?? []);
+        $savedRows = (array)($saved['containerSettings'] ?? []);
+        $unset     = array_fill_keys(array_keys(get_class_vars(self::class)['defaults']), ''); // '' = use the default; exclude is saved as text
         foreach ($listed as $container) {
-            $rows[(string)$container['Name']] ??= ['skip' => $old] + $unset; // no row posted it, e.g. added after the page was drawn
+            $name = (string)$container['Name'];
+            // Its posted row, else its saved one (Unraid leaves a container it cannot inspect off the page), else none: added since the draw
+            $row = (array)($rows[$name] ?? $savedRows[$name] ?? $unset);
+            if (!in_array($row['skip'] ?? '', ['yes', 'no'], true)) {
+                $row['skip'] = $old; // also a saved row with no choice, which the new value would otherwise decide
+            }
+            $rows[$name] = $row;
         }
         $post['containerSettings'] = $rows;
         return $post;

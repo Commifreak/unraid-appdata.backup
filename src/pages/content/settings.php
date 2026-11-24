@@ -251,7 +251,9 @@ HTML;
 }
 
 if (ABSettings::$skipKeptWhy !== null) {
-    echo '<p class="ab-warn">Skip new containers? was not changed: ' . htmlspecialchars(ABSettings::$skipKeptWhy) . ', so the containers already there could not keep their Skip?. The rest was saved. Save again once Docker is running.</p>';
+    echo '<p class="ab-warn">Skip new containers? was not changed: ' . htmlspecialchars(ABSettings::$skipKeptWhy) . ', so the containers already there could not keep their Skip?. The rest was saved. Save again once Docker is running.'
+        . (empty($abTabsChanged) ? '' : ' <a href="#" onclick="location.replace(location.href); return false;">Reload the page</a> to update the tabs for Extra schedule.') // the reload below is skipped so this stays readable
+        . '</p>';
 }
 if (($code ?? 0) != 0) {
     echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
