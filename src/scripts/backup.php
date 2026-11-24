@@ -394,7 +394,7 @@ if (ABHelper::$errorOccured) {
             ABHelper::backupLog("Retention leaves " . count($otherKind) . " set(s) of the other Backup type here alone: it only counts and deletes this type's sets");
         }
 
-        // Only finished, successful sets count towards Keep at least and stand for a GFS period. This run's set gets its backup.log at the end.
+        // Only finished, successful sets count towards Keep at least and stand for a GFS period. This run's set gets its backup.log before any delete.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
 
         $toKeep = ABRetention::keep($abSettings, $curBackupsState, $goodBackups, new DateTime());
@@ -408,6 +408,10 @@ if (ABHelper::$errorOccured) {
 
         $toDelete   = array_diff($curBackupsState, array_keys($toKeep));
         $notDeleted = [];
+        if ($toDelete && !ABStatus::markFinished($abDestination)) { // unmarked, the next run would not count this set and could delete it too
+            ABHelper::backupLog("Could not write backup.log into $abDestination, so retention deletes nothing this run", ABHelper::LOGLEVEL_WARN);
+            $toDelete = [];
+        }
         foreach ($toDelete as $deleteBackupPath) {
             if (ABHelper::abortRequested()) {
                 ABHelper::backupLog("Abort: retention stops, the sets not deleted yet stay");
@@ -457,10 +461,9 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
 }
 
 if ($setCreated && is_dir($abDestination)) {
-    $setLog = $abDestination . '/backup.log';
-    if (!copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, "$setLog.part") || !rename("$setLog.part", $setLog)) { // a part-written backup.log would count as finished
-        @unlink("$setLog.part");
-        ABHelper::backupLog("Could not copy backup.log into $abDestination, so retention will count this set as unfinished", ABHelper::LOGLEVEL_WARN);
+    if (!ABStatus::markFinished($abDestination)) {
+        ABHelper::backupLog(is_file("$abDestination/backup.log") ? "Could not update backup.log in $abDestination, so it lacks this run's last lines"
+            : "Could not copy backup.log into $abDestination, so retention will count this set as unfinished", ABHelper::LOGLEVEL_WARN);
     }
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if (ABHelper::$errorOccured) {

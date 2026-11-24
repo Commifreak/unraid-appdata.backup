@@ -54,6 +54,16 @@ class ABStatus {
         return array_map(fn($time) => time() - $time, $newest);
     }
 
+    /** Copies this run's log into $set as its backup.log, which makes it ok (finished) for sets() and retention; false when that failed */
+    public static function markFinished($set) {
+        $log = "$set/backup.log";
+        if (copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, "$log.part") && rename("$log.part", $log)) { // a part-written backup.log would count as finished
+            return true;
+        }
+        @unlink("$log.part");
+        return false;
+    }
+
     /** Sets in $destination, newest first: path, date, state (ok, failed, incomplete) and size in bytes; false if a listing fails */
     public static function sets($destination) {
         $destination = rtrim($destination, '/');
