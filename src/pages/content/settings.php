@@ -601,8 +601,8 @@ if (($code ?? 0) != 0) {
 
     <div class="title" data-ab-flash-off><span class="left"><i class="fa fa-docker title"></i>Docker specific settings</span></div>
 
-    <p><b>General note</b>: This plugin always backs up every unknown (new) container with the default settings. In this
-        section you can set settings that deviate from the defaults.</p>
+    <p><b>General note</b>: This plugin backs up every unknown (new) container with the default settings, unless
+        <b>Skip new containers?</b> is Yes. In this section you can set settings that deviate from the defaults.</p>
 
     <dl data-ab-flash-off>
         <dt><b>Update containers after backup?</b></dt>
@@ -615,6 +615,19 @@ if (($code ?? 0) != 0) {
     </dl>
     <blockquote class='inline_help'>
         <p>Default for every container: if an update is available, it's installed right after that container's backup. Each container can override this.</p>
+    </blockquote>
+
+    <dl data-ab-flash-off>
+        <dt><b>Skip new containers?</b></dt>
+        <dd><select id='defaultSkip' name="defaults[skip]"
+                    data-setting="<?= htmlspecialchars((string)$abSettings->defaults['skip']) ?>">
+                <option value='no'>No</option>
+                <option value='yes'>Yes</option>
+            </select>
+        </dd>
+    </dl>
+    <blockquote class='inline_help'>
+        <p>Yes sets <b>Skip?</b> to Yes for a container with no saved choice, such as one installed after your last Save, so the run leaves it alone (no stop, backup or update) until you set it to No. Save stores every listed container's <b>Skip?</b> as shown, so the containers listed now keep theirs.</p>
     </blockquote>
 
     <div class="ab-docker-cols" data-ab-flash-off>

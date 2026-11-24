@@ -79,9 +79,9 @@ class ABSettings {
         'updateContainer'    => 'no',
         'skipBackup' => 'no',
         'group' => '',
+        'skip'               => 'no', // Skip new containers? on the Settings tab
 
         // The following are hidden, container special default settings
-        'skip'               => 'no',
         'exclude' => [],
         'dontStop'           => 'no',
         'backupExtVolumes'   => 'no'
