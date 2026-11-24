@@ -5,6 +5,12 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 /** @var $abSettings ABSettings set by settings.php, which also saves this form (ABSettings::storeForm) */
 
+if (!ABHelper::isArrayOnline()) {
+    echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
+    return;
+}
+require_once __DIR__ . '/retention.php';
+
 $extraAll = (new DockerClient())->getDockerContainers() ?: [];
 $extraIcon = fn($container) => empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
 // A select for a run-wide setting: '' = the Settings tab's value, named in the first option (see ABSettings::EXTRA_SAME_AS)
@@ -107,7 +113,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
     <p>Must differ from <b>Backup destination</b>, so each folder's retention only sees its own sets. A subfolder of it is fine. To restore, pick this folder as the source on the Restore tab.</p>
 </blockquote>
 
-<?= abRetentionRows($abSettings, true) // settings.php ?>
+<?= abRetentionRows($abSettings, true) ?>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Backup options</span></div>
 <?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], $abSettings->containerBackupMethod(), 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab. While that is <b>Flash only</b>, <b>Same as Settings tab</b> means <b>For each container</b>.') ?>
@@ -272,6 +278,7 @@ foreach ($extraAll as $container) {
 
     $(function () {
         checkBackupFrequency('extraFrequency'); // settings.php
+        abRetention(document.getElementById('extraRetentionMode')); // settings.php
         abExtraToggle();
         $('#extraFlashBackup, #extraCompression').on('change', abExtraToggle);
         const abExcluded = name => $('select[name="extraSkip[' + name + ']"]').val() !== 'no';

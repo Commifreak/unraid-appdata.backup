@@ -10,29 +10,43 @@ class ABRetention {
     /** GFS: each field, how a set's time names its period (ISO weeks, Monday first) in this server's time zone, and its word */
     const PERIODS = ['keepDaily' => ['Y-m-d', 'day'], 'keepWeekly' => ['o-W', 'week'], 'keepMonthly' => ['Y-m', 'month'], 'keepYearly' => ['Y', 'year']];
 
-    /** A count or day field as retention reads it: a whole number from 1 to 999999, else 0 (off) */
-    public static function count($value): int {
-        return preg_match('/^\d{1,6}$/D', trim((string)$value)) ? (int)$value : 0;
+    /** Each field's label on the Settings tab; label() adds the Extra schedule tab's prefix */
+    const LABELS = ['deleteBackupsOlderThan' => 'Delete backups if older than x days', 'keepMinBackups' => 'Keep at least this many backups',
+        'keepDaily' => 'Keep one backup a day for the last x days', 'keepWeekly' => 'Keep one backup a week for the last x weeks',
+        'keepMonthly' => 'Keep one backup a month for the last x months', 'keepYearly' => 'Keep one backup a year for the last x years'];
+
+    /** A field's label on the Settings tab, or on the Extra schedule tab */
+    public static function label(string $field, bool $extra = false): string {
+        return $extra ? 'Extra schedule: ' . lcfirst(self::LABELS[$field]) : self::LABELS[$field];
+    }
+
+    /** A field as retention reads it: '' is 0, a whole number from 0 to 999999 as a number field takes it (7, 7.0, 1e3) is itself, anything else null */
+    public static function count($value): ?int {
+        $value  = trim((string)$value);
+        $number = $value === '' ? 0.0 : (is_numeric($value) ? (float)$value : -1.0);
+        return $number >= 0 && $number <= 999999 && floor($number) === $number ? (int)$number : null;
     }
 
     /** Why these settings keep every set, or '' when retention deletes */
     public static function off(ABSettings $settings): string {
-        if ($settings->retentionMode === 'gfs') {
-            $fields = array_keys(self::PERIODS);
-            if (array_filter($fields, fn($field) => self::count($settings->$field))) {
-                return '';
+        $gfs   = $settings->retentionMode === 'gfs';
+        $extra = $settings->schedule === 'extra'; // ABSettings::forSchedule
+        foreach ($gfs ? array_keys(self::PERIODS) : ['deleteBackupsOlderThan', 'keepMinBackups'] as $field) {
+            if (self::count($settings->$field) === null) {
+                return self::label($field, $extra) . ' is "' . trim((string)$settings->$field) . '", not a whole number from 0 to 999999';
             }
-            return array_filter($fields, fn($field) => trim((string)$settings->$field) !== '') ? 'none of the four Grandfather-father-son fields is a whole number above 0' : 'the four Grandfather-father-son fields are empty';
         }
-        $days = trim((string)$settings->deleteBackupsOlderThan);
-        return self::count($days) ? '' : 'Delete backups if older than x days is ' . ($days === '' ? 'empty' : "\"$days\"");
+        if ($gfs) {
+            return array_filter(array_keys(self::PERIODS), fn($field) => self::count($settings->$field)) ? '' : ($extra ? 'the extra schedule\'s' : 'the') . ' four Grandfather-father-son fields are empty or 0';
+        }
+        return self::count($settings->deleteBackupsOlderThan) ? '' : self::label('deleteBackupsOlderThan', $extra) . ' is ' . (trim((string)$settings->deleteBackupsOlderThan) === '' ? 'empty' : '0');
     }
 
-    /**
-     * The sets to keep, each with why, while off() is ''. $sets: this run's type, newest first; $good: those that finished without errors.
-     * A failed set is never kept as a GFS period's set, nor counted towards Keep at least.
-     */
+    /** The sets to keep (path => why), all of them while off() says why; $sets: this run's type, newest first; $good: those that finished without errors */
     public static function keep(ABSettings $settings, array $sets, array $good, \DateTime $now): array {
+        if (($off = self::off($settings)) !== '') {
+            return array_fill_keys($sets, "retention off ($off)");
+        }
         $kept = [];
         if ($settings->retentionMode === 'gfs') {
             foreach (self::PERIODS as $field => [$format, $word]) {

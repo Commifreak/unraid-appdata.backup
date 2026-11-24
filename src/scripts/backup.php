@@ -396,19 +396,32 @@ if (ABHelper::$errorOccured) {
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
 
         $toKeep = ABRetention::keep($abSettings, $curBackupsState, $goodBackups, new DateTime());
+        if (in_array($abDestination, $curBackupsState, true)) {
+            $toKeep[$abDestination] ??= "this run's own set"; // a set named later in its period (a clock change) would outrank it
+        }
         ABHelper::backupLog("Retention: " . ABRetention::describe($abSettings) . "; keeping " . count($toKeep) . " of " . count($curBackupsState) . " set(s)");
         foreach ($toKeep as $backupItem => $why) {
             ABHelper::backupLog("Keeping $backupItem: $why", ABHelper::LOGLEVEL_DEBUG);
         }
 
-        $toDelete = array_diff($curBackupsState, array_keys($toKeep));
-
+        $toDelete   = array_diff($curBackupsState, array_keys($toKeep));
+        $notDeleted = [];
         foreach ($toDelete as $deleteBackupPath) {
+            if (ABHelper::abortRequested()) { // the abort fails this run's set, so the sets it would replace stay
+                ABHelper::backupLog("Abort: retention stops, the sets not deleted yet stay");
+                break;
+            }
             ABHelper::backupLog("Delete old backup: " . $deleteBackupPath);
             $rmOut = [];
             exec("rm -rf " . escapeshellarg($deleteBackupPath) . " 2>&1", $rmOut, $rmCode);
             if ($rmCode !== 0) {
-                ABHelper::backupLog("Could not delete all of $deleteBackupPath (rm exited $rmCode): " . implode(' ', array_slice($rmOut, 0, 3)), ABHelper::LOGLEVEL_WARN);
+                $notDeleted[] = "$deleteBackupPath (rm exited $rmCode): " . implode(' ', array_slice($rmOut, 0, 3));
+            }
+        }
+        if ($notDeleted) { // one warning (= one notification): one cause, such as a read-only disk, usually fails them all
+            ABHelper::backupLog("Could not delete all of $notDeleted[0]" . (count($notDeleted) > 1 ? ' (and ' . (count($notDeleted) - 1) . ' more set(s), named in the debug log)' : ''), ABHelper::LOGLEVEL_WARN);
+            foreach (array_slice($notDeleted, 1) as $line) {
+                ABHelper::backupLog("Could not delete all of $line", ABHelper::LOGLEVEL_DEBUG);
             }
         }
 
@@ -438,7 +451,9 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
 }
 
 if ($setCreated && is_dir($abDestination)) {
-    copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
+    if (!copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log')) {
+        ABHelper::backupLog("Could not copy backup.log into $abDestination, so retention will count this set as unfinished", ABHelper::LOGLEVEL_WARN);
+    }
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if (ABHelper::$errorOccured) {
         copy(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $abDestination . '/backup.debug.log');
