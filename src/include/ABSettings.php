@@ -388,7 +388,7 @@ class ABSettings {
         return $post;
     }
 
-    /** The containers Docker lists, or null unless an empty list is Docker's own 200 answer: a failed read also gives an empty getDockerContainers() */
+    /** The containers Docker lists, or null unless an empty list is Docker's whole answer: a failed read also gives an empty getDockerContainers() */
     private static function listedContainers() {
         require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
         $client = new \DockerClient();
@@ -396,7 +396,9 @@ class ABSettings {
         if ($listed) {
             return $listed;
         }
-        return $client->getDockerJSON('/containers/json?all=1', 'GET', $code) === [] && $code === true ? [] : null; // true: HTTP 200
+        $body = '';
+        $client->getDockerJSON('/containers/json?all=1', 'GET', $status, function ($line) use (&$body) { $body .= $line; }, true); // HTTP/1.0: no chunk lines
+        return trim($body) === '[]' ? [] : null; // only Docker's whole answer for no containers: a failed, cut or garbled read also decodes to []
     }
 
     /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */
