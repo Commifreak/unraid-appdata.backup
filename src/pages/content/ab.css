@@ -149,9 +149,15 @@
     opacity: 0.45;
 }
 
-.ab-flash-why {
+.ab-flash-why,
+.ab-lock-why {
     display: block;
     font-style: italic;
+}
+
+/* Skip new containers? while Docker is stopped (settings.php) */
+#defaultSkip[inert] {
+    opacity: 0.45;
 }
 
 blockquote.inline_help.ab-box,

@@ -326,6 +326,7 @@ class ABSettings {
                     }
                 }
             }
+            $post = self::keepListedSkip($post, is_array($saved) ? $saved : []);
             self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
             return true;
         }
@@ -354,6 +355,30 @@ class ABSettings {
         }
         self::store(array_diff_key($saved, $extra) + $fields);
         return true;
+    }
+
+    /** Skip new containers? decides only for containers added after the Save that changes it: each container Docker lists now keeps the old value as its own Skip? */
+    private static function keepListedSkip(array $post, array $saved) {
+        $old = ($saved['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no';
+        if ((($post['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no') === $old) {
+            return $post;
+        }
+        $post['defaults'] = (array)($post['defaults'] ?? []);
+        if (!ABHelper::isDockerRunning()) {
+            $post['defaults']['skip'] = $old; // no container list to keep: settings.php locks the select then
+            return $post;
+        }
+        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
+        $rows = (array)($post['containerSettings'] ?? []);
+        foreach ((new \DockerClient())->getDockerContainers() ?: [] as $container) {
+            $row = (array)($rows[(string)$container['Name']] ?? []);
+            if (($row['skip'] ?? '') === '') {
+                $row['skip']                         = $old; // no row posted it, e.g. added after the page was drawn
+                $rows[(string)$container['Name']] = $row;
+            }
+        }
+        $post['containerSettings'] = $rows;
+        return $post;
     }
 
     /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */

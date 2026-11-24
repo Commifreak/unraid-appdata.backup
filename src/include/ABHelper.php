@@ -95,6 +95,12 @@ class ABHelper {
         return false;
     }
 
+    /** Whether the Docker service runs, checked as Unraid's Docker page does */
+    public static function isDockerRunning() {
+        $pid = trim((string)@file_get_contents('/var/run/dockerd.pid'));
+        return ctype_digit($pid) && is_dir("/proc/$pid");
+    }
+
     /**
      * Takes care of every hook script execution
      * @param $script string

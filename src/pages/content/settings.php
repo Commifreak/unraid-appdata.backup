@@ -619,15 +619,17 @@ if (($code ?? 0) != 0) {
 
     <dl data-ab-flash-off>
         <dt><b>Skip new containers?</b></dt>
+        <?php $abDockerUp = ABHelper::isDockerRunning(); // without Docker, ABSettings::keepListedSkip keeps the saved value ?>
         <dd><select id='defaultSkip' name="defaults[skip]"
-                    data-setting="<?= htmlspecialchars((string)$abSettings->defaults['skip']) ?>">
+                    data-setting="<?= htmlspecialchars((string)$abSettings->defaults['skip']) ?>"<?= $abDockerUp ? '' : ' inert' ?>>
                 <option value='no'>No</option>
                 <option value='yes'>Yes</option>
             </select>
+            <?= $abDockerUp ? '' : '<span class="ab-lock-why">Start Docker to change this</span>' ?>
         </dd>
     </dl>
     <blockquote class='inline_help'>
-        <p>Yes sets <b>Skip?</b> to Yes for a container with no saved choice, such as one installed after your last Save, so the run leaves it alone (no stop, backup or update) until you set it to No. Save stores every listed container's <b>Skip?</b> as shown, so the containers listed now keep theirs.</p>
+        <p>Yes gives each container added after you save it <b>Skip?</b> Yes, so the run leaves it alone (no stop, backup or update) until you set it to No. Changing it never changes a container that is already there: each keeps its <b>Skip?</b>.</p>
     </blockquote>
 
     <div class="ab-docker-cols" data-ab-flash-off>
