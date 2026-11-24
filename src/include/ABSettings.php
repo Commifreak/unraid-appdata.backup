@@ -181,6 +181,9 @@ class ABSettings {
             if ($config) {
                 foreach ($config as $key => $value) {
                     if (property_exists($this, $key)) {
+                        if (in_array(str_starts_with($key, 'extra') ? lcfirst(substr($key, 5)) : $key, self::RETENTION, true) && !is_string($value) && !is_int($value)) {
+                            $value = json_encode($value); // a count PHP would cast to 1 (1.5, true) stays text that ABRetention::count() rejects, so retention is off
+                        }
                         switch ($key) {
                             case 'defaults':
                                 $this->$key = array_merge($this->defaults, $value);
