@@ -316,8 +316,9 @@ class ABSettings {
         $saved = $raw === false ? [] : json_decode($raw, true);
         $extra = array_flip(self::EXTRA_FIELDS);
         if (!isset($post['extraScheduleForm'])) {
+            $prev  = is_array($saved) ? $saved : [];
             $names = self::dockerNames();
-            $post  = self::keepUndrawn($post, is_array($saved) ? $saved : [], $names); // also when no panels were drawn (Docker down at the draw)
+            $post  = self::keepUndrawn($post, $prev, $names); // also when no panels were drawn (Docker down at the draw)
             if (($post['containerOrderMode'] ?? '') === 'unraid' && is_array($saved)) {
                 // The lists were shown in the Docker tab order and could not be dragged: keep the custom lists as saved
                 foreach (['containerOrder', 'containerGroupOrder'] as $key) {
@@ -327,8 +328,8 @@ class ABSettings {
                     }
                 }
             }
-            $post = self::keepListedSkip($post, is_array($saved) ? $saved : [], $names);
-            self::store($post + (is_array($saved) ? array_intersect_key($saved, $extra) : []));
+            $post = self::keepListedSkip($post, $prev, $names);
+            self::store($post + array_intersect_key($prev, $extra));
             return true;
         }
         if (!is_array($saved)) {
@@ -404,7 +405,14 @@ class ABSettings {
         if ($status !== true || !is_array($list)) { // true: HTTP 2xx (DockerClient::$codes)
             return null;
         }
-        return array_values(array_filter(array_map(fn($ct) => ltrim((string)(((array)$ct)['Names'][0] ?? ''), '/'), $list), fn($name) => $name !== ''));
+        $names = [];
+        foreach ($list as $ct) {
+            // Its own name: a link alias ("/app/redis") has a second slash, and docker ps leaves it out too
+            if ($own = preg_grep('#^/[^/]+$#', (array)(((array)$ct)['Names'] ?? []))) {
+                $names[] = substr(reset($own), 1);
+            }
+        }
+        return $names;
     }
 
     /** Settings tab: puts back what the page could not draw of a container Docker still has (of every one when its list cannot be read): its saved row, and its places in the start order and its group's */
@@ -430,7 +438,7 @@ class ABSettings {
         $kept  = fn($name) => !isset($drawn[(string)$name]) && ($has === null || isset($has[(string)$name]));
         $groups = [];
         foreach ($savedRows as $name => $row) {
-            if ($kept($name) && ($group = (string)(((array)$row)['group'] ?? '')) !== '') {
+            if ($kept($name) && ($group = self::groupName(((array)$row)['group'] ?? '')) !== '') {
                 $groups['__grp__' . $group] = true; // a group's start order entry, as ABHelper::sortContainers reads it
             }
         }
@@ -493,9 +501,14 @@ class ABSettings {
             }
         }
 
-        $settings['group'] = preg_replace('/[\W]/', '', $settings['group']);
+        $settings['group'] = self::groupName($settings['group']);
 
         return $settings;
+    }
+
+    /** A group's name as the lists and the start order use it: only word characters of what was typed */
+    public static function groupName($group) {
+        return preg_replace('/[\W]/', '', (string)$group);
     }
 
     /**
