@@ -70,7 +70,7 @@ class ABSettings {
     /** 'stopAll', 'oneAfterTheOther', or 'flashOnly' (no container is stopped or backed up, see flashOnly()) */
     public string|null $backupMethod = self::DEFAULT_BACKUP_METHOD;
     public string $snapshotMode = 'no';
-    /** 'age' (deleteBackupsOlderThan, keepMinBackups) or 'gfs' (ABRetention::PERIODS) */
+    /** 'age' (deleteBackupsOlderThan, keepMinBackups) or 'gfs' (ABRetention::PERIODS); other saved text turns retention off (ABRetention::unreadable) */
     public string $retentionMode = 'age';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
@@ -182,7 +182,7 @@ class ABSettings {
                 foreach ($config as $key => $value) {
                     if (property_exists($this, $key)) {
                         if (in_array(str_starts_with($key, 'extra') ? lcfirst(substr($key, 5)) : $key, self::RETENTION, true) && !is_string($value) && !is_int($value)) {
-                            $value = json_encode($value); // PHP would cast 1.5 or true to 1; as text ("1.5", "true") ABRetention::count() rejects them
+                            $value = json_encode($value); // PHP would cast 1.5 or true to 1, and refuse a list; ABRetention reads none of "1.5", "true" or "[]"
                         }
                         switch ($key) {
                             case 'defaults':
@@ -205,10 +205,6 @@ class ABSettings {
                                 break;
                             case 'containerOrderMode':
                                 $this->$key = $value === 'unraid' ? 'unraid' : 'custom';
-                                break;
-                            case 'retentionMode':
-                            case 'extraRetentionMode':
-                                $this->$key = $value === 'gfs' ? 'gfs' : 'age';
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.

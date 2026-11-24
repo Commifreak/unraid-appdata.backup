@@ -10,15 +10,22 @@ function abRetentionRows(ABSettings $abSettings, bool $extra): string {
     $row  = function (string $field, string $help) use ($abSettings, $extra, $name) {
         $help  = $extra ? 'Works like <b>' . ABRetention::label($field) . '</b> on the Settings tab, for the extra destination only.' : $help;
         $label = ABRetention::label($field, $extra);
-        return "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><input id='{$name($field)}' name='{$name($field)}' type='number' min='0' max='999999' value='"
-            . htmlspecialchars((string)$abSettings->{$name($field)}, ENT_QUOTES) . "' placeholder='Leave empty to disable'/></dd>\n</dl>\n"
+        $value = (string)$abSettings->{$name($field)};
+        $type  = preg_match('/^\d*$/', $value) && ABRetention::count($value) !== null ? 'number' : 'text'; // a number box keeps digits as saved, but can empty or flag other text, which a Save would then change
+        return "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><input id='{$name($field)}' name='{$name($field)}' type='$type' min='0' max='999999' value='"
+            . htmlspecialchars($value, ENT_QUOTES) . "' placeholder='Leave empty to disable'/></dd>\n</dl>\n"
             . "<blockquote class='inline_help'><p>$help</p></blockquote>\n";
     };
     $select = $name('retentionMode');
-    $label  = $extra ? 'Extra schedule: retention' : 'Retention';
-    $html   = "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><select id='$select' name='$select' onchange='abRetention(this);'>\n";
-    foreach (['age' => 'By age', 'gfs' => 'Grandfather-father-son (GFS)'] as $value => $text) {
+    $label  = ABRetention::label('retentionMode', $extra);
+    $why    = ABRetention::unreadable($extra ? $abSettings->forSchedule('extra') : $abSettings);
+    $html   = ($why === '' ? '' : "<p class='ab-warn'>" . htmlspecialchars("Retention is off: $why. Every backup set is kept until you set it again and Save.", ENT_QUOTES) . "</p>\n")
+        . "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><select id='$select' name='$select' onchange='abRetention(this);'>\n";
+    foreach (ABRetention::MODES as $value => $text) {
         $html .= "        <option value='$value'" . ($mode === $value ? ' selected' : '') . ">$text</option>\n";
+    }
+    if (!isset(ABRetention::MODES[$mode])) { // posts the saved text back, so a Save made for another change keeps retention off
+        $html .= "        <option value='" . htmlspecialchars($mode, ENT_QUOTES) . "' selected>" . htmlspecialchars("Off: saved as \"$mode\"", ENT_QUOTES) . "</option>\n";
     }
     $html .= "    </select></dd>\n</dl>\n<blockquote class='inline_help'><p>" . ($extra ? 'Works like <b>Retention</b> on the Settings tab, for the extra destination only.'
         : 'After a run with no errors, deletes the backup sets this does not keep. <b>By age</b> deletes sets older than a number of days. <b>Grandfather-father-son</b> keeps the newest good set of each day, week, month and year, for as many of each as you set, and deletes the rest. <b>Flash only</b> sets and the others are counted and deleted separately, so switching <b>Backup type</b> deletes neither. Switching from <b>Grandfather-father-son</b> to <b>By age</b> deletes, at the next run, the sets it kept that are older than <b>Delete backups if older than x days</b>, apart from the newest that <b>Keep at least this many backups</b> keeps. To keep them, empty <b>Delete backups if older than x days</b> before you save.')

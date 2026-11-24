@@ -1116,10 +1116,10 @@ HTML;
         }
     }
 
-    /** Shows the fields of the chosen Retention (retention.php); hidden ones still save, so an invalid one goes back to its saved value, or to empty if that is invalid too: it would block Save unseen */
+    /** Shows the fields of the chosen Retention (retention.php); hidden ones still save, so an invalid edit goes back to its saved value: it would block Save unseen. A saved value a number box cannot hold is a text box, never invalid */
     function abRetention(select) {
         const invalid = function () { return !this.checkValidity(); };
-        $('#' + select.id + (select.value === 'gfs' ? 'Age' : 'Gfs')).hide().find('input').filter(invalid).val(function () { return this.defaultValue; }).filter(invalid).val('');
+        $('#' + select.id + (select.value === 'gfs' ? 'Age' : 'Gfs')).hide().find('input').filter(invalid).val(function () { return this.defaultValue; });
         $('#' + select.id + (select.value === 'gfs' ? 'Gfs' : 'Age')).show();
     }
 

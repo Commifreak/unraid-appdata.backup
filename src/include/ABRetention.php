@@ -10,8 +10,11 @@ class ABRetention {
     /** GFS: each field, how a set's time names its period (ISO weeks, Monday first) in this server's time zone, and its word */
     const PERIODS = ['keepDaily' => ['Y-m-d', 'day'], 'keepWeekly' => ['o-W', 'week'], 'keepMonthly' => ['Y-m', 'month'], 'keepYearly' => ['Y', 'year']];
 
+    /** The Retention choices: as saved => as the Settings tab shows them */
+    const MODES = ['age' => 'By age', 'gfs' => 'Grandfather-father-son (GFS)'];
+
     /** Each field's label on the Settings tab; label() adds the Extra schedule tab's prefix */
-    const LABELS = ['deleteBackupsOlderThan' => 'Delete backups if older than x days', 'keepMinBackups' => 'Keep at least this many backups',
+    const LABELS = ['retentionMode' => 'Retention', 'deleteBackupsOlderThan' => 'Delete backups if older than x days', 'keepMinBackups' => 'Keep at least this many backups',
         'keepDaily' => 'Keep one backup a day for the last x days', 'keepWeekly' => 'Keep one backup a week for the last x weeks',
         'keepMonthly' => 'Keep one backup a month for the last x months', 'keepYearly' => 'Keep one backup a year for the last x years'];
 
@@ -27,15 +30,28 @@ class ABRetention {
         return $number >= 0 && $number <= 999999 && floor($number) === $number ? (int)$number : null;
     }
 
-    /** Why these settings keep every set, or '' when retention deletes */
-    public static function off(ABSettings $settings): string {
+    /** The saved retention value these settings cannot read, which keeps every set, or '' */
+    public static function unreadable(ABSettings $settings): string {
         $gfs   = $settings->retentionMode === 'gfs';
         $extra = $settings->schedule === 'extra'; // ABSettings::forSchedule
+        if (!isset(self::MODES[$settings->retentionMode])) {
+            return self::label('retentionMode', $extra) . ' is "' . $settings->retentionMode . '", not ' . implode(' or ', self::MODES);
+        }
         foreach ($gfs ? array_keys(self::PERIODS) : ['deleteBackupsOlderThan', 'keepMinBackups'] as $field) {
             if (self::count($settings->$field) === null) {
                 return self::label($field, $extra) . ' is "' . trim((string)$settings->$field) . '", not a whole number from 0 to 999999';
             }
         }
+        return '';
+    }
+
+    /** Why these settings keep every set, or '' when retention deletes */
+    public static function off(ABSettings $settings): string {
+        if (($unreadable = self::unreadable($settings)) !== '') {
+            return $unreadable;
+        }
+        $gfs   = $settings->retentionMode === 'gfs';
+        $extra = $settings->schedule === 'extra';
         if ($gfs) {
             return array_filter(array_keys(self::PERIODS), fn($field) => self::count($settings->$field)) ? '' : ($extra ? 'the extra schedule\'s' : 'the') . ' four Grandfather-father-son fields are empty or 0';
         }
