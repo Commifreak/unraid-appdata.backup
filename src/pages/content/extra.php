@@ -107,24 +107,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
     <p>Must differ from <b>Backup destination</b>, so each folder's retention only sees its own sets. A subfolder of it is fine. To restore, pick this folder as the source on the Restore tab.</p>
 </blockquote>
 
-<dl>
-    <dt><b>Extra schedule: delete backups if older than x days:</b></dt>
-    <dd><input id='extraDeleteBackupsOlderThan' name="extraDeleteBackupsOlderThan" type='number'
-               value='<?= htmlspecialchars((string)$abSettings->extraDeleteBackupsOlderThan) ?>'
-               placeholder='Leave empty to disable'/></dd>
-</dl>
-<blockquote class='inline_help'>
-    <p>Works like <b>Delete backups if older than x days</b>, for the extra destination only.</p>
-</blockquote>
-
-<dl>
-    <dt><b>Extra schedule: keep at least this many backups:</b></dt>
-    <dd><input id='extraKeepMinBackups' name="extraKeepMinBackups" type='number' value='<?= htmlspecialchars((string)$abSettings->extraKeepMinBackups) ?>'
-               placeholder='Leave empty to disable'/></dd>
-</dl>
-<blockquote class='inline_help'>
-    <p>Works like <b>Keep at least this many backups</b>, for the extra destination only.</p>
-</blockquote>
+<?= abRetentionRows($abSettings, true) // settings.php ?>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Backup options</span></div>
 <?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], $abSettings->containerBackupMethod(), 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab. While that is <b>Flash only</b>, <b>Same as Settings tab</b> means <b>For each container</b>.') ?>

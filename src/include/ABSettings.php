@@ -3,6 +3,7 @@
 namespace unraid\plugins\AppdataBackup;
 
 require_once __DIR__ . '/ABHelper.php';
+require_once __DIR__ . '/ABRetention.php';
 
 /**
  * This class offers a convenient way to retrieve settings
@@ -20,13 +21,16 @@ class ABSettings {
     public static $supportUrl = 'https://forums.unraid.net/topic/137710-plugin-appdatabackup/';
 
     /** The settings the Extra schedule tab saves; the Settings tab's form keeps them (see storeForm) */
-    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraContainerOrder', 'extraContainerSettings', 'extraDestination', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups',
-        'extraBackupMethod', 'extraSnapshotMode', 'extraCompression', 'extraCompressionCpuLimit', 'extraFlashBackup', 'extraFlashBackupCopy', 'extraBackupVMMeta', 'extraNotification', 'extraSuccessLogWanted', 'extraUpdateLogWanted',
+    const EXTRA_FIELDS = ['extraFrequency', 'extraFrequencyWeekday', 'extraFrequencyDayOfMonth', 'extraFrequencyHour', 'extraFrequencyMinute', 'extraFrequencyCustom', 'extraContainers', 'extraContainerOrder', 'extraContainerSettings', 'extraDestination', 'extraRetentionMode', 'extraDeleteBackupsOlderThan', 'extraKeepMinBackups',
+        'extraKeepDaily', 'extraKeepWeekly', 'extraKeepMonthly', 'extraKeepYearly', 'extraBackupMethod', 'extraSnapshotMode', 'extraCompression', 'extraCompressionCpuLimit', 'extraFlashBackup', 'extraFlashBackupCopy', 'extraBackupVMMeta', 'extraNotification', 'extraSuccessLogWanted', 'extraUpdateLogWanted',
         'extraScripts', 'extraPreRunScript', 'extraPreBackupScript', 'extraPreContainerBackupScript', 'extraPostContainerBackupScript', 'extraPostBackupScript', 'extraPostRunScript', 'extraIncludeFiles', 'extraGlobalExclusionsOwn', 'extraGlobalExclusions',
         'extraDefaultUpdateContainer', 'extraDefaultDontStop', 'extraDefaultVerifyBackup', 'extraDefaultIgnoreBackupErrors'];
 
     /** Run-wide settings the Extra schedule tab can set for itself: main => extra, where the extra value '' means the Settings tab's */
     const EXTRA_SAME_AS = ['backupMethod' => 'extraBackupMethod', 'snapshotMode' => 'extraSnapshotMode', 'compression' => 'extraCompression', 'compressionCpuLimit' => 'extraCompressionCpuLimit', 'notification' => 'extraNotification', 'successLogWanted' => 'extraSuccessLogWanted', 'updateLogWanted' => 'extraUpdateLogWanted'];
+
+    /** Retention settings (ABRetention), each with the extra schedule's own 'extra' . ucfirst() twin */
+    const RETENTION = ['retentionMode', 'deleteBackupsOlderThan', 'keepMinBackups', 'keepDaily', 'keepWeekly', 'keepMonthly', 'keepYearly'];
 
     /** Run-wide extras the extra schedule makes only with its own Yes, so a frequent run stays on its containers: main => extra */
     const EXTRA_OWN_YES = ['flashBackup' => 'extraFlashBackup', 'backupVMMeta' => 'extraBackupVMMeta'];
@@ -66,8 +70,14 @@ class ABSettings {
     /** 'stopAll', 'oneAfterTheOther', or 'flashOnly' (no container is stopped or backed up, see flashOnly()) */
     public string|null $backupMethod = self::DEFAULT_BACKUP_METHOD;
     public string $snapshotMode = 'no';
+    /** 'age' (deleteBackupsOlderThan, keepMinBackups) or 'gfs' (ABRetention::PERIODS) */
+    public string $retentionMode = 'age';
     public string|int $deleteBackupsOlderThan = '7';
     public string|int $keepMinBackups = '3';
+    public string|int $keepDaily = '7';
+    public string|int $keepWeekly = '4';
+    public string|int $keepMonthly = '12';
+    public string|int $keepYearly = '3';
 
     /**
      * @var array|string[] Allowed sources - WITHOUT trailing slash!
@@ -134,8 +144,13 @@ class ABSettings {
     public string $extraDefaultVerifyBackup = '';
     public string $extraDefaultIgnoreBackupErrors = '';
     public string $extraDestination = '';
+    public string $extraRetentionMode = 'age';
     public string|int $extraDeleteBackupsOlderThan = '7';
     public string|int $extraKeepMinBackups = '3';
+    public string|int $extraKeepDaily = '7';
+    public string|int $extraKeepWeekly = '4';
+    public string|int $extraKeepMonthly = '12';
+    public string|int $extraKeepYearly = '3';
     /** '' for the main schedule, 'extra' once forSchedule() made these the extra schedule's settings */
     public string $schedule = '';
     public array $containerSettings = [];
@@ -187,6 +202,10 @@ class ABSettings {
                                 break;
                             case 'containerOrderMode':
                                 $this->$key = $value === 'unraid' ? 'unraid' : 'custom';
+                                break;
+                            case 'retentionMode':
+                            case 'extraRetentionMode':
+                                $this->$key = $value === 'gfs' ? 'gfs' : 'age';
                                 break;
                             case 'containerOrder':
                                 // HACK - if something goes wrong while we transfer the jQuery sortable data, the value here would NOT be an array. Better safe than sorry: Force to empty array if it isnt one.
@@ -575,8 +594,9 @@ class ABSettings {
             $settings->{'backupFrequency' . $field} = $this->{'extraFrequency' . $field};
         }
         $settings->destination            = $this->extraDestination;
-        $settings->deleteBackupsOlderThan = $this->extraDeleteBackupsOlderThan;
-        $settings->keepMinBackups         = $this->extraKeepMinBackups;
+        foreach (self::RETENTION as $field) {
+            $settings->$field = $this->{'extra' . ucfirst($field)};
+        }
         $settings->containerOrder         = $this->extraContainerOrder ?: $this->containerOrder;
         $settings->containerSettings      = [];
         foreach (array_unique(array_merge(array_keys($this->containerSettings), $this->extraContainers)) as $name) {
@@ -633,7 +653,7 @@ class ABSettings {
         $source   = fn($own) => $own ? ' (own)' : ' (Settings tab)';
         $settings = [
             'Destination' => $run->destination,
-            'Retention'   => ($run->deleteBackupsOlderThan === '' ? 'no age limit' : 'older than ' . $run->deleteBackupsOlderThan . ($run->deleteBackupsOlderThan == 1 ? ' day' : ' days')) . ', keep at least ' . ($run->keepMinBackups === '' ? 'none' : $run->keepMinBackups),
+            'Retention'   => ABRetention::describe($run),
             'Containers'  => $this->extraContainers ? implode(', ', $this->extraContainers) : 'none',
             'Start order' => $this->containerOrderMode === 'unraid' ? 'Docker tab' : ($this->extraContainerOrder ? 'own' : 'Settings tab'),
         ];

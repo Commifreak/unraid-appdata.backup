@@ -6,6 +6,7 @@
 
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABIntegrity;
+use unraid\plugins\AppdataBackup\ABRetention;
 use unraid\plugins\AppdataBackup\ABSettings;
 use unraid\plugins\AppdataBackup\ABStatus;
 use unraid\plugins\AppdataBackup\ABSnapshot;
@@ -379,10 +380,9 @@ ABSteps::start('Retention');
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
-    if (empty($abSettings->keepMinBackups) && empty($abSettings->deleteBackupsOlderThan)) {
-        ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
+    if (($off = ABRetention::off($abSettings)) !== '') {
+        ABHelper::backupLog("Retention is off ($off): every backup set is kept", ABHelper::LOGLEVEL_WARN);
     } else { // Retention enabled
-        $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
         $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem)) && !in_array(realpath($backupItem), $abDestinations, true)));
         // Flash only sets (marked when created) and the others keep and delete only their own type, so switching type never deletes the other's
@@ -392,43 +392,24 @@ if (ABHelper::$errorOccured) {
             ABHelper::backupLog("Retention leaves " . count($otherKind) . " set(s) of the other Backup type here alone: it only counts and deletes this type's sets");
         }
 
-        // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
+        // Only finished, successful sets count towards Keep at least and stand for a GFS period. This run's set gets its backup.log at the end.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
 
-        $toKeep = array_slice($goodBackups, 0, $keepMinBackupsNum);
-        ABHelper::backupLog(ABHelper::dump('toKeep after slicing', $toKeep), ABHelper::LOGLEVEL_DEBUG);
-
-        if (!empty($abSettings->deleteBackupsOlderThan)) {
-            $nowDate = new DateTime();
-            $nowDate->modify('-' . $abSettings->deleteBackupsOlderThan . ' days');
-            ABHelper::backupLog("Delete backups older than " . $nowDate->format("Ymd_His"), ABHelper::LOGLEVEL_DEBUG);
-
-            foreach ($curBackupsState as $backupItem) {
-                $correctedItem = preg_replace('/-failed$/', '', array_reverse(explode("/", $backupItem))[0]); // failed sets age out like the others
-                $backupDate    = date_create_from_format("??_Ymd_His", $correctedItem);
-                if (!$backupDate) {
-                    ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_DEBUG);
-                    $toKeep[] = $backupItem; // Keep the errornous object - Better safe than sorry.
-                    continue;
-                }
-                if (in_array($backupItem, $toKeep)) {
-                    ABHelper::backupLog("Keeping $backupItem, because it is within the minimum number of backups", ABHelper::LOGLEVEL_DEBUG);
-                } elseif ($backupDate >= $nowDate) {
-                    ABHelper::backupLog("Keeping " . $backupItem, ABHelper::LOGLEVEL_DEBUG);
-                    $toKeep[] = $backupItem;
-                } else {
-                    ABHelper::backupLog("Discarding $backupItem, because it is older than the cutoff", ABHelper::LOGLEVEL_DEBUG);
-                }
-            }
+        $toKeep = ABRetention::keep($abSettings, $curBackupsState, $goodBackups, new DateTime());
+        ABHelper::backupLog("Retention: " . ABRetention::describe($abSettings) . "; keeping " . count($toKeep) . " of " . count($curBackupsState) . " set(s)");
+        foreach ($toKeep as $backupItem => $why) {
+            ABHelper::backupLog("Keeping $backupItem: $why", ABHelper::LOGLEVEL_DEBUG);
         }
 
-        $toDelete = array_diff($curBackupsState, $toKeep);
-        ABHelper::backupLog("Resulting toKeep: " . implode(', ', $toKeep), ABHelper::LOGLEVEL_DEBUG);
-        ABHelper::backupLog("Resulting deletion list: " . implode(', ', $toDelete), ABHelper::LOGLEVEL_DEBUG);
+        $toDelete = array_diff($curBackupsState, array_keys($toKeep));
 
         foreach ($toDelete as $deleteBackupPath) {
             ABHelper::backupLog("Delete old backup: " . $deleteBackupPath);
-            exec("rm -rf " . escapeshellarg($deleteBackupPath));
+            $rmOut = [];
+            exec("rm -rf " . escapeshellarg($deleteBackupPath) . " 2>&1", $rmOut, $rmCode);
+            if ($rmCode !== 0) {
+                ABHelper::backupLog("Could not delete all of $deleteBackupPath (rm exited $rmCode): " . implode(' ', array_slice($rmOut, 0, 3)), ABHelper::LOGLEVEL_WARN);
+            }
         }
 
     }

@@ -11,6 +11,38 @@ require_once("/usr/local/emhttp/plugins/appdata.backup$beta/include/ABHelper.php
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
+/** The Retention select and each choice's fields, on this tab or the Extra schedule tab ($extra); abRetention() switches them */
+function abRetentionRows(ABSettings $abSettings, bool $extra): string {
+    $name = fn(string $field) => $extra ? 'extra' . ucfirst($field) : $field;
+    $mode = $abSettings->{$name('retentionMode')};
+    $row  = function (string $field, string $label, string $help) use ($abSettings, $extra, $name) {
+        $help  = $extra ? 'Works like <b>' . $label . '</b> on the Settings tab, for the extra destination only.' : $help;
+        $label = $extra ? 'Extra schedule: ' . lcfirst($label) : $label;
+        return "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><input id='{$name($field)}' name='{$name($field)}' type='number' value='"
+            . htmlspecialchars((string)$abSettings->{$name($field)}, ENT_QUOTES) . "' placeholder='Leave empty to disable'/></dd>\n</dl>\n"
+            . "<blockquote class='inline_help'><p>$help</p></blockquote>\n";
+    };
+    $select = $name('retentionMode');
+    $label  = $extra ? 'Extra schedule: retention' : 'Retention';
+    $html   = "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><select id='$select' name='$select' onchange='abRetention(this);'>\n";
+    foreach (['age' => 'By age', 'gfs' => 'Grandfather-father-son (GFS)'] as $value => $text) {
+        $html .= "        <option value='$value'" . ($mode === $value ? ' selected' : '') . ">$text</option>\n";
+    }
+    $html .= "    </select></dd>\n</dl>\n<blockquote class='inline_help'><p>" . ($extra ? 'Works like <b>Retention</b> on the Settings tab, for the extra destination only.'
+        : 'After a run with no errors, deletes the backup sets this does not keep. <b>By age</b> deletes sets older than a number of days. <b>Grandfather-father-son</b> keeps the newest good set of each day, week, month and year, for as many of each as you set, and deletes the rest. <b>Flash only</b> sets and the others are counted and deleted separately, so switching <b>Backup type</b> deletes neither.')
+        . "</p></blockquote>\n";
+    $html .= "<div id='{$select}Age'" . ($mode === 'gfs' ? " style='display: none;'" : '') . ">\n"
+        . $row('deleteBackupsOlderThan', 'Delete backups if older than x days', 'Deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set.')
+        . $row('keepMinBackups', 'Keep at least this many backups', 'The newest this-many good sets of each <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don\'t count.')
+        . "</div>\n<div id='{$select}Gfs'" . ($mode === 'gfs' ? '' : " style='display: none;'") . ">\n"
+        . $row('keepDaily', 'Keep one backup a day for the last x days', 'Keeps the newest good set of each of the last this-many days that have one, so a day without one doesn\'t count. A set any of these four keeps stays; the rest, failed or unfinished ones too, are deleted. Leave all four empty to keep every set.')
+        . $row('keepWeekly', 'Keep one backup a week for the last x weeks', 'The newest good set of each of the last this-many weeks (Monday to Sunday) that have one.')
+        . $row('keepMonthly', 'Keep one backup a month for the last x months', 'The newest good set of each of the last this-many months that have one.')
+        . $row('keepYearly', 'Keep one backup a year for the last x years', 'The newest good set of each of the last this-many years that have one.')
+        . "</div>\n";
+    return $html;
+}
+
 if (!ABHelper::isArrayOnline()) {
     echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
     return;
@@ -293,25 +325,7 @@ if (($code ?? 0) != 0) {
         <p>Stops the containers, snapshots their data and starts them again, then backs up from the snapshot, so they're only down while they stop and start. Works on ZFS and btrfs (a /mnt/user share must be exclusive) when nothing else is mounted inside the volume; otherwise that container stays stopped for its backup, or with <b>Stop all</b> the whole run does. When the snapshot works, post-container and post-backup scripts run with the containers already up.</p>
     </blockquote>
 
-    <dl>
-
-        <dt><b>Delete backups if older than x days:</b></dt>
-        <dd><input id='deleteBackupsOlderThan' name="deleteBackupsOlderThan" type='number'
-                   value='<?= $abSettings->deleteBackupsOlderThan ?>'
-                   placeholder='Leave empty to disable'/></dd>
-    </dl>
-    <blockquote class='inline_help'>
-        <p>After a run with no errors, deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set. <b>Flash only</b> sets and the others are counted and deleted separately, so switching <b>Backup type</b> deletes neither.</p>
-    </blockquote>
-
-    <dl>
-        <dt><b>Keep at least this many backups:</b></dt>
-        <dd><input id='keepMinBackups' name="keepMinBackups" type='number' value='<?= $abSettings->keepMinBackups ?>'
-                   placeholder='Leave empty to disable'/></dd>
-    </dl>
-    <blockquote class='inline_help'>
-        <p>The newest this-many good sets of each <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don't count.</p>
-    </blockquote>
+    <?= abRetentionRows($abSettings, false) ?>
 
     <dl data-ab-flash-off>
         <dt><b>Appdata source(s)</b> Please read the info in the help block!</dt>
@@ -1129,6 +1143,13 @@ HTML;
         } else {
             $excludeTextarea.val($excludeTextarea.val() + "\n" + $path);
         }
+    }
+
+    /** Shows the fields of the chosen Retention (abRetentionRows); hidden ones are still saved, so one left invalid goes back to its saved value, or it would block Save unseen */
+    function abRetention(select) {
+        const hide = $('#' + select.id + (select.value === 'gfs' ? 'Age' : 'Gfs')).hide();
+        hide.find('input').filter(function () { return !this.checkValidity(); }).val(function () { return this.defaultValue; });
+        $('#' + select.id + (select.value === 'gfs' ? 'Gfs' : 'Age')).show();
     }
 
     /** Enables only the fields the chosen frequency uses; prefix = the frequency select's id (backupFrequency or extraFrequency) */
