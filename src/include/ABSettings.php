@@ -40,6 +40,9 @@ class ABSettings {
     /** Per-container settings the Extra schedule tab can set for itself ('' = same as the Settings tab) */
     const EXTRA_CONTAINER_KEYS = ['backupExtVolumes', 'updateContainer', 'skipBackup', 'verifyBackup', 'ignoreBackupErrors', 'dontStop'];
 
+    /** Why the last storeForm kept Skip new containers? as saved (settings.php shows it); null when it did not */
+    public static ?string $skipKeptWhy = null;
+
     public static $tempFolder = '/tmp/appdata.backup';
 
     public static $logfile = 'ab.log';
@@ -357,25 +360,33 @@ class ABSettings {
         return true;
     }
 
-    /** Skip new containers? decides only for containers added after the Save that changes it: each container Docker lists now keeps the old value as its own Skip? */
+    /** Skip new containers? decides only for containers added after the Save that changes it: a listed container no row posted gets the old value as its own Skip? */
     private static function keepListedSkip(array $post, array $saved) {
-        $old = ($saved['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no';
+        self::$skipKeptWhy = null;
+        $old               = ($saved['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no';
         if ((($post['defaults']['skip'] ?? 'no') === 'yes' ? 'yes' : 'no') === $old) {
             return $post;
         }
         $post['defaults'] = (array)($post['defaults'] ?? []);
-        if (!ABHelper::isDockerRunning()) {
-            $post['defaults']['skip'] = $old; // no container list to keep: settings.php locks the select then
+        $rows             = (array)($post['containerSettings'] ?? []);
+        $running          = ABHelper::isDockerRunning();
+        $listed           = [];
+        if ($running) {
+            require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
+            $listed = (new \DockerClient())->getDockerContainers();
+        }
+        self::$skipKeptWhy = match (true) {
+            !$running         => 'Docker is not running',
+            !$listed && $rows => 'Docker listed no containers', // rows were posted or kept, so the list is taken as failed
+            default           => null,
+        };
+        if (self::$skipKeptWhy !== null) {
+            $post['defaults']['skip'] = $old;
             return $post;
         }
-        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
-        $rows = (array)($post['containerSettings'] ?? []);
-        foreach ((new \DockerClient())->getDockerContainers() ?: [] as $container) {
-            $row = (array)($rows[(string)$container['Name']] ?? []);
-            if (($row['skip'] ?? '') === '') {
-                $row['skip']                         = $old; // no row posted it, e.g. added after the page was drawn
-                $rows[(string)$container['Name']] = $row;
-            }
+        $unset = array_fill_keys(array_keys(get_class_vars(self::class)['defaults']), ''); // '' = use the default; exclude is saved as text
+        foreach ($listed as $container) {
+            $rows[(string)$container['Name']] ??= ['skip' => $old] + $unset; // no row posted it, e.g. added after the page was drawn
         }
         $post['containerSettings'] = $rows;
         return $post;

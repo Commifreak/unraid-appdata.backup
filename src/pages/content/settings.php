@@ -250,9 +250,12 @@ HTML;
 
 }
 
+if (ABSettings::$skipKeptWhy !== null) {
+    echo '<p class="ab-warn">Skip new containers? was not changed: ' . htmlspecialchars(ABSettings::$skipKeptWhy) . ', so the containers already there could not keep their Skip?. The rest was saved. Save again once Docker is running.</p>';
+}
 if (($code ?? 0) != 0) {
     echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
-} elseif (!empty($abTabsChanged)) {
+} elseif (!empty($abTabsChanged) && ABSettings::$skipKeptWhy === null) {
     echo "<script>location.replace(location.href);</script>"; // a GET, not a resubmit
 }
 ?>
