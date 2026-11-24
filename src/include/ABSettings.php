@@ -182,7 +182,7 @@ class ABSettings {
                 foreach ($config as $key => $value) {
                     if (property_exists($this, $key)) {
                         if (in_array(str_starts_with($key, 'extra') ? lcfirst(substr($key, 5)) : $key, self::RETENTION, true) && !is_string($value) && !is_int($value)) {
-                            $value = json_encode($value); // a count PHP would cast to 1 (1.5, true) stays text that ABRetention::count() rejects, so retention is off
+                            $value = json_encode($value); // PHP would cast 1.5 or true to 1; as text ("1.5", "true") ABRetention::count() rejects them
                         }
                         switch ($key) {
                             case 'defaults':
