@@ -362,12 +362,10 @@ if (!$setCreated || !is_dir($abDestination)) {
 } elseif (!ABHelper::$errorOccured) {
     ABSteps::start('Writing checksums');
     ABIntegrity::writeChecksums($abDestination, $setFiles);
-    // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
+    // Retention deletes older sets, so this one goes to disk first
     ABHelper::backupLog("Flushing the backup to disk...");
-    $output = $resultcode = null;
-    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, array_filter([$abDestination . '/' . ABIntegrity::FILE], 'is_file'), [$abDestination]))) . ' 2>&1', $output, $resultcode);
-    if ($resultcode != 0) {
-        ABHelper::backupLog("Flushing the backup to disk failed! sync said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+    if (($said = ABHelper::flush(array_merge($setFiles, array_filter([$abDestination . '/' . ABIntegrity::FILE], 'is_file'), [$abDestination]))) !== null) {
+        ABHelper::backupLog("Flushing the backup to disk failed! sync said: $said", ABHelper::LOGLEVEL_ERR);
         ABHelper::$errorOccured = true;
     }
 }
@@ -410,6 +408,9 @@ if (ABHelper::$errorOccured) {
         $notDeleted = [];
         if ($toDelete && !ABStatus::markFinished($abDestination)) { // unmarked, the next run would not count this set and could delete it too
             ABHelper::backupLog("Could not write backup.log into $abDestination, so retention deletes nothing this run", ABHelper::LOGLEVEL_WARN);
+            $toDelete = [];
+        } elseif ($toDelete && ($said = ABHelper::flush(["$abDestination/backup.log", $abDestination])) !== null) { // a power cut after the deletes must not lose the mark
+            ABHelper::backupLog("Could not flush backup.log in $abDestination to disk, so retention deletes nothing this run. sync said: $said", ABHelper::LOGLEVEL_WARN);
             $toDelete = [];
         }
         foreach ($toDelete as $deleteBackupPath) {

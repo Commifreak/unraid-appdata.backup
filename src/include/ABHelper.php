@@ -1005,6 +1005,13 @@ class ABHelper {
         return addcslashes($path, '\\*?[');
     }
 
+    /** Flushes these files and folders to disk, one by one: sync -f does not reach the disks through /mnt/user. null, or what sync said when it failed */
+    public static function flush(array $paths): ?string {
+        $output = $resultcode = null;
+        exec('sync ' . implode(' ', array_map('escapeshellarg', $paths)) . ' 2>&1', $output, $resultcode);
+        return $resultcode === 0 ? null : (implode('; ', $output) ?: "exit $resultcode");
+    }
+
     public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline, array $errcontext = []): bool {
         // @ leaves only fatal levels in error_reporting(). Unraid's php.ini leaves out E_WARNING, so never test $errno against it.
         if ((error_reporting() & ~self::FATAL_ERRORS) === 0) {
