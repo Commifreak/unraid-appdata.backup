@@ -30,7 +30,7 @@ class ABRetention {
         return $number >= 0 && $number <= 999999 && floor($number) === $number ? (int)$number : null;
     }
 
-    /** The saved retention value these settings cannot read, which keeps every set, or '' */
+    /** Names the saved retention value these settings cannot read, so retention keeps every set, or '' */
     public static function unreadable(ABSettings $settings): string {
         $gfs   = $settings->retentionMode === 'gfs';
         $extra = $settings->schedule === 'extra'; // ABSettings::forSchedule
