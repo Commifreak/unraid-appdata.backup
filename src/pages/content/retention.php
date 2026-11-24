@@ -10,10 +10,12 @@ function abRetentionRows(ABSettings $abSettings, bool $extra): string {
     $row  = function (string $field, string $help) use ($abSettings, $extra, $name) {
         $help  = $extra ? 'Works like <b>' . ABRetention::label($field) . '</b> on the Settings tab, for the extra destination only.' : $help;
         $label = ABRetention::label($field, $extra);
-        $value = (string)$abSettings->{$name($field)};
-        $type  = preg_match('/\A\d*\z/', $value) && ABRetention::count($value) !== null ? 'number' : 'text'; // a number box keeps digits as saved, but can empty or flag other text, which a Save would then change
-        return "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><input id='{$name($field)}' name='{$name($field)}' type='$type' min='0' max='999999' value='"
-            . htmlspecialchars($value, ENT_QUOTES) . "' placeholder='Leave empty to disable'/></dd>\n</dl>\n"
+        $value = htmlspecialchars((string)$abSettings->{$name($field)}, ENT_QUOTES);
+        $id    = $name($field);
+        $box   = preg_match('/\A\d*\z/', $value) && ABRetention::count($value) !== null // a number box keeps only digits as saved; a text box would drop line breaks ("1\n2" posts 12)
+            ? "<input id='$id' name='$id' type='number' min='0' max='999999' value='$value' placeholder='Leave empty to disable'/>"
+            : "<textarea id='$id' name='$id' rows='2' placeholder='Leave empty to disable'>\n$value</textarea>"; // the parser drops the first line break
+        return "<dl>\n    <dt><b>$label:</b></dt>\n    <dd>$box</dd>\n</dl>\n"
             . "<blockquote class='inline_help'><p>$help</p></blockquote>\n";
     };
     $select = $name('retentionMode');
