@@ -368,28 +368,35 @@ class ABSettings {
             return $post;
         }
         $post['defaults'] = (array)($post['defaults'] ?? []);
-        $rows             = (array)($post['containerSettings'] ?? []);
         $running          = ABHelper::isDockerRunning();
-        $listed           = [];
-        if ($running) {
-            require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
-            $listed = (new \DockerClient())->getDockerContainers();
-        }
+        $listed           = $running ? self::listedContainers() : null;
         self::$skipKeptWhy = match (true) {
-            !$running         => 'Docker is not running',
-            !$listed && $rows => 'Docker listed no containers', // rows were posted or kept, so the list is taken as failed
-            default           => null,
+            !$running        => 'Docker is not running',
+            $listed === null => 'Docker did not list its containers',
+            default          => null,
         };
         if (self::$skipKeptWhy !== null) {
             $post['defaults']['skip'] = $old;
             return $post;
         }
+        $rows  = (array)($post['containerSettings'] ?? []);
         $unset = array_fill_keys(array_keys(get_class_vars(self::class)['defaults']), ''); // '' = use the default; exclude is saved as text
         foreach ($listed as $container) {
             $rows[(string)$container['Name']] ??= ['skip' => $old] + $unset; // no row posted it, e.g. added after the page was drawn
         }
         $post['containerSettings'] = $rows;
         return $post;
+    }
+
+    /** The containers Docker lists, or null unless an empty list is Docker's own 200 answer: a failed read also gives an empty getDockerContainers() */
+    private static function listedContainers() {
+        require_once '/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php';
+        $client = new \DockerClient();
+        $listed = $client->getDockerContainers();
+        if ($listed) {
+            return $listed;
+        }
+        return $client->getDockerJSON('/containers/json?all=1', 'GET', $code) === [] && $code === true ? [] : null; // true: HTTP 200
     }
 
     /** Only what each extra panel sets: '' is "Same as Settings tab", and the exclusion box counts only as an Own list */
