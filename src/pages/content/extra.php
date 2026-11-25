@@ -37,7 +37,10 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <?php include_once __DIR__ . '/head.php'; ?>
 
 <div class="title"><span class="left"><i class="fa fa-clock-o title"></i>Extra schedule</span></div>
-<?php if (($abExtraSaved ?? null) === false): ?>
+<?php if (($abExtraNotSaved ?? null) === ABSettings::NOT_WRITTEN): ?>
+<p class="ab-warn"><?= ABSettings::NOT_WRITTEN_TEXT ?></p>
+<?php endif; ?>
+<?php if (($abExtraNotSaved ?? null) === ABSettings::NOT_READ): ?>
 <p class="ab-warn">Not saved: the existing settings could not be read, and saving only this tab would have wiped them.</p>
 <?php endif; ?>
 

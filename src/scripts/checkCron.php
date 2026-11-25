@@ -14,6 +14,9 @@ echo "Checking cron." . PHP_EOL;
 
 try {
     $abSettings = new ABSettings();
+    if (($abUnreadable = ABSettings::unreadableWarning()) !== '') {
+        echo $abUnreadable . PHP_EOL;
+    }
     list($code, $out) = $abSettings->checkCron();
 
     if ($code == 0) {

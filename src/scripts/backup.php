@@ -62,6 +62,13 @@ if (!file_exists(ABSettings::getConfigPath())) {
 }
 
 $abSettings = new ABSettings();
+if (in_array('extra', $runArgs, true)) {
+    ABHelper::$targetLogLevel = $abSettings->forSchedule('extra')->notification; // the errors below notify at this run's level; loading the settings set the Settings tab's
+}
+if (($abUnreadable = ABSettings::unreadableWarning()) !== '') {
+    ABHelper::backupLog($abUnreadable, ABHelper::LOGLEVEL_ERR);
+    ABHelper::$errorOccured = true; // a default may leave things out of the set: it is marked failed, and retention does not run
+}
 
 // Retention never deletes either schedule's destination, even one picked inside the other and named like a set
 $abDestinations = array_filter(array_map(fn($path) => $path === '' ? false : realpath($path), [$abSettings->destination, $abSettings->extraDestination]));
@@ -69,7 +76,8 @@ $abDestinations = array_filter(array_map(fn($path) => $path === '' ? false : rea
 if (in_array('extra', $runArgs, true)) {
     ABHelper::backupLog("Running the extra schedule: only its chosen containers, into its own destination.");
     if ($abSettings->extraSchedule !== 'yes') {
-        ABHelper::backupLog("The extra schedule is turned off (Settings, Use an extra schedule?).", ABHelper::LOGLEVEL_ERR);
+        ABHelper::backupLog(ABSettings::unread('/^extraSchedule$/') ? "The extra schedule did not run: Use an extra schedule? could not be read from config.json (see above)."
+            : "The extra schedule is turned off (Settings, Use an extra schedule?).", ABHelper::LOGLEVEL_ERR);
         goto end;
     }
     $extraReal = $abSettings->extraDestination === '' ? false : realpath($abSettings->extraDestination); // realpath('') is the working directory
@@ -82,7 +90,6 @@ if (in_array('extra', $runArgs, true)) {
     ABHelper::backupLog(ABHelper::dump('Extra schedule settings', $extraSummary['settings']), ABHelper::LOGLEVEL_DEBUG);
     ABHelper::backupLog(ABHelper::dump("Extra schedule's own container settings", $extraSummary['overrides']), ABHelper::LOGLEVEL_DEBUG);
     $abSettings = $abSettings->forSchedule('extra');
-    ABHelper::$targetLogLevel = $abSettings->notification; // this run's own notification level; loading the settings set the Settings tab's
 }
 
 if (empty($abSettings->destination)) {
