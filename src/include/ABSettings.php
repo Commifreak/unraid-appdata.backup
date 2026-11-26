@@ -2,6 +2,7 @@
 
 namespace unraid\plugins\AppdataBackup;
 
+require_once __DIR__ . '/ABCron.php';
 require_once __DIR__ . '/ABHelper.php';
 require_once __DIR__ . '/ABRetention.php';
 
@@ -198,6 +199,7 @@ class ABSettings {
                 $this->load((string)$key, $value);
             }
         }
+        ABCron::check($this);
         if ($this->extraSchedule !== 'yes') { // no extra runs, and no Extra schedule tab to set them on; a main run's retention still keeps out of extraDestination
             self::$unreadable = array_values(array_filter(self::$unreadable, fn($item) => !self::onExtraTab($item) || $item === 'extraDestination'));
             self::$unreadable = array_map(fn($item) => $item === 'extraDestination' ? "$item (Use an extra schedule? Yes shows its tab)" : $item, self::$unreadable);
@@ -237,6 +239,9 @@ class ABSettings {
         if (in_array(str_starts_with($key, 'extra') ? lcfirst(substr($key, 5)) : $key, self::RETENTION, true) && !is_string($value) && !is_int($value)) {
             $value = json_encode($value) ?: var_export($value, true); // a default, or PHP's cast of 1.5 or true to 1, could delete sets; ABRetention::unreadable() names "1.5", "true", "[]" or INF (1e400, which has no JSON) and keeps every set
         }
+        if (preg_match('/^(backup|extra)Frequency[A-Z]/', $key) && (is_bool($value) || is_float($value))) {
+            $value = var_export($value, true); // PHP would cast false or 2.5 to the time 0 or 2; ABCron::check() names the text instead
+        }
         if ($key === 'settingsVersion') {
             if (self::isVersion($value)) {
                 $this::$settingsVersion = $value;
@@ -262,12 +267,12 @@ class ABSettings {
         return in_array($value, ['stopAll', 'oneAfterTheOther', ...($key === 'extraBackupMethod' ? [''] : ['flashOnly'])], true) ? $value : null;
     }
 
-    /** A frequency both tabs offer: cronTime() writes no line for any other, so checkCron() would drop the saved schedule */
+    /** A frequency both tabs offer: ABCron::write() writes no line for any other, so it would drop the saved schedule */
     private static function frequency($value) {
         return in_array($value, ['disabled', 'daily', 'weekly', 'monthly', 'custom'], true) ? $value : null;
     }
 
-    /** 'yes' or 'no', as the select offers: checkCron() would read other text as no and drop the saved extra line */
+    /** 'yes' or 'no', as the select offers: ABCron::write() would read other text as no and drop the saved extra line */
     private static function yesNo($value) {
         return in_array($value, ['yes', 'no'], true) ? $value : null;
     }
@@ -365,10 +370,15 @@ class ABSettings {
                 ? 'config.json on the flash drive could not be read, so every setting uses its default, and retention keeps every backup set, until it can be read again.'
                 : 'config.json could not be read as settings, so every setting uses its default, and retention keeps every backup set, until you set them again and Save on the Settings tab.';
         }
-        $extra = array_filter(self::$unreadable, fn($item) => self::onExtraTab($item));
-        $tabs  = array_filter(['the Settings tab' => array_diff(self::$unreadable, $extra), 'the Extra schedule tab' => $extra]);
-        $where = array_map(fn($tab, $items) => "$tab: " . implode(', ', $items), array_keys($tabs), $tabs);
-        return $where ? 'config.json holds settings this version cannot read, so they use their defaults, and retention keeps every backup set, until you set them again and Save on ' . implode('; ', $where) . '.' : '';
+        $where = self::byTab(self::$unreadable, fn($item) => $item);
+        return $where !== '' ? 'config.json holds settings this version cannot read, so they use their defaults, and retention keeps every backup set, until you set them again and Save on ' . $where . '.' : '';
+    }
+
+    /** $items named by $name and grouped by the tab that sets them: "the Settings tab: a, b; the Extra schedule tab: c" */
+    public static function byTab(array $items, callable $name) {
+        $extra = array_filter($items, fn($item) => self::onExtraTab($item));
+        $tabs  = array_filter(['the Settings tab' => array_diff($items, $extra), 'the Extra schedule tab' => $extra]);
+        return implode('; ', array_map(fn($tab, $items) => "$tab: " . implode(', ', array_map($name, $items)), array_keys($tabs), $tabs));
     }
 
     /** Whether the last load could not read a setting matching $pattern, or the whole file */
@@ -456,8 +466,8 @@ class ABSettings {
     }
 
     /** Replaces $path with $text through a temporary file beside it, so a failed or short write leaves the old file; false when it could not */
-    private static function replaceFile(string $path, string $text) {
-        $tmp = "$path." . getmypid() . '.tmp'; // its own per process: two writers (a Save, a run's migration, checkCron) may replace one file at once
+    public static function replaceFile(string $path, string $text) {
+        $tmp = "$path." . getmypid() . '.tmp'; // its own per process: two writers (a Save, a run's migration, ABCron::write) may replace one file at once
         if (@file_put_contents($tmp, $text) !== strlen($text) || !@rename($tmp, $path)) {
             @unlink($tmp);
             return false;
@@ -843,60 +853,6 @@ class ABSettings {
             return [];
         }
         return array_values(array_diff($this->extraContainers, array_column($containers ?: [], 'Name')));
-    }
-
-    /** The cron time fields for the schedule whose settings start with $prefix, or '' when it is off */
-    private function cronTime($prefix) {
-        $minute = $this->{$prefix . 'Minute'};
-        $hour   = $this->{$prefix . 'Hour'};
-        return match ($this->$prefix) {
-            'custom' => trim($this->{$prefix . 'Custom'}),
-            'daily' => "$minute $hour * * *",
-            'weekly' => "$minute $hour * * " . $this->{$prefix . 'Weekday'},
-            'monthly' => "$minute $hour " . $this->{$prefix . 'DayOfMonth'} . " * *",
-            default => '',
-        };
-    }
-
-    /** The saved cron lines of one schedule when the last load could not read one of its settings ($fields, a pattern) or the whole file: a default could stop or move it. $lines is the cron file's ([] for none, false when it cannot be read, which gives null) */
-    private static function keptCronLines(string $fields, bool $extra, $lines) {
-        if (!self::unread($fields)) {
-            return [];
-        }
-        return $lines === false ? null : array_values(array_filter($lines, fn($line) => str_contains($line, '/scripts/backup.php') && str_contains($line, ' extra ') === $extra)); // older versions wrote the main line without 'scheduled'
-    }
-
-    /**
-     * @return array
-     */
-    public function checkCron() {
-        $cronPath = self::$pluginDir . '/' . self::$cronFile;
-        $saved    = is_file($cronPath) ? @file($cronPath, FILE_IGNORE_NEW_LINES) : []; // read once, so both schedules keep lines of the same file
-        $lines    = [];
-        // 'scheduled' makes a run wait for a running job instead of being refused
-        foreach (['backupFrequency' => ['scheduled', '/^backupFrequency/'], 'extraFrequency' => ['scheduled extra', '/^(extraFrequency|extraSchedule$)/']] as $prefix => [$args, $fields]) {
-            $kept = self::keptCronLines($fields, $prefix === 'extraFrequency', $saved);
-            if ($kept === null) {
-                return [1, ['The cron file ' . self::$pluginDir . '/' . self::$cronFile . ' could not be read, so the schedules were left as they were']];
-            }
-            if ($kept) {
-                array_push($lines, ...$kept);
-                continue;
-            }
-            $time = $prefix === 'extraFrequency' && $this->extraSchedule !== 'yes' ? '' : $this->cronTime($prefix);
-            if ($time !== '') {
-                $lines[] = $time . ' php ' . dirname(__DIR__) . '/scripts/backup.php ' . $args . ' > /dev/null 2>&1';
-            }
-        }
-
-        $written = $lines ? self::replaceFile($cronPath, '# Appdata.Backup cron settings' . PHP_EOL . implode(PHP_EOL, $lines) . PHP_EOL) : !file_exists($cronPath) || @unlink($cronPath);
-        if (!$written) {
-            return [1, ["The cron file $cronPath could not be written, so the schedules may not match these settings"]];
-        }
-        // Let dcron know our changes via update_cron
-        $out = $code = 0;
-        exec("update_cron", $out, $code);
-        return [$code, $out];
     }
 
 }

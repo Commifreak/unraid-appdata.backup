@@ -1,5 +1,6 @@
 <?php
 
+use unraid\plugins\AppdataBackup\ABCron;
 use unraid\plugins\AppdataBackup\ABSettings;
 
 // CLI only: nginx runs any .php under the plugin folder for a logged-in GET.
@@ -17,7 +18,10 @@ try {
     if (($abUnreadable = ABSettings::unreadableWarning()) !== '') {
         echo $abUnreadable . PHP_EOL;
     }
-    list($code, $out) = $abSettings->checkCron();
+    if (($abBadCron = ABCron::warning()) !== '') {
+        echo $abBadCron . PHP_EOL;
+    }
+    list($code, $out) = ABCron::write($abSettings);
 
     if ($code == 0) {
         echo "Checking cron succeeded!" . PHP_EOL;

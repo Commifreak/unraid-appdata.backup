@@ -24,7 +24,7 @@ require_once dirname(__DIR__) . '/include/ABStatus.php';
 
 set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
-// From cron (see ABSettings::checkCron): 'scheduled' waits for a running job, 'extra' runs the extra schedule
+// From cron (see ABCron::write): 'scheduled' waits for a running job, 'extra' runs the extra schedule
 $runArgs = array_slice($argv, 1);
 if (in_array('extra', $runArgs, true)) {
     ABHelper::$runLabel = 'Extra schedule'; // names this run in every notification, "Still running" included

@@ -8,6 +8,7 @@ require_once("/usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerCli
 require_once("/usr/local/emhttp/plugins/appdata.backup$beta/include/ABSettings.php");
 require_once("/usr/local/emhttp/plugins/appdata.backup$beta/include/ABHelper.php");
 
+use unraid\plugins\AppdataBackup\ABCron;
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 
@@ -112,8 +113,8 @@ if (isset($_POST['extraScheduleForm'])) {
             echo "<h1>Not migrated!</h1><p>config.json on the flash drive could not be written. Check the flash drive, then migrate again.</p>";
             exit;
         }
-        // This branch exits, so the checkCron() call after a normal save never runs for it
-        [$code, $out] = (new ABSettings())->checkCron();
+        // This branch exits, so the ABCron::write() call after a normal save never runs for it
+        [$code, $out] = ABCron::write(new ABSettings());
         if ($code != 0) {
             echo "<h1>Cron error!</h1><p>" . htmlspecialchars(implode('; ', $out)) . "</p>";
             exit; // no success message or reload, so the error stays on screen
@@ -157,7 +158,7 @@ window.setTimeout(function() {
 $abSettings = new ABSettings();
 
 if ($_POST) {
-    list($code, $out) = $abSettings->checkCron();
+    list($code, $out) = ABCron::write($abSettings);
 }
 
 
@@ -270,6 +271,9 @@ if (($abNotSaved ?? null) === ABSettings::NOT_READ) {
 if (($abUnreadable = ABSettings::unreadableWarning()) !== '') {
     echo '<p class="ab-warn">' . htmlspecialchars($abUnreadable) . '</p>';
 }
+if (($abBadCron = ABCron::warning()) !== '') {
+    echo '<p class="ab-warn">' . htmlspecialchars($abBadCron) . '</p>';
+}
 if (ABSettings::$skipKeptWhy !== null) {
     echo '<p class="ab-warn">Skip new containers? was not changed: ' . htmlspecialchars(ABSettings::$skipKeptWhy) . ', so the containers already there could not keep their Skip?. Set it again and Save once the Docker tab lists your containers.'
         . (empty($abTabsChanged) ? '' : ' <a href="#" onclick="location.replace(location.href); return false;">Reload the page</a> to update the tabs for Extra schedule.') // the reload below is skipped so this stays readable
@@ -292,7 +296,7 @@ if (($code ?? 0) != 0) {
     <input type="hidden" name="settingsVersion" value="<?= ABSettings::$settingsVersion ?>"/>
     <dl>
         <dt><b>Backup type</b></dt>
-        <dd><select id="backupMethod" name="backupMethod" data-setting="<?= $abSettings->backupMethod ?>">
+        <dd><select id="backupMethod" name="backupMethod" data-setting="<?= htmlspecialchars((string)$abSettings->backupMethod) ?>">
                 <option value="stopAll">Stop all containers, backup, start all</option>
                 <option value="oneAfterTheOther">Stop, backup, start for each container</option>
                 <option value="flashOnly">Flash only</option>
@@ -304,7 +308,7 @@ if (($code ?? 0) != 0) {
 
     <dl data-ab-flash-off>
         <dt><b>Use snapshots</b></dt>
-        <dd><select id="snapshotMode" name="snapshotMode" data-setting="<?= $abSettings->snapshotMode ?>">
+        <dd><select id="snapshotMode" name="snapshotMode" data-setting="<?= htmlspecialchars((string)$abSettings->snapshotMode) ?>">
                 <option value="no">No</option>
                 <option value="yes">Yes, on ZFS and btrfs</option>
             </select></dd>
@@ -321,7 +325,7 @@ if (($code ?? 0) != 0) {
             <div style="display: table; width: 300px;"><textarea required id="allowedSources" name="allowedSources"
                                                                  onfocus="$(this).next('.ft').slideDown('fast');"
                                                                  style="resize: vertical; width: 400px;"
-                                                                 onchange="$('#abSettingsForm').submit();"><?= implode("\r\n", $abSettings->allowedSources) ?></textarea>
+                                                                 onchange="document.getElementById('abSettingsForm').requestSubmit();"><?= implode("\r\n", $abSettings->allowedSources) ?></textarea>
                 <div class="ft" style="display: none;">
                     <div class="fileTreeDiv"></div>
                     <button onclick="addSelectionToList(this);  return false;">Add to list</button>
@@ -361,7 +365,7 @@ if (($code ?? 0) != 0) {
 
     <dl data-ab-flash-off>
         <dt><b>Use Compression?</b></dt>
-        <dd><select id='compression' name="compression" data-setting="<?= $abSettings->compression ?>"
+        <dd><select id='compression' name="compression" data-setting="<?= htmlspecialchars((string)$abSettings->compression) ?>"
                     onchange="checkMultiCoreCpuCount();">
                 <option value='no'>No</option>
                 <option value='yes'>Yes, normal</option>
@@ -377,7 +381,7 @@ if (($code ?? 0) != 0) {
     <dl>
         <dt><b>How many cores should be used?</b></dt>
         <dd><select id='compressionCpuLimit' name="compressionCpuLimit"
-                    data-setting="<?= $abSettings->compressionCpuLimit ?>">
+                    data-setting="<?= htmlspecialchars((string)$abSettings->compressionCpuLimit) ?>">
                 <option value='0'>All cores</option>
                 <?php
                 $cores = 0;
@@ -396,7 +400,7 @@ if (($code ?? 0) != 0) {
 
     <dl data-ab-flash-on>
         <dt><b>Backup the flash drive?</b></dt>
-        <dd><select id='flashBackup' name="flashBackup" data-setting="<?= $abSettings->flashBackup ?>"
+        <dd><select id='flashBackup' name="flashBackup" data-setting="<?= htmlspecialchars((string)$abSettings->flashBackup) ?>"
                     onchange="checkFlashBackupCopy();">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
@@ -422,7 +426,7 @@ if (($code ?? 0) != 0) {
 
     <dl data-ab-flash-off>
         <dt><b>Backup VM meta?</b></dt>
-        <dd><select id='backupVMMeta' name="backupVMMeta" data-setting="<?= $abSettings->backupVMMeta ?>">
+        <dd><select id='backupVMMeta' name="backupVMMeta" data-setting="<?= htmlspecialchars((string)$abSettings->backupVMMeta) ?>">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
             </select></dd>
@@ -441,7 +445,7 @@ if (($code ?? 0) != 0) {
         <dl>
             <dt><b>Skip stopping of containers?</b></dt>
             <dd><select id='dontStop' name="defaults[dontStop]"
-                        data-setting="<?= $abSettings->defaults['dontStop'] ?>">
+                        data-setting="<?= htmlspecialchars((string)$abSettings->defaults['dontStop']) ?>">
                     <option value='no'>No</option>
                     <option value='yes'>Yes</option>
                 </select>
@@ -454,7 +458,7 @@ if (($code ?? 0) != 0) {
         <dl>
             <dt><b>Verify Backup?</b></dt>
             <dd><select id='verifyBackup' name="defaults[verifyBackup]"
-                        data-setting="<?= $abSettings->defaults['verifyBackup'] ?>">
+                        data-setting="<?= htmlspecialchars((string)$abSettings->defaults['verifyBackup']) ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
@@ -467,7 +471,7 @@ if (($code ?? 0) != 0) {
         <dl>
             <dt><b>Ignore errors during backup?</b></dt>
             <dd><select id='ignoreBackupErrors' name="defaults[ignoreBackupErrors]"
-                        data-setting="<?= $abSettings->defaults['ignoreBackupErrors'] ?>">
+                        data-setting="<?= htmlspecialchars((string)$abSettings->defaults['ignoreBackupErrors']) ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
@@ -480,7 +484,7 @@ if (($code ?? 0) != 0) {
         <dl>
             <dt><b>Enable <code>--ignore-case</code> for tar?</b></dt>
             <dd><select id='ignoreExclusionCase' name="ignoreExclusionCase"
-                        data-setting="<?= $abSettings->ignoreExclusionCase ?>">
+                        data-setting="<?= htmlspecialchars((string)$abSettings->ignoreExclusionCase) ?>">
                     <option value='yes'>Yes</option>
                     <option value='no'>No</option>
                 </select>
@@ -497,7 +501,7 @@ if (($code ?? 0) != 0) {
 
     <dl>
         <dt><b>Notification Settings:</b></dt>
-        <dd><select id='notification' name="notification" data-setting="<?= $abSettings->notification ?>">
+        <dd><select id='notification' name="notification" data-setting="<?= htmlspecialchars((string)$abSettings->notification) ?>">
                 <option value='<?= ABHelper::LOGLEVEL_ERR ?>'>Errors only</option>
                 <option value='<?= ABHelper::LOGLEVEL_WARN ?>'>Warnings and errors</option>
                 <option value='disabled'>Disabled</option>
@@ -505,14 +509,14 @@ if (($code ?? 0) != 0) {
         </dd>
 
         <dt><b>Create success notification:</b></dt>
-        <dd><select id='successLogWanted' name="successLogWanted" data-setting="<?= $abSettings->successLogWanted ?>">
+        <dd><select id='successLogWanted' name="successLogWanted" data-setting="<?= htmlspecialchars((string)$abSettings->successLogWanted) ?>">
                 <option value='no'>No</option>
                 <option value='yes'>Yes</option>
             </select>
         </dd>
 
         <dt data-ab-flash-off><b>Send notification if containers were updated:</b></dt>
-        <dd data-ab-flash-off><select id='updateLogWanted' name="updateLogWanted" data-setting="<?= $abSettings->updateLogWanted ?>">
+        <dd data-ab-flash-off><select id='updateLogWanted' name="updateLogWanted" data-setting="<?= htmlspecialchars((string)$abSettings->updateLogWanted) ?>">
                 <option value='no'>No</option>
                 <option value='yes'>Yes</option>
             </select>
@@ -520,7 +524,7 @@ if (($code ?? 0) != 0) {
 
         <dt><b>Scheduled Backup Frequency</b></dt>
         <dd><select id='backupFrequency' name="backupFrequency" onchange="checkBackupFrequency();"
-                    data-setting="<?= $abSettings->backupFrequency ?>">
+                    data-setting="<?= htmlspecialchars((string)$abSettings->backupFrequency) ?>">
                 <option value='disabled'>Disabled</option>
                 <option value='daily'>Daily</option>
                 <option value='weekly'>Weekly</option>
@@ -530,8 +534,8 @@ if (($code ?? 0) != 0) {
         </dd>
 
         <dt><b>Day of Week:</b></dt>
-        <dd><select id='backupFrequencyDay' name="backupFrequencyWeekday"
-                    data-setting="<?= $abSettings->backupFrequencyWeekday ?>">
+        <dd><select id='backupFrequencyDay' name="backupFrequencyWeekday" class="ab-cron"
+                    data-setting="<?= htmlspecialchars((string)$abSettings->backupFrequencyWeekday) ?>">
                 <option value='0'>Sunday</option>
                 <option value='1'>Monday</option>
                 <option value='2'>Tuesday</option>
@@ -539,12 +543,13 @@ if (($code ?? 0) != 0) {
                 <option value='4'>Thursday</option>
                 <option value='5'>Friday</option>
                 <option value='6'>Saturday</option>
+                <?= abUnofferedOption($abSettings->backupFrequencyWeekday, 'Weekday') ?>
             </select>
         </dd>
 
         <dt><b>Day of Month:</b></dt>
-        <dd><select id='backupFrequencyDayOfMonth' name="backupFrequencyDayOfMonth"
-                    data-setting="<?= $abSettings->backupFrequencyDayOfMonth ?>">
+        <dd><select id='backupFrequencyDayOfMonth' name="backupFrequencyDayOfMonth" class="ab-cron"
+                    data-setting="<?= htmlspecialchars((string)$abSettings->backupFrequencyDayOfMonth) ?>">
                 <option value='1'>1st</option>
                 <option value='2'>2nd</option>
                 <option value='3'>3rd</option>
@@ -576,20 +581,21 @@ if (($code ?? 0) != 0) {
                 <option value='29'>29th</option>
                 <option value='30'>30th</option>
                 <option value='31'>31st</option>
+                <?= abUnofferedOption($abSettings->backupFrequencyDayOfMonth, 'DayOfMonth') ?>
             </select>
         </dd>
 
         <dt><b>Hour:</b></dt>
-        <dd><input type="number" min="00" max="23" id='backupFrequencyHour' name="backupFrequencyHour"
-                   value="<?= $abSettings->backupFrequencyHour ?>"/></dd>
+        <dd><input type="number" min="00" max="23" required class="ab-cron" id='backupFrequencyHour' name="backupFrequencyHour"
+                   value="<?= htmlspecialchars((string)$abSettings->backupFrequencyHour) ?>"/></dd>
 
         <dt><b>Minute:</b></dt>
-        <dd><input type="number" min="00" max="59" id='backupFrequencyMinute' name="backupFrequencyMinute"
-                   value="<?= $abSettings->backupFrequencyMinute ?>"/></dd>
+        <dd><input type="number" min="00" max="59" required class="ab-cron" id='backupFrequencyMinute' name="backupFrequencyMinute"
+                   value="<?= htmlspecialchars((string)$abSettings->backupFrequencyMinute) ?>"/></dd>
 
         <dt><b>Custom Cron Entry:</b></dt>
-        <dd><input type='text' id='backupFrequencyCustom' name="backupFrequencyCustom"
-                   value="<?= $abSettings->backupFrequencyCustom ?>"
+        <dd><input type='text' class="ab-cron" id='backupFrequencyCustom' name="backupFrequencyCustom"
+                   value="<?= htmlspecialchars((string)$abSettings->backupFrequencyCustom) ?>"
                    placeholder="Setting this will disable the other options"/></dd>
     </dl>
 
@@ -614,7 +620,7 @@ if (($code ?? 0) != 0) {
     <dl data-ab-flash-off>
         <dt><b>Update containers after backup?</b></dt>
         <dd><select id='updateContainer' name="defaults[updateContainer]"
-                    data-setting="<?= $abSettings->defaults['updateContainer'] ?>">
+                    data-setting="<?= htmlspecialchars((string)$abSettings->defaults['updateContainer']) ?>">
                 <option value='yes'>Yes</option>
                 <option value='no'>No</option>
             </select>
@@ -985,9 +991,11 @@ HTML;
          */
         console.debug('Setting select settings...');
         $('select[data-setting]').each(function (index) {
-            console.debug($(this).attr('name'), $(this).data('setting'));
-            $(this).find('option[value="' + $(this).data('setting') + '"]').prop('selected', true);
+            const saved = this.getAttribute('data-setting'); // saved text, which a selector could not hold
+            console.debug(this.name, saved);
+            $(this.options).filter(function () { return this.value === saved; }).prop('selected', true);
         });
+        $('.ab-cron').each(abCronCheck).on('input change', abCronCheck); // after the saved values above are selected
 
         abLockOrder(true);
         $('#containerOrderMode').on('change', () => abLockOrder(false));
@@ -1141,11 +1149,24 @@ HTML;
         $('#' + select.id + (select.value === 'gfs' ? 'Gfs' : 'Age')).show();
     }
 
-    /** Enables only the fields the chosen frequency uses; prefix = the frequency select's id (backupFrequency or extraFrequency) */
+    const abCronCustom = new RegExp(<?= json_encode(ABCron::custom()) ?>);
+    /** Refuses Save while a schedule field holds a time the server would not accept (ABCron::accepts), and :invalid shows it red: a Custom Cron Entry as typed, an Hour or Minute other than digits (the boxes check their range), a saved list value the list does not offer until another is picked */
+    function abCronCheck() {
+        if (this.type === 'text') {
+            this.setCustomValidity(abCronCustom.test(this.value.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '').replace(/[^\x00-\x7f]/g, 'x')) ? '' : 'Not an entry this page accepts: five fields in range, such as 0 2 * * 1-5 (for every day, * rather than 0-7), or @reboot; @daily and the like need ID=name after them'); // as ABCron::accepts() reads it: trim() leaves a no-break space, and preg_match (no /u) reads no non-ASCII byte as a space, where JS \s takes U+00A0
+        } else if (this.type === 'number') {
+            this.setCustomValidity(/^[0-9]*$/.test(this.value) ? '' : 'A whole number, such as 5'); // the box itself takes 5.0 and 1e1
+        } else if (this.tagName === 'SELECT') {
+            this.setCustomValidity(this.selectedOptions[0]?.hasAttribute('data-ab-unoffered') ? 'The saved value is not in the list: pick one from it' : '');
+        }
+    }
+
+    const abCronFields = <?= json_encode(ABCron::fields()) ?>;
+    /** Enables only the fields the chosen frequency uses (abCronFields, as the server checks them); prefix = the frequency select's id (backupFrequency or extraFrequency) */
     function checkBackupFrequency(prefix = 'backupFrequency') {
-        const used = {disabled: [], daily: ['Hour', 'Minute'], weekly: ['Hour', 'Minute', 'Day'], monthly: ['Hour', 'Minute', 'DayOfMonth']}[$('#' + prefix).val()] ?? ['Custom'];
-        ['Day', 'DayOfMonth', 'Hour', 'Minute', 'Custom'].forEach(function (field) {
-            $('#' + prefix + field).prop('disabled', !used.includes(field));
+        const used = abCronFields[$('#' + prefix).val()] ?? [];
+        [...new Set(Object.values(abCronFields).flat())].forEach(function (field) {
+            $('[name="' + prefix + field + '"]').prop('disabled', !used.includes(field));
         });
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+use unraid\plugins\AppdataBackup\ABCron;
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABSettings;
 use unraid\plugins\AppdataBackup\ABStatus;
@@ -27,10 +28,10 @@ if ($summary['recorded']) {
         . ($summary['ok'] ? ' &middot; newest ' . $date($summary['ok'][0]) . ', oldest ' . $date($summary['ok'][count($summary['ok']) - 1]) : '')
         . ' &middot; as of the last backup run';
 }
-$rows['Next scheduled run'] = $summary['next'] ? $summary['next']->format('D d.m.Y H:i') : ($abSettings->backupFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->backupFrequencyCustom) : 'Not scheduled');
-if ($abSettings->extraSchedule === 'yes') {
+$rows['Next scheduled run'] = ABCron::held(false) ? 'Unknown: see the warning on the Settings tab' : ($summary['next'] ? $summary['next']->format('D d.m.Y H:i') : ($abSettings->backupFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->backupFrequencyCustom) : 'Not scheduled'));
+if ($abSettings->extraSchedule === 'yes' || ABCron::held(true)) { // an unreadable Use an extra schedule? keeps its cron line too
     $extraSummary = ABStatus::summary($abSettings->forSchedule('extra'));
-    $rows['Extra schedule'] = ($extraSummary['next'] ? 'Next ' . $extraSummary['next']->format('D d.m.Y H:i') : ($abSettings->extraFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->extraFrequencyCustom) : 'Not scheduled'))
+    $rows['Extra schedule'] = (ABCron::held(true) ? 'Next unknown: see the warning on the Settings tab' : ($extraSummary['next'] ? 'Next ' . $extraSummary['next']->format('D d.m.Y H:i') : ($abSettings->extraFrequency === 'custom' ? 'Custom: ' . htmlspecialchars($abSettings->extraFrequencyCustom) : 'Not scheduled')))
         . ' &middot; ' . ($extraSummary['recorded'] ? count($extraSummary['ok']) . ' good' . ($extraSummary['ok'] ? ', newest ' . $date($extraSummary['ok'][0]) : '') : 'sets shown after its first run');
 }
 $rows['Free space'] = $summary['free'] === false ? 'Unknown' : ABHelper::bytes($summary['free']) . ' free' . ($summary['ok'] ? ' &middot; newest backup ' . ABHelper::bytes($summary['ok'][0]['size']) : '');

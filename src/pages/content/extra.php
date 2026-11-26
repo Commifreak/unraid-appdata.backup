@@ -77,32 +77,34 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 
 <dl>
     <dt><b>Day of Week:</b></dt>
-    <dd><select id='extraFrequencyDay' name="extraFrequencyWeekday" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyWeekday) ?>">
+    <dd><select id='extraFrequencyDay' name="extraFrequencyWeekday" class="ab-cron" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyWeekday) ?>">
 <?php foreach ($weekdays as $day => $name): ?>
             <option value='<?= $day ?>'><?= $name ?></option>
 <?php endforeach; ?>
+            <?= abUnofferedOption($abSettings->extraFrequencyWeekday, 'Weekday') ?>
         </select>
     </dd>
 
     <dt><b>Day of Month:</b></dt>
-    <dd><select id='extraFrequencyDayOfMonth' name="extraFrequencyDayOfMonth" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyDayOfMonth) ?>">
+    <dd><select id='extraFrequencyDayOfMonth' name="extraFrequencyDayOfMonth" class="ab-cron" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyDayOfMonth) ?>">
 <?php for ($day = 1; $day <= 31; $day++): ?>
             <option value='<?= $day ?>'><?= $ordinal($day) ?></option>
 <?php endfor; ?>
+            <?= abUnofferedOption($abSettings->extraFrequencyDayOfMonth, 'DayOfMonth') ?>
         </select>
     </dd>
 
     <dt><b>Hour:</b></dt>
-    <dd><input type="number" min="00" max="23" id='extraFrequencyHour' name="extraFrequencyHour"
+    <dd><input type="number" min="00" max="23" required class="ab-cron" id='extraFrequencyHour' name="extraFrequencyHour"
                value="<?= htmlspecialchars((string)$abSettings->extraFrequencyHour) ?>"/></dd>
 
     <dt><b>Minute:</b></dt>
-    <dd><input type="number" min="00" max="59" id='extraFrequencyMinute' name="extraFrequencyMinute"
+    <dd><input type="number" min="00" max="59" required class="ab-cron" id='extraFrequencyMinute' name="extraFrequencyMinute"
                value="<?= htmlspecialchars((string)$abSettings->extraFrequencyMinute) ?>"/></dd>
 
     <dt><b>Custom Cron Entry:</b></dt>
-    <dd><input type='text' id='extraFrequencyCustom' name="extraFrequencyCustom"
-               value="<?= htmlspecialchars($abSettings->extraFrequencyCustom) ?>"
+    <dd><input type='text' class="ab-cron" id='extraFrequencyCustom' name="extraFrequencyCustom"
+               value="<?= htmlspecialchars((string)$abSettings->extraFrequencyCustom) ?>"
                placeholder="Setting this will disable the other options"/></dd>
 </dl>
 

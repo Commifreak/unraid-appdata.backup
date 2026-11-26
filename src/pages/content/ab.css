@@ -327,6 +327,12 @@ blockquote.inline_help.ab-box {
     border-left: 3px solid #e68a00;
 }
 
+/* :focus too: Unraid's input:focus[type=text] (0,2,1) sets outline: 0 */
+.ab-cron:invalid,
+.ab-cron:invalid:focus {
+    outline: 2px solid #d9312b;
+}
+
 .ab-step {
     margin: 0 0 0.75rem;
     font-weight: bold;
