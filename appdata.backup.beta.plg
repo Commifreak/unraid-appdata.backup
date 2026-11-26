@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
         <!ENTITY name      "appdata.backup.beta">
         <!ENTITY author    "Robin Kluth">
-        <!ENTITY version   "2026.11.18b1">
-        <!ENTITY sha256    "24c9e640a4fa55f465767a9a9971a399ad141f294ee30cb199a16339a42d9dc0">
+        <!ENTITY version   "2026.11.26b1">
+        <!ENTITY sha256    "aad368862da95ce77ae0106b5ccfcae305ba37c4780de655576875ddc45157d7">
         <!ENTITY launch    "Settings/AB.Beta.Main">
         <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
         <!ENTITY github    "Commifreak/unraid-appdata.backup">
@@ -16,6 +16,15 @@
     <CHANGES>
         <![CDATA[
         ➕New  🩹Fix 🔧Change
+###2026.11.26b1
+- ➕ Retention can keep one backup a day, week, month and year (Grandfather-father-son), on the Settings and Extra schedule tabs
+- 🔧 By age with Delete backups if older than x days empty now keeps every set, as its help says. To keep only the newest few as before, set the days to 1
+- 🔧 Switching from Grandfather-father-son to By age, or going back to an older version, runs By age with the saved days, which can delete sets GFS kept: empty the days first
+- 🔧 A retention value that cannot be read keeps every set and is named on the Settings tab
+- 🩹 Fix a cleared Hour or Minute, or a Custom Cron Entry cron reads differently, running the backup at the wrong time or never: the page refuses it, and one already saved is named on the Settings tab
+- ➕ Skip new containers? on the Settings tab: containers added later start out skipped
+- 🩹 Fix a Save losing the settings of a container the page could not draw, such as a dead container on Unraid 7.2 and later
+- 🩹 Fix the backup log not saying when a snapshot is removed
 ###2026.11.18b1
 - 🔧 The Extra schedule tab asks Skip? like the Settings tab, instead of Include?
 - ➕ A filter and Skip all above the container list on the Settings and Extra schedule tabs
