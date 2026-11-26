@@ -1,0 +1,45 @@
+<?php
+
+use unraid\plugins\AppdataBackup\ABRetention;
+use unraid\plugins\AppdataBackup\ABSettings;
+
+/** The Retention select and each choice's fields, on the Settings tab or the Extra schedule tab ($extra); abRetention() in settings.php switches them */
+function abRetentionRows(ABSettings $abSettings, bool $extra): string {
+    $name = fn(string $field) => $extra ? 'extra' . ucfirst($field) : $field;
+    $mode = $abSettings->{$name('retentionMode')};
+    $row  = function (string $field, string $help) use ($abSettings, $extra, $name) {
+        $help  = $extra ? 'Works like <b>' . ABRetention::label($field) . '</b> on the Settings tab, for the extra destination only.' : $help;
+        $label = ABRetention::label($field, $extra);
+        $value = htmlspecialchars((string)$abSettings->{$name($field)}, ENT_QUOTES);
+        $id    = $name($field);
+        $box   = preg_match('/\A\d*\z/', $value) && ABRetention::count($value) !== null // a number box keeps only digits as saved; a text box would drop line breaks ("1\n2" posts 12)
+            ? "<input id='$id' name='$id' type='number' min='0' max='999999' value='$value' placeholder='Leave empty to disable'/>"
+            : "<textarea id='$id' name='$id' rows='2' placeholder='Leave empty to disable'>\n$value</textarea>"; // the parser drops the first line break
+        return "<dl>\n    <dt><b>$label:</b></dt>\n    <dd>$box</dd>\n</dl>\n"
+            . "<blockquote class='inline_help'><p>$help</p></blockquote>\n";
+    };
+    $select = $name('retentionMode');
+    $label  = ABRetention::label('retentionMode', $extra);
+    $why    = ABRetention::unreadable($extra ? $abSettings->forSchedule('extra') : $abSettings);
+    $html   = ($why === '' ? '' : "<p class='ab-warn'>" . htmlspecialchars("Retention is off: $why. Every backup set is kept until you set it again and Save.", ENT_QUOTES) . "</p>\n")
+        . "<dl>\n    <dt><b>$label:</b></dt>\n    <dd><select id='$select' name='$select' onchange='abRetention(this);'>\n";
+    foreach (ABRetention::MODES as $value => $text) {
+        $html .= "        <option value='$value'" . ($mode === $value ? ' selected' : '') . ">$text</option>\n";
+    }
+    if (!isset(ABRetention::MODES[$mode])) { // posts the saved text back, so a Save made for another change keeps retention off
+        $html .= "        <option value='" . htmlspecialchars($mode, ENT_QUOTES) . "' selected>" . htmlspecialchars("Off: saved as \"$mode\"", ENT_QUOTES) . "</option>\n";
+    }
+    $html .= "    </select></dd>\n</dl>\n<blockquote class='inline_help'><p>" . ($extra ? 'Works like <b>Retention</b> on the Settings tab, for the extra destination only.'
+        : 'After a run with no errors, deletes the backup sets this does not keep. <b>By age</b> deletes sets older than a number of days. <b>Grandfather-father-son</b> keeps the newest good set of each day, week, month and year, for as many of each as you set, and deletes the rest. <b>Flash only</b> sets and the others are counted and deleted separately, so switching <b>Backup type</b> deletes neither. Switching from <b>Grandfather-father-son</b> to <b>By age</b> deletes, at the next run, the sets it kept that are older than <b>Delete backups if older than x days</b>, apart from the newest that <b>Keep at least this many backups</b> keeps. To keep them, empty <b>Delete backups if older than x days</b> before you save.')
+        . "</p></blockquote>\n";
+    $html .= "<div id='{$select}Age'" . ($mode === 'gfs' ? " style='display: none;'" : '') . ">\n"
+        . $row('deleteBackupsOlderThan', 'Deletes backup sets older than this many days, failed ones too. Leave it empty to keep every set.')
+        . $row('keepMinBackups', 'The newest this-many good sets of each <b>Backup type</b> are never deleted by <b>Delete backups if older than x days</b>, however old they get. Failed or unfinished sets don\'t count.')
+        . "</div>\n<div id='{$select}Gfs'" . ($mode === 'gfs' ? '' : " style='display: none;'") . ">\n"
+        . $row('keepDaily', 'Keeps the newest good set of each of the last this-many days that have one, so a day without one doesn\'t count. A set any of these four keeps stays; the rest, failed or unfinished ones too, are deleted. Leave all four empty to keep every set.')
+        . $row('keepWeekly', 'The newest good set of each of the last this-many weeks (Monday to Sunday) that have one.')
+        . $row('keepMonthly', 'The newest good set of each of the last this-many months that have one.')
+        . $row('keepYearly', 'The newest good set of each of the last this-many years that have one.')
+        . "</div>\n";
+    return $html;
+}

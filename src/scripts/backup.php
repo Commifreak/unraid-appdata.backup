@@ -6,6 +6,7 @@
 
 use unraid\plugins\AppdataBackup\ABHelper;
 use unraid\plugins\AppdataBackup\ABIntegrity;
+use unraid\plugins\AppdataBackup\ABRetention;
 use unraid\plugins\AppdataBackup\ABSettings;
 use unraid\plugins\AppdataBackup\ABStatus;
 use unraid\plugins\AppdataBackup\ABSnapshot;
@@ -23,7 +24,7 @@ require_once dirname(__DIR__) . '/include/ABStatus.php';
 
 set_error_handler("unraid\plugins\AppdataBackup\ABHelper::errorHandler");
 
-// From cron (see ABSettings::checkCron): 'scheduled' waits for a running job, 'extra' runs the extra schedule
+// From cron (see ABCron::write): 'scheduled' waits for a running job, 'extra' runs the extra schedule
 $runArgs = array_slice($argv, 1);
 if (in_array('extra', $runArgs, true)) {
     ABHelper::$runLabel = 'Extra schedule'; // names this run in every notification, "Still running" included
@@ -38,6 +39,7 @@ if (!ABHelper::claimRun(in_array('scheduled', $runArgs, true))) {
  */
 $backupStarted = new DateTime(); // after claimRun(): a scheduled run's wait is not part of its duration
 $setCreated    = false; // only a set folder this run made may get its checksums, logs, -failed rename and permissions
+$backupDone    = false; // set before Retention: an abort after it must not fail the set retention relies on
 
 ABHelper::backupLog("👋 WELCOME TO APPDATA.BACKUP!! :D");
 $unraidVersion           = parse_ini_file('/etc/unraid-version');
@@ -60,6 +62,13 @@ if (!file_exists(ABSettings::getConfigPath())) {
 }
 
 $abSettings = new ABSettings();
+if (in_array('extra', $runArgs, true)) {
+    ABHelper::$targetLogLevel = $abSettings->forSchedule('extra')->notification; // the errors below notify at this run's level; loading the settings set the Settings tab's
+}
+if (($abUnreadable = ABSettings::unreadableWarning()) !== '') {
+    ABHelper::backupLog($abUnreadable, ABHelper::LOGLEVEL_ERR);
+    ABHelper::$errorOccured = true; // a default may leave things out of the set: it is marked failed, and retention does not run
+}
 
 // Retention never deletes either schedule's destination, even one picked inside the other and named like a set
 $abDestinations = array_filter(array_map(fn($path) => $path === '' ? false : realpath($path), [$abSettings->destination, $abSettings->extraDestination]));
@@ -67,7 +76,8 @@ $abDestinations = array_filter(array_map(fn($path) => $path === '' ? false : rea
 if (in_array('extra', $runArgs, true)) {
     ABHelper::backupLog("Running the extra schedule: only its chosen containers, into its own destination.");
     if ($abSettings->extraSchedule !== 'yes') {
-        ABHelper::backupLog("The extra schedule is turned off (Settings, Use an extra schedule?).", ABHelper::LOGLEVEL_ERR);
+        ABHelper::backupLog(ABSettings::unread('/^extraSchedule$/') ? "The extra schedule did not run: Use an extra schedule? could not be read from config.json (see above)."
+            : "The extra schedule is turned off (Settings, Use an extra schedule?).", ABHelper::LOGLEVEL_ERR);
         goto end;
     }
     $extraReal = $abSettings->extraDestination === '' ? false : realpath($abSettings->extraDestination); // realpath('') is the working directory
@@ -80,7 +90,6 @@ if (in_array('extra', $runArgs, true)) {
     ABHelper::backupLog(ABHelper::dump('Extra schedule settings', $extraSummary['settings']), ABHelper::LOGLEVEL_DEBUG);
     ABHelper::backupLog(ABHelper::dump("Extra schedule's own container settings", $extraSummary['overrides']), ABHelper::LOGLEVEL_DEBUG);
     $abSettings = $abSettings->forSchedule('extra');
-    ABHelper::$targetLogLevel = $abSettings->notification; // this run's own notification level; loading the settings set the Settings tab's
 }
 
 if (empty($abSettings->destination)) {
@@ -360,12 +369,10 @@ if (!$setCreated || !is_dir($abDestination)) {
 } elseif (!ABHelper::$errorOccured) {
     ABSteps::start('Writing checksums');
     ABIntegrity::writeChecksums($abDestination, $setFiles);
-    // Retention deletes older sets, so this one goes to disk first. File by file: sync -f does not reach the disks through /mnt/user.
+    // Retention deletes older sets, so this one goes to disk first
     ABHelper::backupLog("Flushing the backup to disk...");
-    $output = $resultcode = null;
-    exec('sync ' . implode(' ', array_map('escapeshellarg', array_merge($setFiles, array_filter([$abDestination . '/' . ABIntegrity::FILE], 'is_file'), [$abDestination]))) . ' 2>&1', $output, $resultcode);
-    if ($resultcode != 0) {
-        ABHelper::backupLog("Flushing the backup to disk failed! sync said: " . implode('; ', $output), ABHelper::LOGLEVEL_ERR);
+    if (($said = ABHelper::flush(array_merge($setFiles, array_filter([$abDestination . '/' . ABIntegrity::FILE], 'is_file'), [$abDestination]))) !== null && !ABHelper::abortRequested()) { // an abort is handled below
+        ABHelper::backupLog("Flushing the backup to disk failed! sync said: $said", ABHelper::LOGLEVEL_ERR);
         ABHelper::$errorOccured = true;
     }
 }
@@ -374,15 +381,15 @@ if (!$setCreated || !is_dir($abDestination)) {
 if (ABHelper::abortRequested()) {
     goto abort;
 }
+$backupDone = !ABHelper::$errorOccured;
 
 ABSteps::start('Retention');
 if (ABHelper::$errorOccured) {
     ABHelper::backupLog("An error occurred during backup! RETENTION WILL NOT BE CHECKED! Please review the log. If you need further assistance, ask in the support forum.", ABHelper::LOGLEVEL_WARN);
 } else {
-    if (empty($abSettings->keepMinBackups) && empty($abSettings->deleteBackupsOlderThan)) {
-        ABHelper::backupLog("BOTH retention settings are disabled!", ABHelper::LOGLEVEL_WARN);
+    if (($off = ABRetention::off($abSettings)) !== '') {
+        ABHelper::backupLog("Retention is off ($off): every backup set is kept", ABHelper::LOGLEVEL_WARN);
     } else { // Retention enabled
-        $keepMinBackupsNum = empty($abSettings->keepMinBackups) ? 0 : $abSettings->keepMinBackups;
         // glob sorts by name, so oldest first. Only real set names: another ab_* folder here (e.g. the extra schedule's destination) is not a backup.
         $curBackupsState   = array_values(array_filter(array_reverse(glob(ABHelper::globQuote(rtrim($abSettings->destination, '/')) . '/ab_*')), fn($backupItem) => preg_match(ABStatus::SET_PATTERN, basename($backupItem)) && !in_array(realpath($backupItem), $abDestinations, true)));
         // Flash only sets (marked when created) and the others keep and delete only their own type, so switching type never deletes the other's
@@ -392,43 +399,44 @@ if (ABHelper::$errorOccured) {
             ABHelper::backupLog("Retention leaves " . count($otherKind) . " set(s) of the other Backup type here alone: it only counts and deletes this type's sets");
         }
 
-        // Only finished, successful sets count towards the minimum. This run's set gets its backup.log at the end.
+        // Only finished, successful sets count towards Keep at least and stand for a GFS period. This run's set gets its backup.log before any delete.
         $goodBackups = array_values(array_filter($curBackupsState, fn($backupItem) => $backupItem === $abDestination || (!str_ends_with($backupItem, '-failed') && file_exists($backupItem . '/backup.log'))));
 
-        $toKeep = array_slice($goodBackups, 0, $keepMinBackupsNum);
-        ABHelper::backupLog(ABHelper::dump('toKeep after slicing', $toKeep), ABHelper::LOGLEVEL_DEBUG);
-
-        if (!empty($abSettings->deleteBackupsOlderThan)) {
-            $nowDate = new DateTime();
-            $nowDate->modify('-' . $abSettings->deleteBackupsOlderThan . ' days');
-            ABHelper::backupLog("Delete backups older than " . $nowDate->format("Ymd_His"), ABHelper::LOGLEVEL_DEBUG);
-
-            foreach ($curBackupsState as $backupItem) {
-                $correctedItem = preg_replace('/-failed$/', '', array_reverse(explode("/", $backupItem))[0]); // failed sets age out like the others
-                $backupDate    = date_create_from_format("??_Ymd_His", $correctedItem);
-                if (!$backupDate) {
-                    ABHelper::backupLog("Cannot create date from " . $correctedItem, ABHelper::LOGLEVEL_DEBUG);
-                    $toKeep[] = $backupItem; // Keep the errornous object - Better safe than sorry.
-                    continue;
-                }
-                if (in_array($backupItem, $toKeep)) {
-                    ABHelper::backupLog("Keeping $backupItem, because it is within the minimum number of backups", ABHelper::LOGLEVEL_DEBUG);
-                } elseif ($backupDate >= $nowDate) {
-                    ABHelper::backupLog("Keeping " . $backupItem, ABHelper::LOGLEVEL_DEBUG);
-                    $toKeep[] = $backupItem;
-                } else {
-                    ABHelper::backupLog("Discarding $backupItem, because it is older than the cutoff", ABHelper::LOGLEVEL_DEBUG);
-                }
-            }
+        $toKeep = ABRetention::keep($abSettings, $curBackupsState, $goodBackups, new DateTime());
+        if (in_array($abDestination, $curBackupsState, true)) {
+            $toKeep[$abDestination] ??= "this run's own set"; // a set named later in its period (a clock change) would outrank it
+        }
+        ABHelper::backupLog("Retention: " . ABRetention::describe($abSettings) . "; keeping " . count($toKeep) . " of " . count($curBackupsState) . " set(s)");
+        foreach ($toKeep as $backupItem => $why) {
+            ABHelper::backupLog("Keeping $backupItem: $why", ABHelper::LOGLEVEL_DEBUG);
         }
 
-        $toDelete = array_diff($curBackupsState, $toKeep);
-        ABHelper::backupLog("Resulting toKeep: " . implode(', ', $toKeep), ABHelper::LOGLEVEL_DEBUG);
-        ABHelper::backupLog("Resulting deletion list: " . implode(', ', $toDelete), ABHelper::LOGLEVEL_DEBUG);
-
+        $toDelete   = array_diff($curBackupsState, array_keys($toKeep));
+        $notDeleted = [];
+        if ($toDelete && !ABStatus::markFinished($abDestination)) { // unmarked, the next run would not count this set and could delete it too
+            ABHelper::backupLog("Could not write backup.log into $abDestination, so retention deletes nothing this run", ABHelper::LOGLEVEL_WARN);
+            $toDelete = [];
+        } elseif ($toDelete && ($said = ABHelper::flush(["$abDestination/backup.log", $abDestination, dirname($abDestination)])) !== null && !ABHelper::abortRequested()) { // a power cut after the deletes must not lose the mark; an abort stops the loop below
+            ABHelper::backupLog("Could not flush backup.log in $abDestination to disk, so retention deletes nothing this run. sync said: $said", ABHelper::LOGLEVEL_WARN);
+            $toDelete = [];
+        }
         foreach ($toDelete as $deleteBackupPath) {
+            if (ABHelper::abortRequested()) {
+                ABHelper::backupLog("Abort: retention stops, the sets not deleted yet stay");
+                break;
+            }
             ABHelper::backupLog("Delete old backup: " . $deleteBackupPath);
-            exec("rm -rf " . escapeshellarg($deleteBackupPath));
+            $rmOut = [];
+            exec("rm -rf " . escapeshellarg($deleteBackupPath) . " 2>&1 " . ABSettings::$externalCmdPidCapture, $rmOut, $rmCode);
+            if ($rmCode !== 0) {
+                $notDeleted[] = "$deleteBackupPath (rm exited $rmCode" . (ABHelper::abortRequested() ? ', Abort was pressed' : '') . "): " . implode(' ', array_slice($rmOut, 0, 3));
+            }
+        }
+        if ($notDeleted) { // one warning (= one notification): one cause, such as a read-only disk, usually fails them all
+            ABHelper::backupLog("Could not delete all of $notDeleted[0]" . (count($notDeleted) > 1 ? ' (and ' . (count($notDeleted) - 1) . ' more set(s), named in the debug log)' : ''), ABHelper::LOGLEVEL_WARN);
+            foreach (array_slice($notDeleted, 1) as $line) {
+                ABHelper::backupLog("Could not delete all of $line", ABHelper::LOGLEVEL_DEBUG);
+            }
         }
 
     }
@@ -439,8 +447,12 @@ ABHelper::setCurrentContainerName(null);
 ABSteps::start('Finishing');
 ABSnapshot::destroyAll(); // an aborted run can still hold snapshots
 if (ABHelper::abortRequested()) {
-    ABHelper::$errorOccured = true;
-    ABHelper::startAfterAbort();
+    if ($backupDone) {
+        ABHelper::backupLog("Abort came after the backup had finished, so this run's set stays good", ABHelper::LOGLEVEL_WARN);
+    } else {
+        ABHelper::$errorOccured = true;
+        ABHelper::startAfterAbort();
+    }
 }
 
 ABHelper::reportRunNotes();
@@ -457,7 +469,10 @@ if (!ABHelper::$errorOccured && $abSettings->successLogWanted == 'yes') {
 }
 
 if ($setCreated && is_dir($abDestination)) {
-    copy(ABSettings::$tempFolder . '/' . ABSettings::$logfile, $abDestination . '/backup.log');
+    if (!ABStatus::markFinished($abDestination)) {
+        ABHelper::backupLog(is_file("$abDestination/backup.log") ? "Could not update backup.log in $abDestination, so it lacks this run's last lines"
+            : "Could not copy backup.log into $abDestination, so retention will count this set as unfinished", ABHelper::LOGLEVEL_WARN);
+    }
     copy(ABSettings::getConfigPath(), $abDestination . '/' . ABSettings::$settingsFile);
     if (ABHelper::$errorOccured) {
         copy(ABSettings::$tempFolder . '/' . ABSettings::$debugLogFile, $abDestination . '/backup.debug.log');

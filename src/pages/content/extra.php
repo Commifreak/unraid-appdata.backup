@@ -5,6 +5,12 @@ use unraid\plugins\AppdataBackup\ABSettings;
 
 /** @var $abSettings ABSettings set by settings.php, which also saves this form (ABSettings::storeForm) */
 
+if (!ABHelper::isArrayOnline()) {
+    echo "<h1>Oooopsie!</h1><p>The array is NOT online!</p>";
+    return;
+}
+require_once __DIR__ . '/retention.php';
+
 $extraAll = (new DockerClient())->getDockerContainers() ?: [];
 $extraIcon = fn($container) => empty($container['Icon']) ? '/plugins/dynamix.docker.manager/images/question.png' : $container['Icon'];
 // A select for a run-wide setting: '' = the Settings tab's value, named in the first option (see ABSettings::EXTRA_SAME_AS)
@@ -31,7 +37,10 @@ $ordinal  = fn($day) => $day . (in_array($day, [11, 12, 13]) ? 'th' : (['th', 's
 <?php include_once __DIR__ . '/head.php'; ?>
 
 <div class="title"><span class="left"><i class="fa fa-clock-o title"></i>Extra schedule</span></div>
-<?php if (($abExtraSaved ?? null) === false): ?>
+<?php if (($abExtraNotSaved ?? null) === ABSettings::NOT_WRITTEN): ?>
+<p class="ab-warn"><?= ABSettings::NOT_WRITTEN_TEXT ?></p>
+<?php endif; ?>
+<?php if (($abExtraNotSaved ?? null) === ABSettings::NOT_READ): ?>
 <p class="ab-warn">Not saved: the existing settings could not be read, and saving only this tab would have wiped them.</p>
 <?php endif; ?>
 
@@ -68,32 +77,34 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
 
 <dl>
     <dt><b>Day of Week:</b></dt>
-    <dd><select id='extraFrequencyDay' name="extraFrequencyWeekday" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyWeekday) ?>">
+    <dd><select id='extraFrequencyDay' name="extraFrequencyWeekday" class="ab-cron" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyWeekday) ?>">
 <?php foreach ($weekdays as $day => $name): ?>
             <option value='<?= $day ?>'><?= $name ?></option>
 <?php endforeach; ?>
+            <?= abUnofferedOption($abSettings->extraFrequencyWeekday, 'Weekday') ?>
         </select>
     </dd>
 
     <dt><b>Day of Month:</b></dt>
-    <dd><select id='extraFrequencyDayOfMonth' name="extraFrequencyDayOfMonth" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyDayOfMonth) ?>">
+    <dd><select id='extraFrequencyDayOfMonth' name="extraFrequencyDayOfMonth" class="ab-cron" data-setting="<?= htmlspecialchars((string)$abSettings->extraFrequencyDayOfMonth) ?>">
 <?php for ($day = 1; $day <= 31; $day++): ?>
             <option value='<?= $day ?>'><?= $ordinal($day) ?></option>
 <?php endfor; ?>
+            <?= abUnofferedOption($abSettings->extraFrequencyDayOfMonth, 'DayOfMonth') ?>
         </select>
     </dd>
 
     <dt><b>Hour:</b></dt>
-    <dd><input type="number" min="00" max="23" id='extraFrequencyHour' name="extraFrequencyHour"
+    <dd><input type="number" min="00" max="23" required class="ab-cron" id='extraFrequencyHour' name="extraFrequencyHour"
                value="<?= htmlspecialchars((string)$abSettings->extraFrequencyHour) ?>"/></dd>
 
     <dt><b>Minute:</b></dt>
-    <dd><input type="number" min="00" max="59" id='extraFrequencyMinute' name="extraFrequencyMinute"
+    <dd><input type="number" min="00" max="59" required class="ab-cron" id='extraFrequencyMinute' name="extraFrequencyMinute"
                value="<?= htmlspecialchars((string)$abSettings->extraFrequencyMinute) ?>"/></dd>
 
     <dt><b>Custom Cron Entry:</b></dt>
-    <dd><input type='text' id='extraFrequencyCustom' name="extraFrequencyCustom"
-               value="<?= htmlspecialchars($abSettings->extraFrequencyCustom) ?>"
+    <dd><input type='text' class="ab-cron" id='extraFrequencyCustom' name="extraFrequencyCustom"
+               value="<?= htmlspecialchars((string)$abSettings->extraFrequencyCustom) ?>"
                placeholder="Setting this will disable the other options"/></dd>
 </dl>
 
@@ -107,24 +118,7 @@ if ($abSettings->extraFrequency !== 'disabled' && $extraGaps):
     <p>Must differ from <b>Backup destination</b>, so each folder's retention only sees its own sets. A subfolder of it is fine. To restore, pick this folder as the source on the Restore tab.</p>
 </blockquote>
 
-<dl>
-    <dt><b>Extra schedule: delete backups if older than x days:</b></dt>
-    <dd><input id='extraDeleteBackupsOlderThan' name="extraDeleteBackupsOlderThan" type='number'
-               value='<?= htmlspecialchars((string)$abSettings->extraDeleteBackupsOlderThan) ?>'
-               placeholder='Leave empty to disable'/></dd>
-</dl>
-<blockquote class='inline_help'>
-    <p>Works like <b>Delete backups if older than x days</b>, for the extra destination only.</p>
-</blockquote>
-
-<dl>
-    <dt><b>Extra schedule: keep at least this many backups:</b></dt>
-    <dd><input id='extraKeepMinBackups' name="extraKeepMinBackups" type='number' value='<?= htmlspecialchars((string)$abSettings->extraKeepMinBackups) ?>'
-               placeholder='Leave empty to disable'/></dd>
-</dl>
-<blockquote class='inline_help'>
-    <p>Works like <b>Keep at least this many backups</b>, for the extra destination only.</p>
-</blockquote>
+<?= abRetentionRows($abSettings, true) ?>
 
 <div class="title"><span class="left"><i class="fa fa-cog title"></i>Backup options</span></div>
 <?= $sameAs('extraBackupMethod', 'Backup type', ['stopAll' => 'Stop all', 'oneAfterTheOther' => 'For each container'], $abSettings->containerBackupMethod(), 'How this schedule stops its containers; see <b>Backup type</b> on the Settings tab. While that is <b>Flash only</b>, <b>Same as Settings tab</b> means <b>For each container</b>.') ?>
@@ -289,6 +283,7 @@ foreach ($extraAll as $container) {
 
     $(function () {
         checkBackupFrequency('extraFrequency'); // settings.php
+        abRetention(document.getElementById('extraRetentionMode')); // settings.php
         abExtraToggle();
         $('#extraFlashBackup, #extraCompression').on('change', abExtraToggle);
         const abExcluded = name => $('select[name="extraSkip[' + name + ']"]').val() !== 'no';
